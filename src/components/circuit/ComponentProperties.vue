@@ -210,14 +210,6 @@ function updateSourceType() {
   margin-bottom: 0.25rem;
 }
 
-.property-input {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease-in-out;
-}
-
 .property-input:focus {
   outline: none;
   border-color: #80bdff;
@@ -235,25 +227,40 @@ function updateSourceType() {
 
 .value-input-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  width: 100%;
 }
 
 .value-input-group .property-input {
   flex: 1;
+  min-width: 0;
 }
 
 .unit-select {
-  padding: 0.375rem 0.5rem;
+  padding: 0.25rem 0.375rem;
   border: 1px solid #ced4da;
   border-radius: 0.25rem;
   font-size: 0.875rem;
   background: white;
-  min-width: 60px;
+  width: 50px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
 }
 
 .unit-select:focus {
   outline: none;
   border-color: #80bdff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.property-input {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease-in-out;
+  position: relative;
+  z-index: 20;
 }
 </style>

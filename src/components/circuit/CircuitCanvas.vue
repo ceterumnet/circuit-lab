@@ -11,6 +11,7 @@
         <!-- Grid background -->
         <v-rect
           :config="{
+            name: 'grid-background',
             x: 0,
             y: 0,
             width: stageConfig.width,
@@ -48,6 +49,7 @@
           :component="component"
           @select="handleComponentSelect"
           @move="handleComponentMove"
+          @terminal-click="handleTerminalClick"
         />
       </v-layer>
     </v-stage>
@@ -59,6 +61,19 @@ import { ref, computed, onMounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
+import { ComponentType } from '@/types/circuit'
+import type { Resistor, VoltageSource, Ground, Position } from '@/types/circuit'
+
+interface Props {
+  selectedTool?: ComponentType | null
+}
+
+interface Emits {
+  (e: 'component-placed'): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 
 // Stage configuration
 const stageConfig = ref({
@@ -98,10 +113,78 @@ const dragTarget = ref<string | null>(null)
 
 // Event handlers
 function handleStageClick(e: KonvaEventObject<MouseEvent>) {
-  // If clicking on empty space, clear selection
-  if (e.target === e.target.getStage()) {
+  // Check if we clicked on the background (stage or grid elements)
+  const isBackground =
+    e.target === e.target.getStage() ||
+    e.target.name() === 'grid-background' ||
+    e.target.className === 'Rect' ||
+    e.target.className === 'Line'
+
+  // If clicking on background and a tool is selected, place component
+  if (isBackground && props.selectedTool) {
+    const pos = e.target.getStage()?.getPointerPosition()
+    if (pos) {
+      // Snap to grid
+      const snappedPos = {
+        x: Math.round(pos.x / gridSize) * gridSize,
+        y: Math.round(pos.y / gridSize) * gridSize,
+      }
+      addComponentAtPosition(props.selectedTool, snappedPos)
+      emit('component-placed')
+    }
+  } else if (isBackground) {
+    // If no tool selected and clicking on background, clear selection and cancel wiring
     circuitStore.clearSelection()
+    circuitStore.cancelWiring()
   }
+}
+
+function addComponentAtPosition(type: ComponentType, position: { x: number; y: number }) {
+  const id = circuitStore.generateComponentId(type)
+
+  const baseComponent = {
+    id,
+    type,
+    position,
+    rotation: 0,
+    selected: false,
+  }
+
+  let component
+
+  switch (type) {
+    case ComponentType.RESISTOR:
+      component = {
+        ...baseComponent,
+        type: ComponentType.RESISTOR,
+        resistance: { value: 1000, unit: 'Ω' },
+        terminals: [`${id}_1`, `${id}_2`],
+      } as Resistor
+      break
+
+    case ComponentType.VOLTAGE_SOURCE:
+      component = {
+        ...baseComponent,
+        type: ComponentType.VOLTAGE_SOURCE,
+        voltage: { value: 5, unit: 'V' },
+        sourceType: 'dc' as const,
+        terminals: [`${id}_pos`, `${id}_neg`],
+      } as VoltageSource
+      break
+
+    case ComponentType.GROUND:
+      component = {
+        ...baseComponent,
+        type: ComponentType.GROUND,
+        terminal: `${id}_gnd`,
+      } as Ground
+      break
+
+    default:
+      return
+  }
+
+  circuitStore.addComponent(component)
 }
 
 function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
@@ -131,6 +214,19 @@ function handleComponentMove(componentId: string, startDrag: boolean) {
   if (startDrag) {
     isDragging.value = true
     dragTarget.value = componentId
+  }
+}
+
+function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
+  // Calculate world position (component position + terminal offset)
+  const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId)
+  if (component) {
+    const worldPosition = {
+      x: component.position.x + position.x,
+      y: component.position.y + position.y,
+    }
+
+    circuitStore.selectTerminal(terminalId, componentId, worldPosition)
   }
 }
 

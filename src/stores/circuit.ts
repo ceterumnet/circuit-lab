@@ -3,13 +3,14 @@ import { ref, computed } from 'vue'
 import type {
   Circuit,
   CircuitComponent,
-  ComponentType,
   Position,
   SimulationResult,
   Resistor,
   VoltageSource,
   Ground,
+  Wire,
 } from '@/types/circuit'
+import { ComponentType } from '@/types/circuit'
 
 export const useCircuitStore = defineStore('circuit', () => {
   // State
@@ -23,6 +24,14 @@ export const useCircuitStore = defineStore('circuit', () => {
   const selectedComponentId = ref<string | null>(null)
   const isSimulating = ref(false)
   const simulationResults = ref<SimulationResult | null>(null)
+
+  // Wire connection state
+  const selectedTerminal = ref<{
+    terminalId: string
+    componentId: string
+    position: Position
+  } | null>(null)
+  const isWiringMode = ref(false)
 
   // Getters
   const selectedComponent = computed(() => {
@@ -121,12 +130,64 @@ export const useCircuitStore = defineStore('circuit', () => {
     }, 1000)
   }
 
+  // Wire connection functions
+  function selectTerminal(terminalId: string, componentId: string, position: Position) {
+    if (!selectedTerminal.value) {
+      // First terminal selected - start wire
+      selectedTerminal.value = { terminalId, componentId, position }
+      isWiringMode.value = true
+    } else {
+      // Second terminal selected - complete wire
+      const startTerminal = selectedTerminal.value
+      const endTerminal = { terminalId, componentId, position }
+
+      // Don't allow connecting to same terminal or same component
+      if (
+        startTerminal.terminalId !== endTerminal.terminalId &&
+        startTerminal.componentId !== endTerminal.componentId
+      ) {
+        createWire(startTerminal, endTerminal)
+      }
+
+      // Reset wire mode
+      selectedTerminal.value = null
+      isWiringMode.value = false
+    }
+  }
+
+  function createWire(
+    startTerminal: { terminalId: string; componentId: string; position: Position },
+    endTerminal: { terminalId: string; componentId: string; position: Position },
+  ) {
+    const wireId = generateComponentId(ComponentType.WIRE)
+
+    const wire = {
+      id: wireId,
+      type: ComponentType.WIRE,
+      position: { x: 0, y: 0 }, // Wires don't have a single position
+      rotation: 0,
+      selected: false,
+      startTerminal: startTerminal.terminalId,
+      endTerminal: endTerminal.terminalId,
+      points: [startTerminal.position, endTerminal.position],
+    } as Wire
+
+    addComponent(wire)
+  }
+
+  function cancelWiring() {
+    selectedTerminal.value = null
+    isWiringMode.value = false
+  }
+
   return {
     // State
     currentCircuit,
     selectedComponentId,
     isSimulating,
     simulationResults,
+    selectedTerminal,
+    isWiringMode,
 
     // Getters
     selectedComponent,
@@ -142,5 +203,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     generateComponentId,
     clearCircuit,
     startSimulation,
+    selectTerminal,
+    cancelWiring,
   }
 })

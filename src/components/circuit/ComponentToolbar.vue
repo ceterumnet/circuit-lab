@@ -33,11 +33,6 @@
         <span class="button-label">Clear</span>
       </button>
     </div>
-
-    <div class="toolbar-section" v-if="circuitStore.selectedComponent">
-      <h4>Properties</h4>
-      <component-properties :component="circuitStore.selectedComponent" />
-    </div>
   </div>
 </template>
 
@@ -45,7 +40,6 @@
 import { ref } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { ComponentType } from '@/types/circuit'
-import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 
 const circuitStore = useCircuitStore()
 
@@ -94,11 +88,11 @@ function clearCircuit() {
 
 <style scoped>
 .component-toolbar {
-  width: 250px;
+  width: 180px;
   height: 100%;
   background: #f8f9fa;
   border-right: 1px solid #dee2e6;
-  padding: 1rem;
+  padding: 0.75rem;
   overflow-y: auto;
 }
 

@@ -47,25 +47,17 @@
     />
 
     <!-- Connection terminals -->
-    <v-circle
-      :config="{
-        x: -30,
-        y: 0,
-        radius: 3,
-        fill: '#666',
-        stroke: '#333',
-        strokeWidth: 1,
-      }"
+    <circuit-terminal
+      :terminal-id="component.terminals[0]"
+      :position="{ x: -30, y: 0 }"
+      :component-id="component.id"
+      @terminal-click="handleTerminalClick"
     />
-    <v-circle
-      :config="{
-        x: 30,
-        y: 0,
-        radius: 3,
-        fill: '#666',
-        stroke: '#333',
-        strokeWidth: 1,
-      }"
+    <circuit-terminal
+      :terminal-id="component.terminals[1]"
+      :position="{ x: 30, y: 0 }"
+      :component-id="component.id"
+      @terminal-click="handleTerminalClick"
     />
 
     <!-- Connection lines -->
@@ -111,7 +103,8 @@
 </template>
 
 <script setup lang="ts">
-import type { VoltageSource } from '@/types/circuit'
+import type { VoltageSource, Position } from '@/types/circuit'
+import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 
 interface Props {
   component: VoltageSource
@@ -120,6 +113,7 @@ interface Props {
 interface Emits {
   (e: 'select'): void
   (e: 'dragstart'): void
+  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
 }
 
 defineProps<Props>()
@@ -131,5 +125,9 @@ function handleClick() {
 
 function handleDragStart() {
   emit('dragstart')
+}
+
+function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-click', terminalId, componentId, position)
 }
 </script>

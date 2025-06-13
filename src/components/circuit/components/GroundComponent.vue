@@ -43,15 +43,11 @@
     />
 
     <!-- Connection terminal -->
-    <v-circle
-      :config="{
-        x: 0,
-        y: -15,
-        radius: 3,
-        fill: '#666',
-        stroke: '#333',
-        strokeWidth: 1,
-      }"
+    <circuit-terminal
+      :terminal-id="component.terminal"
+      :position="{ x: 0, y: -15 }"
+      :component-id="component.id"
+      @terminal-click="handleTerminalClick"
     />
 
     <!-- Component label -->
@@ -69,7 +65,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Ground } from '@/types/circuit'
+import type { Ground, Position } from '@/types/circuit'
+import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 
 interface Props {
   component: Ground
@@ -78,6 +75,7 @@ interface Props {
 interface Emits {
   (e: 'select'): void
   (e: 'dragstart'): void
+  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
 }
 
 defineProps<Props>()
@@ -89,5 +87,9 @@ function handleClick() {
 
 function handleDragStart() {
   emit('dragstart')
+}
+
+function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-click', terminalId, componentId, position)
 }
 </script>

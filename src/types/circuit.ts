@@ -9,6 +9,14 @@ export interface ComponentValue {
   unit: string
 }
 
+// Component types enum - must be declared before interfaces that use it
+export enum ComponentType {
+  RESISTOR = 'resistor',
+  VOLTAGE_SOURCE = 'voltage_source',
+  WIRE = 'wire',
+  GROUND = 'ground',
+}
+
 // Base component interface
 export interface CircuitComponent {
   id: string
@@ -17,13 +25,6 @@ export interface CircuitComponent {
   rotation: number
   label?: string
   selected: boolean
-}
-
-export enum ComponentType {
-  RESISTOR = 'resistor',
-  VOLTAGE_SOURCE = 'voltage_source',
-  WIRE = 'wire',
-  GROUND = 'ground',
 }
 
 // Specific component types
