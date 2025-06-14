@@ -9,6 +9,7 @@
         lineCap: 'round',
       }"
       @click="handleClick"
+      @dblclick="handleDoubleClick"
     />
 
     <!-- Selection indicator -->
@@ -37,6 +38,7 @@ interface Props {
 
 interface Emits {
   (e: 'select'): void
+  (e: 'delete'): void
 }
 
 const props = defineProps<Props>()
@@ -46,11 +48,22 @@ const wirePoints = computed(() => {
   const start = props.startPosition
   const end = props.endPosition
 
+  console.log('🔗 WireComponent rendering:', {
+    wireId: props.component.id,
+    startPos: start,
+    endPos: end,
+    points: [start.x, start.y, end.x, end.y],
+  })
+
   // Simple straight line for now
   return [start.x, start.y, end.x, end.y]
 })
 
 function handleClick() {
   emit('select')
+}
+
+function handleDoubleClick() {
+  emit('delete')
 }
 </script>

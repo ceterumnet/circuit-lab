@@ -49,7 +49,35 @@
           :component="component"
           @select="handleComponentSelect"
           @move="handleComponentMove"
-          @terminal-click="handleTerminalClick"
+          @terminal-click="
+            (terminalId, componentId) => handleTerminalClick(terminalId, componentId)
+          "
+          @terminal-drag-start="
+            (terminalId, componentId) => handleTerminalDragStart(terminalId, componentId)
+          "
+          @terminal-drag-move="handleTerminalDragMove"
+          @terminal-drag-end="handleTerminalDragEnd"
+          @wire-delete="handleWireDelete"
+        />
+
+        <!-- Drag connection preview -->
+        <v-line
+          v-if="
+            circuitStore.dragConnectionState.isActive &&
+            circuitStore.dragConnectionState.startTerminal &&
+            circuitStore.dragConnectionState.currentPosition
+          "
+          :config="{
+            points: [
+              circuitStore.dragConnectionState.startTerminal.position.x,
+              circuitStore.dragConnectionState.startTerminal.position.y,
+              circuitStore.dragConnectionState.currentPosition.x,
+              circuitStore.dragConnectionState.currentPosition.y,
+            ],
+            stroke: '#007bff',
+            strokeWidth: 2,
+            dash: [5, 5],
+          }"
         />
       </v-layer>
     </v-stage>
@@ -57,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
@@ -217,16 +245,74 @@ function handleComponentMove(componentId: string, startDrag: boolean) {
   }
 }
 
-function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
-  // Calculate world position (component position + terminal offset)
+function handleTerminalClick(terminalId: string, componentId: string) {
+  // For rotated components, we need to calculate the world position using the rotation-aware method
   const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId)
   if (component) {
-    const worldPosition = {
-      x: component.position.x + position.x,
-      y: component.position.y + position.y,
+    const worldPosition = circuitStore.getTerminalWorldPosition(component, terminalId)
+    circuitStore.selectTerminal(terminalId, componentId, worldPosition)
+  }
+}
+
+function handleTerminalDragStart(terminalId: string, componentId: string) {
+  const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId)
+  if (component) {
+    // Get the local terminal position and pass it to the store
+    let localOffset: Position
+
+    switch (component.type) {
+      case ComponentType.RESISTOR:
+      case ComponentType.VOLTAGE_SOURCE: {
+        const terminals = (component as Resistor | VoltageSource).terminals
+        const terminalIndex = terminals.indexOf(terminalId)
+        const offsetX = terminalIndex === 0 ? -30 : 30
+        localOffset = { x: offsetX, y: 0 }
+        break
+      }
+      case ComponentType.GROUND: {
+        localOffset = { x: 0, y: -15 }
+        break
+      }
+      default:
+        localOffset = { x: 0, y: 0 }
     }
 
-    circuitStore.selectTerminal(terminalId, componentId, worldPosition)
+    circuitStore.startDragConnection(terminalId, componentId, localOffset)
+  }
+}
+
+function handleTerminalDragMove(terminalId: string, componentId: string, position: Position) {
+  circuitStore.updateDragConnection(position)
+}
+
+function handleTerminalDragEnd(terminalId: string, componentId: string, position: Position) {
+  // Check if we're ending on a terminal
+  const targetTerminal = circuitStore.findTerminalAtPosition(position)
+
+  if (targetTerminal) {
+    // End drag on a terminal - create connection
+    circuitStore.finishDragConnection(
+      targetTerminal.terminalId,
+      targetTerminal.componentId,
+      targetTerminal.position,
+    )
+  } else {
+    // End drag in empty space - cancel connection
+    circuitStore.cancelDragConnection()
+  }
+}
+
+function handleWireDelete(wireId: string) {
+  circuitStore.deleteWire(wireId)
+}
+
+// Keyboard event handler
+function handleKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    circuitStore.deleteSelectedComponent()
+  } else if (e.key === 'Escape') {
+    circuitStore.cancelWiring()
+    circuitStore.clearSelection()
   }
 }
 
@@ -241,6 +327,14 @@ onMounted(() => {
     })
     resizeObserver.observe(container)
   }
+
+  // Add keyboard event listeners
+  document.addEventListener('keydown', handleKeyDown)
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 

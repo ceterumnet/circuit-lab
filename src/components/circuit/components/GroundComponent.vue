@@ -8,6 +8,8 @@
     }"
     @click="handleClick"
     @dragstart="handleDragStart"
+    @dragmove="handleDragMove"
+    @dragend="handleDragEnd"
   >
     <!-- Ground symbol -->
     <!-- Vertical line -->
@@ -48,6 +50,9 @@
       :position="{ x: 0, y: -15 }"
       :component-id="component.id"
       @terminal-click="handleTerminalClick"
+      @terminal-drag-start="handleTerminalDragStart"
+      @terminal-drag-move="handleTerminalDragMove"
+      @terminal-drag-end="handleTerminalDragEnd"
     />
 
     <!-- Component label -->
@@ -75,7 +80,12 @@ interface Props {
 interface Emits {
   (e: 'select'): void
   (e: 'dragstart'): void
+  (e: 'dragmove', position: Position): void
+  (e: 'dragend', position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-drag-start', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-drag-move', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-drag-end', terminalId: string, componentId: string, position: Position): void
 }
 
 defineProps<Props>()
@@ -89,7 +99,35 @@ function handleDragStart() {
   emit('dragstart')
 }
 
+function handleDragMove(e: { target: { x(): number; y(): number } }) {
+  const newPosition = {
+    x: e.target.x(), // Don't snap during drag for smooth movement
+    y: e.target.y(),
+  }
+  emit('dragmove', newPosition)
+}
+
+function handleDragEnd(e: { target: { x(): number; y(): number } }) {
+  const newPosition = {
+    x: Math.round(e.target.x() / 20) * 20, // Snap to grid on end
+    y: Math.round(e.target.y() / 20) * 20,
+  }
+  emit('dragend', newPosition)
+}
+
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
   emit('terminal-click', terminalId, componentId, position)
+}
+
+function handleTerminalDragStart(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-drag-start', terminalId, componentId, position)
+}
+
+function handleTerminalDragMove(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-drag-move', terminalId, componentId, position)
+}
+
+function handleTerminalDragEnd(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-drag-end', terminalId, componentId, position)
 }
 </script>

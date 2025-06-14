@@ -6,6 +6,11 @@
     </div>
 
     <div class="property-item">
+      <label>Type:</label>
+      <span class="property-value">{{ getComponentTypeName(component.type) }}</span>
+    </div>
+
+    <div class="property-item">
       <label for="component-label">Label:</label>
       <input
         id="component-label"
@@ -72,7 +77,13 @@
       </div>
     </template>
 
-    <div class="property-item">
+    <!-- Wire specific properties -->
+    <template v-else-if="component.type === ComponentType.WIRE">
+      <!-- Wires don't have additional properties beyond delete -->
+    </template>
+
+    <!-- Common properties for non-wire components -->
+    <div v-if="component.type !== ComponentType.WIRE" class="property-item">
       <label for="rotation">Rotation:</label>
       <input
         id="rotation"
@@ -84,6 +95,13 @@
         step="90"
         @blur="updateRotation"
       />
+    </div>
+
+    <!-- Delete button for all components -->
+    <div class="property-item">
+      <button class="delete-button" @click="deleteComponent">
+        🗑️ Delete {{ getComponentTypeName(component.type) }}
+      </button>
     </div>
   </div>
 </template>
@@ -183,6 +201,25 @@ function updateSourceType() {
     })
   }
 }
+
+function deleteComponent() {
+  circuitStore.removeComponent(props.component.id)
+}
+
+function getComponentTypeName(type: ComponentType): string {
+  switch (type) {
+    case ComponentType.RESISTOR:
+      return 'Resistor'
+    case ComponentType.VOLTAGE_SOURCE:
+      return 'Voltage Source'
+    case ComponentType.GROUND:
+      return 'Ground'
+    case ComponentType.WIRE:
+      return 'Wire'
+    default:
+      return 'Component'
+  }
+}
 </script>
 
 <style scoped>
@@ -252,6 +289,27 @@ function updateSourceType() {
   outline: none;
   border-color: #80bdff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.delete-button {
+  padding: 0.5rem 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  width: 100%;
+}
+
+.delete-button:hover {
+  background: #c82333;
+}
+
+.delete-button:active {
+  background: #a71e2a;
 }
 
 .property-input {
