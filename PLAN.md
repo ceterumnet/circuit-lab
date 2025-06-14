@@ -39,7 +39,7 @@ Building a web-based circuit simulation application focused on educational purpo
 
 ## Development Phases
 
-### Phase 1 - Basic Circuit Elements
+### Phase 1 - Basic Circuit Elements ✅ COMPLETED
 
 **Goal**: Foundation with simple DC circuits
 
@@ -48,18 +48,22 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] Resistors with value editing - UI components created
 - [x] Ground components
 - [x] Component toolbar for selection and placement
-- [x] Basic circuit canvas (placeholder implementation)
+- [x] Basic circuit canvas with Konva integration
 - [x] Component properties panel
 - [x] State management with Pinia store
-- [ ] Wire connections
-- [ ] Basic plotting of voltage/current vs time
-- [ ] Basic Ohm's law calculations
-- [ ] Drag-and-drop functionality with Konva canvas
+- [x] Wire connections with drag-to-connect functionality
+- [x] Node system for circuit junctions
+- [x] Drag-and-drop functionality with Konva canvas
+- [x] Component rotation support
+- [x] Visual feedback during wire creation
+- [x] Complex circuit topology support (voltage dividers, etc.)
 
 ### Phase 2 - Passive Components
 
 **Goal**: AC analysis and energy storage elements
 
+- [ ] Basic plotting of voltage/current vs time
+- [ ] Basic Ohm's law calculations
 - [ ] Capacitors and inductors
 - [ ] AC analysis (frequency response)
 - [ ] Bode plots
@@ -110,7 +114,7 @@ Building a web-based circuit simulation application focused on educational purpo
 
 ### Visualization & Interaction
 
-- **Circuit Drawing**: Konva.js or Fabric.js for interactive canvas
+- **Circuit Drawing**: Konva.js ✅ (fully integrated with interactive canvas)
 - **Plotting**: Chart.js or D3.js for waveforms and analysis plots
 - **UI Components**: Consider Vuetify or PrimeVue for component library
 - **Styling**: Tailwind CSS for rapid UI development
@@ -141,7 +145,7 @@ Building a web-based circuit simulation application focused on educational purpo
 ```
 src/
 ├── components/
-│   ├── circuit/          # Circuit drawing and interaction
+│   ├── circuit/          # Circuit drawing and interaction ✅
 │   ├── simulation/       # Simulation engine components
 │   ├── plotting/         # Waveform and analysis plots
 │   └── ui/              # Common UI components
@@ -149,8 +153,8 @@ src/
 │   ├── simulation/       # Core simulation algorithms
 │   ├── circuit/         # Circuit model and analysis
 │   └── math/            # Mathematical utilities
-├── stores/              # Pinia stores for state management
-├── views/               # Main application views
+├── stores/              # Pinia stores for state management ✅
+├── views/               # Main application views ✅
 └── utils/               # Utility functions
 ```
 
@@ -205,141 +209,196 @@ src/
 
 ## Current Progress Status
 
-### ✅ Completed (Phase 1 Foundation)
+### ✅ Completed (Phase 1 - Circuit Foundation)
 
 #### Project Setup & Architecture
 
 - [x] Vue 3 + TypeScript + Vite project initialized
-- [x] Konva.js and vue-konva installed for canvas interactions
+- [x] Konva.js and vue-konva fully integrated for interactive canvas
 - [x] Clean application layout focused on circuit editor
 - [x] Router setup with circuit editor as default route
 
+#### Advanced Circuit Interaction System
+
+- [x] **Drag-to-Connect Wire System**: Complete replacement of click-to-connect with intuitive drag-and-drop
+  - Drag from any terminal to any other terminal to create connections
+  - Drag from terminal to empty space to create free-form wires with automatic nodes
+  - Visual feedback during drag operations (green terminals, preview lines)
+  - Proper handling of rotated components with rotation-aware terminal positioning
+
+#### Node System & Circuit Junctions
+
+- [x] **Unified Component Architecture**: Nodes implemented as regular components with single terminals
+  - Consistent terminal-based connection system across all components
+  - Automatic node creation when dragging wires to empty space
+  - Manual node placement via Node tool in toolbar
+  - Support for complex circuit topologies (voltage dividers, multi-point connections)
+
+#### Component System & Rotation
+
+- [x] **Component Rotation Support**: All components can be rotated with proper terminal positioning
+  - Rotation-aware wire connections that follow rotated components
+  - Fixed double-rotation bug in terminal positioning calculations
+  - Proper drag start positions for rotated component terminals
+
 #### Type System & Data Models
 
-- [x] TypeScript interfaces for all circuit components:
-  - `CircuitComponent` base interface
-  - `Resistor`, `VoltageSource`, `Ground` specific types
+- [x] **Comprehensive TypeScript Architecture**:
+  - `CircuitComponent` base interface with rotation support
+  - `Resistor`, `VoltageSource`, `Ground`, `CircuitNode` specific types
+  - `Wire` interface with flexible connection options (terminal-to-terminal, terminal-to-position)
   - `Position`, `ComponentValue` utility types
   - `SimulationResult` and `Circuit` container types
-- [x] Component type enumeration with extensible design
 
 #### State Management
 
-- [x] Pinia store (`useCircuitStore`) with complete API:
-  - Component CRUD operations (add, remove, update, select)
-  - Circuit management (clear, load, save state)
-  - Component ID generation system
-  - Selection management
-  - Mock simulation state handling
+- [x] **Advanced Pinia Store** (`useCircuitStore`) with complete wire management:
+  - Component CRUD operations with rotation support
+  - Drag connection state management with visual preview
+  - Wire creation and management (terminal-to-terminal, free-form)
+  - Node creation and positioning with grid snapping
+  - Terminal world position calculations with rotation handling
+  - Component selection and property management
 
 #### UI Components Built
 
-- [x] **CircuitEditor.vue** - Main application view
-- [x] **ComponentToolbar.vue** - Tool selection and actions sidebar
-- [x] **ComponentProperties.vue** - Dynamic property editing panel
-- [x] **CircuitCanvas.vue** - Canvas wrapper (placeholder implementation)
-- [x] **CircuitComponent.vue** - Component renderer dispatcher
+- [x] **CircuitEditor.vue** - Main application view with full interaction support
+- [x] **ComponentToolbar.vue** - Tool selection including Node tool
+- [x] **ComponentProperties.vue** - Dynamic property editing with rotation controls
+- [x] **CircuitCanvas.vue** - Full Konva integration with drag handling
+- [x] **CircuitComponent.vue** - Component renderer with drag and terminal events
+- [x] **CircuitTerminal.vue** - Interactive terminal component with drag support
 
 #### Visual Component Implementations
 
-- [x] **ResistorComponent.vue** - Zigzag resistor symbol with terminals
-- [x] **VoltageSourceComponent.vue** - Circle with +/- symbols and terminals
-- [x] **GroundComponent.vue** - Standard ground symbol with terminal
+- [x] **ResistorComponent.vue** - Zigzag resistor with draggable terminals
+- [x] **VoltageSourceComponent.vue** - Circle with +/- symbols and draggable terminals
+- [x] **GroundComponent.vue** - Standard ground symbol with draggable terminal
+- [x] **NodeComponent.vue** - Small circle junction point with single terminal
+- [x] **WireComponent.vue** - Dynamic wire rendering with real-time position updates
 
-#### Features Working
+#### Advanced Features Working
 
-- [x] Component placement by tool selection + canvas click
-- [x] Component selection and highlighting
-- [x] Dynamic property editing (resistance values, voltage, units)
-- [x] Component deletion
-- [x] Real-time component count display
-- [x] Simulation status indicators
-- [x] Component list view with selection
+- [x] **Interactive Circuit Building**:
 
-### 🚧 In Progress / Next Up
+  - Component placement by tool selection + canvas click
+  - Drag-and-drop component movement with grid snapping
+  - Drag-to-connect wire creation between any terminals
+  - Automatic node creation for circuit junctions
+  - Component rotation with proper wire following
+  - Component selection and highlighting
+  - Dynamic property editing (resistance, voltage, rotation)
+  - Component deletion with wire cleanup
 
-#### Immediate Next Steps (Current Phase 1)
+- [x] **Visual Feedback System**:
+  - Terminal highlighting during drag operations
+  - Wire preview lines during connection creation
+  - Component selection indicators
+  - Grid snapping visual feedback
+  - Real-time wire position updates when components move
 
-- [ ] **Replace placeholder canvas with Konva implementation**
+### 🚧 Next Phase - Basic Simulation Engine
 
-  - Integrate `CircuitCanvas.vue` with actual Konva components
-  - Enable visual component rendering on canvas
-  - Implement grid snapping and visual feedback
+#### Immediate Next Steps (Phase 2 Start)
 
-- [ ] **Drag & Drop Functionality**
+- [ ] **DC Circuit Analysis Engine**
 
-  - Mouse-based component movement
-  - Visual feedback during dragging
-  - Collision detection and constraints
+  - Node voltage calculation using modified nodal analysis
+  - Current flow computation through components
+  - Basic Ohm's law implementation for resistor networks
+  - Voltage divider analysis and verification
 
-- [ ] **Wire Connection System**
-  - Terminal-to-terminal wire drawing
-  - Visual wire representation
-  - Connection validation
+- [ ] **Simulation Results Display**
 
-#### Basic Simulation Engine
+  - Voltage and current value overlays on components
+  - Simple bar charts or numeric displays
+  - Real-time updates as circuit is modified
+  - Error handling for invalid circuits (shorts, open circuits)
 
-- [ ] **DC Circuit Analysis**
-  - Node voltage calculation
-  - Current flow computation
-  - Basic Ohm's law implementation
-  - Voltage divider analysis
+- [ ] **Basic Plotting System**
+  - Voltage vs position plots for resistor networks
+  - Current flow visualization
+  - Component value charts
+  - Integration with Chart.js or similar library
 
-### 📋 Remaining Phase 1 Tasks
+### 📋 Remaining Phase 2 Tasks
 
-1. **Canvas Integration** (Priority: High)
+1. **Circuit Analysis** (Priority: High)
 
-   - Replace `canvas-placeholder` with actual Konva stage
-   - Fix component rendering on canvas
-   - Implement visual component dragging
+   - Implement modified nodal analysis algorithm
+   - Handle ground reference and floating nodes
+   - Calculate steady-state DC solutions
 
-2. **Wire Connections** (Priority: High)
+2. **Results Visualization** (Priority: High)
 
-   - Terminal identification and highlighting
-   - Wire drawing between terminals
-   - Connection state management
+   - Overlay voltage/current values on circuit
+   - Color-coded voltage levels
+   - Current flow direction indicators
 
-3. **Basic Simulation** (Priority: Medium)
+3. **Plotting Integration** (Priority: Medium)
 
-   - Simple DC analysis for resistor networks
-   - Voltage/current calculations
-   - Results display
+   - Add Chart.js or D3.js for data visualization
+   - Create voltage/current vs time plots
+   - Parameter sweep visualization
 
-4. **Basic Plotting** (Priority: Low)
-   - Voltage vs position plots
-   - Current flow visualization
-   - Simple bar charts for component values
+4. **Circuit Validation** (Priority: Medium)
+   - Detect and handle circuit errors
+   - Validate component connections
+   - Provide helpful error messages
 
 ### 📝 Development Notes
 
 #### Architecture Decisions Made
 
-- **Component System**: Modular design with separate visual components for each circuit element
-- **State Management**: Centralized Pinia store with reactive updates
-- **Canvas Strategy**: Konva.js for interactive 2D graphics (installed but not yet integrated)
-- **Styling**: Custom CSS with clean, professional appearance
-- **Type Safety**: Comprehensive TypeScript coverage for all circuit data
+- **Unified Component System**: All components (including nodes) use consistent terminal-based connections
+- **Drag-to-Connect**: Intuitive wire creation replacing complex multi-click workflows
+- **Rotation Support**: Full rotation handling with proper terminal positioning calculations
+- **Real-time Updates**: Wires dynamically follow components as they move
+- **Grid Snapping**: Consistent 20px grid for clean circuit layouts
+
+#### Key Technical Achievements
+
+- **Solved Double-Rotation Bug**: Fixed terminal positioning for rotated components
+- **Unified Node Architecture**: Nodes as regular components with terminals (not special cases)
+- **Dynamic Wire Positioning**: Wires calculate positions in real-time from component positions
+- **Comprehensive Drag System**: Full drag-and-drop for both components and wire creation
 
 #### Code Quality
 
-- ✅ ESLint configuration active and errors resolved
-- ✅ Consistent Vue 3 Composition API usage
-- ✅ Proper TypeScript typing throughout
-- ✅ Modular component architecture
-- ✅ Clean separation of concerns
+- ✅ ESLint configuration active (only unrelated config errors remain)
+- ✅ Consistent Vue 3 Composition API usage throughout
+- ✅ Comprehensive TypeScript typing with no 'any' types
+- ✅ Modular component architecture with clear separation
+- ✅ Memory system for preserving architectural decisions
 
 #### Testing Setup
 
 - ✅ Vitest configured for unit testing
 - ✅ Cypress configured for e2e testing
-- [ ] Actual tests written (TODO)
+- [ ] Comprehensive test suite (TODO for Phase 2)
 
-### 🎯 Week-by-Week Plan (Updated)
+### 🎯 Updated Development Roadmap
 
-1. **This Week**: Complete Konva canvas integration and drag & drop
-2. **Next Week**: Wire connection system and terminal management
-3. **Week 3**: Basic DC simulation engine (Ohm's law, voltage dividers)
-4. **Week 4**: Simple plotting and visualization of results
+**Phase 1**: ✅ **COMPLETE** - Interactive Circuit Building
+
+- Full drag-to-connect wire system
+- Node-based circuit junctions
+- Component rotation and movement
+- Visual feedback and grid snapping
+
+**Phase 2**: 🚧 **STARTING** - Basic Simulation Engine
+
+- DC circuit analysis (modified nodal analysis)
+- Voltage/current calculation and display
+- Basic plotting and visualization
+- Circuit validation and error handling
+
+**Phase 3**: 📋 **PLANNED** - Advanced Components
+
+- Capacitors and inductors
+- AC analysis capabilities
+- Time-domain simulation
+- Frequency response analysis
 
 ## Resources & References
 
@@ -347,27 +406,42 @@ src/
 - [ngspice Documentation](https://ngspice.sourceforge.io/docs.html)
 - [SPICE Circuit Simulation](https://en.wikipedia.org/wiki/SPICE)
 - [Electronic Circuit Analysis](https://www.allaboutcircuits.com/)
+- [Modified Nodal Analysis](https://en.wikipedia.org/wiki/Modified_nodal_analysis)
 
 ---
 
-## 📸 Current Screenshot Status
+## 📸 Current Application Status
 
-**Application Layout**: ✅ Clean, professional interface
-**Component Toolbar**: ✅ Working with Resistor, Voltage Source, Ground tools
-**Canvas Area**: ⚠️ Placeholder implementation (needs Konva integration)
-**Property Panel**: ✅ Dynamic editing for selected components
-**Navigation**: ✅ Circuit editor as default route
+**Application Layout**: ✅ Professional interface with full Konva integration
+**Component Toolbar**: ✅ Complete with Resistor, Voltage Source, Ground, Node, Wire tools
+**Interactive Canvas**: ✅ Full drag-and-drop with wire creation and component movement
+**Property Panel**: ✅ Dynamic editing including rotation controls
+**Wire System**: ✅ Drag-to-connect with automatic node creation
+**Circuit Junctions**: ✅ Node-based junction system supporting complex topologies
 
 **Demo Instructions**:
 
-1. Navigate to `http://localhost:5173/` (auto-redirects to circuit editor)
-2. Select a component tool from the left sidebar
-3. Click on the canvas area to place components
-4. Click on components in the list to select and edit properties
-5. Use delete buttons to remove components
+1. Navigate to `http://localhost:5176/` (circuit editor)
+2. Select component tools and click to place on canvas
+3. Drag components to move them around (with grid snapping)
+4. Drag from any terminal to another terminal to create wires
+5. Drag from terminal to empty space to create wire + automatic node
+6. Use Node tool to manually place junction points
+7. Rotate components using property panel
+8. Build complex circuits like voltage dividers with multiple connection points
+
+**Key Features Demonstrated**:
+
+- Intuitive drag-to-connect wire creation
+- Automatic junction node creation
+- Component rotation with proper wire following
+- Real-time wire position updates
+- Grid snapping and visual feedback
+- Complex circuit topology support
 
 ---
 
 _Last Updated: January 2025_
 _Project: Circuit Lab - Educational Circuit Simulator_
-_Status: Phase 1 Foundation Complete - Ready for Konva Canvas Integration_
+_Status: Phase 1 Complete - Advanced Circuit Building System Implemented_
+_Next: Phase 2 - Basic DC Simulation Engine_
