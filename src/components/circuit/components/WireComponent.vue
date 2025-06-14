@@ -28,12 +28,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Wire } from '@/types/circuit'
+import type { Wire, Position } from '@/types/circuit'
 
 interface Props {
   component: Wire
-  startPosition: { x: number; y: number }
-  endPosition: { x: number; y: number }
+  startPosition?: Position
+  endPosition?: Position
 }
 
 interface Emits {
@@ -45,13 +45,16 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const wirePoints = computed(() => {
-  const start = props.startPosition
-  const end = props.endPosition
+  // Use the provided positions if available, otherwise fall back to component's stored positions
+  const start = props.startPosition || props.component.startPosition || { x: 0, y: 0 }
+  const end = props.endPosition || props.component.endPosition || { x: 0, y: 0 }
 
   console.log('🔗 WireComponent rendering:', {
     wireId: props.component.id,
     startPos: start,
     endPos: end,
+    hasStartTerminal: !!props.component.startTerminal,
+    hasEndTerminal: !!props.component.endTerminal,
     points: [start.x, start.y, end.x, end.y],
   })
 

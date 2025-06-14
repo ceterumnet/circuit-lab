@@ -9,6 +9,7 @@ import type {
   VoltageSource,
   Ground,
   Wire,
+  CircuitNode,
 } from '@/types/circuit'
 import { ComponentType } from '@/types/circuit'
 
@@ -197,14 +198,11 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   // Drag connection functions
-  function startDragConnection(terminalId: string, componentId: string, position: Position) {
-    // Calculate world position (component position + terminal offset)
+  function startDragConnection(terminalId: string, componentId: string) {
+    // Use the rotation-aware terminal position calculation
     const component = currentCircuit.value.components.find((c) => c.id === componentId)
     if (component) {
-      const worldPosition = {
-        x: component.position.x + position.x,
-        y: component.position.y + position.y,
-      }
+      const worldPosition = getTerminalWorldPosition(component, terminalId)
 
       dragConnectionState.value = {
         isActive: true,
@@ -250,6 +248,112 @@ export const useCircuitStore = defineStore('circuit', () => {
     cancelDragConnection()
   }
 
+  function finishDragConnectionToNode(nodeId: string) {
+    if (!dragConnectionState.value.startTerminal) return
+
+    // Find the node component
+    const node = currentCircuit.value.components.find((c) => c.id === nodeId) as CircuitNode
+    if (!node) return
+
+    // Create wire connecting to the node's terminal
+    createWire(dragConnectionState.value.startTerminal, {
+      terminalId: node.terminal,
+      componentId: nodeId,
+      position: node.position,
+    })
+
+    cancelDragConnection()
+  }
+
+  function finishDragConnectionToPosition(position: Position) {
+    if (!dragConnectionState.value.isActive || !dragConnectionState.value.startTerminal) {
+      cancelDragConnection()
+      return
+    }
+
+    createFreeFormWire(dragConnectionState.value.startTerminal, position)
+    cancelDragConnection()
+  }
+
+  function createFreeFormWire(
+    startTerminal: { terminalId: string; componentId: string; position: Position },
+    endPosition: Position,
+  ) {
+    const wireId = generateComponentId(ComponentType.WIRE)
+
+    const wire = {
+      id: wireId,
+      type: ComponentType.WIRE,
+      position: { x: 0, y: 0 },
+      rotation: 0,
+      selected: false,
+      startTerminal: startTerminal.terminalId,
+      endPosition: endPosition,
+      points: [],
+    } as Wire
+
+    addComponent(wire)
+
+    // Create a node at the end position and connect the wire to it
+    const nodeId = createNodeAtPosition(endPosition)
+    const node = currentCircuit.value.components.find((c) => c.id === nodeId) as CircuitNode
+    if (node) {
+      // Update the wire to connect to the node's terminal
+      wire.endTerminal = node.terminal
+      wire.endPosition = undefined
+    }
+  }
+
+  function createNodeAtPosition(position: Position): string {
+    console.log('🟢 Creating node at position:', position)
+
+    // Snap to grid
+    const snappedPosition = {
+      x: Math.round(position.x / 20) * 20,
+      y: Math.round(position.y / 20) * 20,
+    }
+
+    const nodeId = generateComponentId(ComponentType.NODE)
+    const terminalId = `${nodeId}_terminal`
+
+    console.log('🟢 Generated node ID:', nodeId, 'terminal ID:', terminalId)
+
+    const node = {
+      id: nodeId,
+      type: ComponentType.NODE,
+      position: snappedPosition,
+      rotation: 0,
+      selected: false,
+      terminal: terminalId,
+    } as CircuitNode
+
+    addComponent(node)
+    console.log('🟢 Added node to circuit:', node)
+
+    return nodeId
+  }
+
+  function findNodeAtPosition(position: Position): { nodeId: string; position: Position } | null {
+    for (const component of currentCircuit.value.components) {
+      if (component.type === ComponentType.NODE) {
+        const distance = Math.sqrt(
+          Math.pow(position.x - component.position.x, 2) +
+            Math.pow(position.y - component.position.y, 2),
+        )
+
+        if (distance <= 10) {
+          // Slightly larger radius for nodes
+          return {
+            nodeId: component.id,
+            position: component.position,
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
   function cancelDragConnection() {
     dragConnectionState.value = {
       isActive: false,
@@ -274,6 +378,8 @@ export const useCircuitStore = defineStore('circuit', () => {
         terminals = (component as Resistor | VoltageSource).terminals
       } else if (component.type === ComponentType.GROUND) {
         terminals = [(component as Ground).terminal]
+      } else if (component.type === ComponentType.NODE) {
+        terminals = [(component as CircuitNode).terminal]
       }
 
       for (const terminalId of terminals) {
@@ -300,6 +406,10 @@ export const useCircuitStore = defineStore('circuit', () => {
             }
             case ComponentType.GROUND: {
               localOffset = { x: 0, y: -15 }
+              break
+            }
+            case ComponentType.NODE: {
+              localOffset = { x: 0, y: 0 }
               break
             }
             default:
@@ -337,6 +447,11 @@ export const useCircuitStore = defineStore('circuit', () => {
       case ComponentType.GROUND: {
         // Ground has single terminal at top
         localOffset = { x: 0, y: -15 }
+        break
+      }
+      case ComponentType.NODE: {
+        // Node terminal is at the center
+        localOffset = { x: 0, y: 0 }
         break
       }
       default:
@@ -416,8 +531,12 @@ export const useCircuitStore = defineStore('circuit', () => {
     startDragConnection,
     updateDragConnection,
     finishDragConnection,
+    finishDragConnectionToNode,
+    finishDragConnectionToPosition,
     cancelDragConnection,
     findTerminalAtPosition,
+    findNodeAtPosition,
     getTerminalWorldPosition,
+    createNodeAtPosition,
   }
 })

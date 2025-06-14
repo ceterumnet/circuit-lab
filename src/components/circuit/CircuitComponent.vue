@@ -45,6 +45,18 @@
       />
     </v-group>
 
+    <!-- Node component -->
+    <v-group v-else-if="component.type === ComponentType.NODE">
+      <node-component
+        :component="component as CircuitNode"
+        @select="handleSelect"
+        @dragstart="handleDragStart"
+        @dragmove="handleDragMove"
+        @dragend="handleDragEnd"
+        @node-connect="handleNodeConnect"
+      />
+    </v-group>
+
     <!-- Wire component -->
     <v-group v-else-if="component.type === ComponentType.WIRE">
       <wire-component
@@ -66,6 +78,7 @@ import type {
   VoltageSource,
   Ground,
   Wire,
+  CircuitNode,
   Position,
 } from '@/types/circuit'
 import { ComponentType } from '@/types/circuit'
@@ -73,6 +86,7 @@ import ResistorComponent from '@/components/circuit/components/ResistorComponent
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
+import NodeComponent from '@/components/circuit/components/NodeComponent.vue'
 import { useCircuitStore } from '@/stores/circuit'
 
 interface Props {
@@ -86,6 +100,7 @@ interface Emits {
   (e: 'terminal-drag-start', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-drag-move', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-drag-end', terminalId: string, componentId: string, position: Position): void
+  (e: 'node-connect', nodeId: string): void
   (e: 'wire-delete', wireId: string): void
 }
 
@@ -97,19 +112,21 @@ const circuitStore = useCircuitStore()
 const wireStartPosition = computed(() => {
   if (props.component.type === ComponentType.WIRE) {
     const wire = props.component as Wire
-    // Explicitly access the reactive components array to ensure reactivity
     const components = circuitStore.currentCircuit.components
 
-    // Find the component that has the start terminal
-    const startComponent = components.find(
-      (c: CircuitComponent) => c.type !== ComponentType.WIRE && hasTerminal(c, wire.startTerminal),
-    )
-
-    if (!startComponent) {
-      return { x: 0, y: 0 }
+    // Check if connected to a terminal
+    if (wire.startTerminal) {
+      const startComponent = components.find(
+        (c: CircuitComponent) =>
+          c.type !== ComponentType.WIRE && hasTerminal(c, wire.startTerminal!),
+      )
+      if (startComponent) {
+        return getTerminalWorldPosition(startComponent, wire.startTerminal)
+      }
     }
 
-    return getTerminalWorldPosition(startComponent, wire.startTerminal)
+    // Fall back to stored position
+    return wire.startPosition || { x: 0, y: 0 }
   }
   return { x: 0, y: 0 }
 })
@@ -117,19 +134,29 @@ const wireStartPosition = computed(() => {
 const wireEndPosition = computed(() => {
   if (props.component.type === ComponentType.WIRE) {
     const wire = props.component as Wire
-    // Explicitly access the reactive components array to ensure reactivity
     const components = circuitStore.currentCircuit.components
 
-    // Find the component that has the end terminal
-    const endComponent = components.find(
-      (c: CircuitComponent) => c.type !== ComponentType.WIRE && hasTerminal(c, wire.endTerminal),
-    )
+    console.log('🔗 Computing wireEndPosition for', wire.id, {
+      endTerminal: wire.endTerminal,
+      endPosition: wire.endPosition,
+    })
 
-    if (!endComponent) {
-      return { x: 0, y: 0 }
+    // Check if connected to a terminal
+    if (wire.endTerminal) {
+      const endComponent = components.find(
+        (c: CircuitComponent) => c.type !== ComponentType.WIRE && hasTerminal(c, wire.endTerminal!),
+      )
+      if (endComponent) {
+        const terminalPos = getTerminalWorldPosition(endComponent, wire.endTerminal)
+        console.log('🔗 Connected to terminal:', wire.endTerminal, terminalPos)
+        return terminalPos
+      }
     }
 
-    return getTerminalWorldPosition(endComponent, wire.endTerminal)
+    // Fall back to stored position
+    const fallbackPos = wire.endPosition || { x: 0, y: 0 }
+    console.log('🔗 Using fallback position:', fallbackPos)
+    return fallbackPos
   }
   return { x: 0, y: 0 }
 })
@@ -168,6 +195,10 @@ function handleTerminalDragEnd(terminalId: string, componentId: string, position
   emit('terminal-drag-end', terminalId, componentId, position)
 }
 
+function handleNodeConnect(nodeId: string) {
+  emit('node-connect', nodeId)
+}
+
 function handleWireDelete() {
   emit('wire-delete', props.component.id)
 }
@@ -179,6 +210,8 @@ function hasTerminal(component: CircuitComponent, terminalId: string): boolean {
       return (component as Resistor | VoltageSource).terminals.includes(terminalId)
     case ComponentType.GROUND:
       return (component as Ground).terminal === terminalId
+    case ComponentType.NODE:
+      return (component as CircuitNode).terminal === terminalId
     default:
       return false
   }

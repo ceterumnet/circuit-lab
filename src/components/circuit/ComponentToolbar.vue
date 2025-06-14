@@ -61,6 +61,11 @@ const basicComponents = [
     label: 'Ground',
     icon: '⏚',
   },
+  {
+    type: ComponentType.NODE,
+    label: 'Node',
+    icon: '⚫',
+  },
 ]
 
 interface Emits {

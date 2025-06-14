@@ -57,6 +57,7 @@
           "
           @terminal-drag-move="handleTerminalDragMove"
           @terminal-drag-end="handleTerminalDragEnd"
+          @node-connect="handleNodeConnect"
           @wire-delete="handleWireDelete"
         />
 
@@ -90,7 +91,7 @@ import { useCircuitStore } from '@/stores/circuit'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { ComponentType } from '@/types/circuit'
-import type { Resistor, VoltageSource, Ground, Position } from '@/types/circuit'
+import type { Resistor, VoltageSource, Ground, CircuitNode, Position } from '@/types/circuit'
 
 interface Props {
   selectedTool?: ComponentType | null
@@ -208,6 +209,14 @@ function addComponentAtPosition(type: ComponentType, position: { x: number; y: n
       } as Ground
       break
 
+    case ComponentType.NODE:
+      component = {
+        ...baseComponent,
+        type: ComponentType.NODE,
+        terminal: `${id}_terminal`,
+      } as CircuitNode
+      break
+
     default:
       return
   }
@@ -255,30 +264,7 @@ function handleTerminalClick(terminalId: string, componentId: string) {
 }
 
 function handleTerminalDragStart(terminalId: string, componentId: string) {
-  const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId)
-  if (component) {
-    // Get the local terminal position and pass it to the store
-    let localOffset: Position
-
-    switch (component.type) {
-      case ComponentType.RESISTOR:
-      case ComponentType.VOLTAGE_SOURCE: {
-        const terminals = (component as Resistor | VoltageSource).terminals
-        const terminalIndex = terminals.indexOf(terminalId)
-        const offsetX = terminalIndex === 0 ? -30 : 30
-        localOffset = { x: offsetX, y: 0 }
-        break
-      }
-      case ComponentType.GROUND: {
-        localOffset = { x: 0, y: -15 }
-        break
-      }
-      default:
-        localOffset = { x: 0, y: 0 }
-    }
-
-    circuitStore.startDragConnection(terminalId, componentId, localOffset)
-  }
+  circuitStore.startDragConnection(terminalId, componentId)
 }
 
 function handleTerminalDragMove(terminalId: string, componentId: string, position: Position) {
@@ -297,8 +283,23 @@ function handleTerminalDragEnd(terminalId: string, componentId: string, position
       targetTerminal.position,
     )
   } else {
-    // End drag in empty space - cancel connection
-    circuitStore.cancelDragConnection()
+    // Check if we're ending on a node
+    const targetNode = circuitStore.findNodeAtPosition(position)
+
+    if (targetNode) {
+      // End drag on a node - create connection to node
+      circuitStore.finishDragConnectionToNode(targetNode.nodeId)
+    } else {
+      // End drag in empty space - create a free-form wire
+      circuitStore.finishDragConnectionToPosition(position)
+    }
+  }
+}
+
+function handleNodeConnect(nodeId: string) {
+  // Handle connections to nodes (for existing wires connecting to nodes)
+  if (circuitStore.dragConnectionState.isActive) {
+    circuitStore.finishDragConnectionToNode(nodeId)
   }
 }
 

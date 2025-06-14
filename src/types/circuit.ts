@@ -15,6 +15,7 @@ export enum ComponentType {
   VOLTAGE_SOURCE = 'voltage_source',
   WIRE = 'wire',
   GROUND = 'ground',
+  NODE = 'node',
 }
 
 // Base component interface
@@ -43,14 +44,21 @@ export interface VoltageSource extends CircuitComponent {
 
 export interface Wire extends CircuitComponent {
   type: ComponentType.WIRE
-  startTerminal: string
-  endTerminal: string
+  startTerminal?: string // Optional - can connect to any terminal (component or node)
+  endTerminal?: string // Optional - can connect to any terminal (component or node)
+  startPosition?: Position // Optional - for free-floating wire ends
+  endPosition?: Position // Optional - for free-floating wire ends
   points: Position[] // For curved wires
 }
 
 export interface Ground extends CircuitComponent {
   type: ComponentType.GROUND
   terminal: string
+}
+
+export interface CircuitNode extends CircuitComponent {
+  type: ComponentType.NODE
+  terminal: string // Single terminal ID, just like Ground
 }
 
 // Circuit simulation types
