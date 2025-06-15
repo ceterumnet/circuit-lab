@@ -1,8 +1,8 @@
 <template>
   <div class="circuit-editor">
     <div class="editor-layout">
-      <!-- Component toolbar -->
-      <component-toolbar class="sidebar" />
+      <!-- Modal toolbar -->
+      <modal-toolbar class="sidebar" />
 
       <!-- Main canvas area -->
       <div class="canvas-area">
@@ -49,7 +49,7 @@ import { useCircuitStore } from '@/stores/circuit'
 import { InteractionMode } from '@/types/components'
 import { getComponentDefinition } from '@/registry/components'
 
-import ComponentToolbar from '@/components/circuit/ComponentToolbar.vue'
+import ModalToolbar from '@/components/circuit/ModalToolbar.vue'
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 

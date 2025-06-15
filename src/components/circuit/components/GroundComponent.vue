@@ -103,8 +103,8 @@ function handleDragMove(e: { target: { x(): number; y(): number } }) {
 
 function handleDragEnd(e: { target: { x(): number; y(): number } }) {
   const newPosition = {
-    x: Math.round(e.target.x() / 20) * 20, // Snap to grid on end
-    y: Math.round(e.target.y() / 20) * 20,
+    x: Math.round(e.target.x() / 30) * 30, // Snap to grid on end
+    y: Math.round(e.target.y() / 30) * 30,
   }
   emit('dragend', newPosition)
 }

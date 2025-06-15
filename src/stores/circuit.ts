@@ -303,8 +303,8 @@ export const useCircuitStore = defineStore('circuit', () => {
 
     // Snap to grid
     const snappedPosition = {
-      x: Math.round(position.x / 20) * 20,
-      y: Math.round(position.y / 20) * 20,
+      x: Math.round(position.x / 30) * 30,
+      y: Math.round(position.y / 30) * 30,
     }
 
     const nodeId = generateComponentId('node')

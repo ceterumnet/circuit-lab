@@ -99,7 +99,7 @@ const stageConfig = ref({
   height: 600,
 })
 
-const gridSize = 20
+const gridSize = 30
 
 // Grid lines for visual reference
 const gridLinesX = computed(() => {
@@ -145,18 +145,31 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
       y: Math.round(pos.y / gridSize) * gridSize,
     }
 
-    if (isBackground && circuitStore.wireCreationState.isActive) {
-      // If wire creation is active and clicking on background, create node and finish wire
-      circuitStore.finishWireCreationToPosition(snappedPos)
-    } else if (isBackground && circuitStore.currentMode === InteractionMode.PLACE_COMPONENT && circuitStore.modeData?.componentType) {
-      // If clicking on background and in component placement mode, place component
-      const componentType = circuitStore.modeData.componentType as string
-      addComponentAtPosition(componentType, snappedPos)
-      emit('component-placed')
-    } else if (isBackground) {
-      // If no tool selected and clicking on background, clear selection and cancel wiring
-      circuitStore.clearSelection()
-      circuitStore.cancelWiring()
+    // Handle different interaction modes
+    switch (circuitStore.currentMode) {
+      case InteractionMode.PLACE_COMPONENT:
+        if (isBackground && circuitStore.modeData?.componentType) {
+          const componentType = circuitStore.modeData.componentType as string
+          addComponentAtPosition(componentType, snappedPos)
+          emit('component-placed')
+        }
+        break
+
+      case InteractionMode.WIRE:
+        if (isBackground && circuitStore.wireCreationState.isActive) {
+          // Create node and finish wire
+          circuitStore.finishWireCreationToPosition(snappedPos)
+        }
+        break
+
+      case InteractionMode.SELECT_MOVE:
+      default:
+        if (isBackground) {
+          // Clear selection and cancel any active operations
+          circuitStore.clearSelection()
+          circuitStore.cancelWiring()
+        }
+        break
     }
   }
 }
@@ -245,7 +258,27 @@ function handleContextMenu(e: Event) {
 }
 
 function handleComponentSelect(componentId: string) {
-  circuitStore.selectComponent(componentId)
+  // Handle component selection based on current mode
+  switch (circuitStore.currentMode) {
+    case InteractionMode.DELETE:
+      // Delete component immediately in delete mode
+      circuitStore.removeComponent(componentId)
+      break
+
+    case InteractionMode.ROTATE:
+      // Rotate component in rotate mode
+      const component = circuitStore.currentCircuit.components.find(c => c.id === componentId)
+      if (component) {
+        circuitStore.updateComponent(componentId, { rotation: (component.rotation + 90) % 360 })
+      }
+      break
+
+    case InteractionMode.SELECT_MOVE:
+    default:
+      // Select component in select mode
+      circuitStore.selectComponent(componentId)
+      break
+  }
 }
 
 function handleComponentMove(componentId: string, startDrag: boolean) {
@@ -256,12 +289,15 @@ function handleComponentMove(componentId: string, startDrag: boolean) {
 }
 
 function handleTerminalClick(terminalId: string, componentId: string) {
-  if (circuitStore.wireCreationState.isActive) {
-    // Second click - finish wire creation
-    circuitStore.finishWireCreation(terminalId, componentId)
-  } else {
-    // First click - start wire creation
-    circuitStore.startWireCreation(terminalId, componentId)
+  // Only handle terminal clicks in wire mode
+  if (circuitStore.currentMode === InteractionMode.WIRE) {
+    if (circuitStore.wireCreationState.isActive) {
+      // Second click - finish wire creation
+      circuitStore.finishWireCreation(terminalId, componentId)
+    } else {
+      // First click - start wire creation
+      circuitStore.startWireCreation(terminalId, componentId)
+    }
   }
 }
 
@@ -314,7 +350,6 @@ onUnmounted(() => {
   height: 100%;
   min-height: 600px;
   border: 1px solid #ddd;
-  border-radius: 4px;
   overflow: hidden;
   background-color: #fafafa;
 }
