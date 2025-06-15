@@ -457,6 +457,414 @@ src/
 - Time-domain simulation
 - Frequency response analysis
 
+## 🔍 UX Analysis & Architectural Review
+
+### Current System Issues Identified
+
+#### 1. **Terminal Alignment & Grid Problems**
+The fundamental issue: when components rotate 90°, their terminals end up at off-grid positions that fight with the grid system.
+
+**Problem Analysis**:
+- Resistor at position (0,0) has terminals at (-30,0) and (30,0)
+- When rotated 90°, terminals become (0,-30) and (0,30) 
+- Grid is 20px, so -30 and 30 don't align with grid lines
+- This creates visual misalignment and connection difficulties
+
+**Grid/Terminal Mismatch**:
+```
+Current: 20px grid + 30px terminal spacing = misalignment when rotated
+Result: Terminals never align properly with grid intersections
+```
+
+#### 2. **Overly Complex Terminal System**
+The current `CircuitTerminal.vue` components handle too many responsibilities:
+- Visual feedback (hover states, selection highlighting)  
+- Wire creation start/end points
+- Connection validation logic
+- Interaction state management
+- Position calculations with rotation
+
+**Code Complexity Indicators**:
+- `CircuitTerminal.vue`: 71 lines for simple connection points
+- Terminal logic scattered across multiple files
+- Complex hover/selection state management  
+- Rotation-aware positioning calculations
+
+#### 3. **UX Flow Issues**
+- Click-to-connect wire creation is non-intuitive for users
+- No clear visual indication of available connection points
+- Grid snapping conflicts with terminal positioning
+- Wire creation mode not obviously discoverable
+- Rotation increments (90°) don't work harmoniously with grid system
+
+### Critical Scalability Issue - Complex Components
+
+#### The IC Problem
+**Question Raised**: How will the current system work with complex components like ICs?
+
+**Analysis**: The current auto-connection approach would completely fail with complex components:
+
+**Simple Components** (Current - Works):
+- Resistor, Capacitor: 2 terminals
+- Auto-connection can reasonably select closest terminal
+- Terminal function is obvious (current flows through)
+
+**Complex Components** (Future - Current System Fails):
+- IC packages: 8, 14, 16, 20+ pins
+- Each pin has specific function: VCC (power), GND (ground), Pin 1-8 (I/O), Pin 9-14 (logic)
+- Auto-selecting "closest terminal" would be meaningless and potentially dangerous
+- Pin-specific connections are required (VCC must connect to power, not to random I/O pin)
+
+**Example IC Connection Requirements**:
+```
+74HC04 Hex Inverter (DIP-14):
+Pin 1: Input A1    Pin 8: Input A4
+Pin 2: Output Y1   Pin 9: Output Y4  
+Pin 3: Input A2    Pin 10: Input A3
+Pin 4: Output Y2   Pin 11: Output Y3
+Pin 5: Input A3    Pin 12: Output Y2
+Pin 6: Output Y3   Pin 13: Input A2
+Pin 7: GND         Pin 14: VCC
+```
+
+Auto-connection between ICs would require the system to understand:
+- Which pins are inputs vs outputs
+- Power vs signal pins  
+- Pin compatibility and electrical requirements
+
+### Recommended Solution: Hierarchical Terminal System
+
+#### Architecture Overview
+
+**Component Complexity Classification**:
+```typescript
+export enum ComponentComplexity {
+  SIMPLE = 'simple',      // ≤2 terminals (resistor, capacitor)
+  MODERATE = 'moderate',  // 3-8 terminals (transistor, op-amp) 
+  COMPLEX = 'complex'     // >8 terminals (ICs, microcontrollers)
+}
+```
+
+**Enhanced Terminal Interface**:
+```typescript
+export interface Terminal {
+  id: string
+  pinNumber?: number      // For ICs: 1, 2, 3...
+  label?: string         // For ICs: "VCC", "CLK", "Q0" 
+  position: Position     // Relative to component
+  type?: 'power' | 'ground' | 'input' | 'output' | 'io' | 'control'
+  isRequired?: boolean   // Must be connected for component to work
+}
+```
+
+**IC Component Definition**:
+```typescript
+export interface IC extends CircuitComponent {
+  type: ComponentType.IC
+  complexity: ComponentComplexity.COMPLEX
+  packageType: 'DIP-14' | 'DIP-16' | 'SOIC-8' | 'QFP-44'
+  terminals: Terminal[]  // Array of all pins
+  pinout: PinConfiguration
+}
+```
+
+#### Adaptive Connection Behavior
+
+**Connection Logic Flow**:
+```
+User clicks component → Check complexity:
+├── SIMPLE: Show connection zones, auto-select terminal
+├── MODERATE: Highlight all terminals, click to select specific one  
+└── COMPLEX: Show pin labels/numbers, require specific pin selection
+```
+
+**Visual Representation Strategy**:
+
+**Simple Components** (Current):
+- Large click zones covering entire component
+- Auto-connect to closest appropriate terminal
+- Forgiving UX for beginners
+
+**Complex Components** (ICs):
+- Pin-specific click targets
+- Visible pin numbers and labels  
+- Precise connection requirement
+- Pin type indication (power, I/O, etc.)
+
+#### Grid-Aware Layout Solutions
+
+**Option 1: Multi-Scale Grid System**
+- Primary grid: 20px for component placement
+- Secondary grid: 10px for IC pin alignment
+- IC pins align to sub-grid intersections
+
+**Option 2: IC-Optimized Grid**  
+- Change to 30px grid to match current terminal spacing
+- All components and IC pins align properly
+- Better visual consistency
+
+**Option 3: Smart Component Positioning**
+- ICs snap to positions where all pins align with grid
+- Pre-calculated valid positions for each IC package type
+- Component-specific snapping behavior
+
+**Option 4: Flexible Pin Routing**
+- Pins can be slightly off-grid
+- Wires auto-route to nearest grid intersection  
+- Maintains grid aesthetics while allowing precise pin placement
+
+### Implementation Strategy
+
+#### Phase 1: Fix Current Issues (1-2 days)
+**Immediate Actions**:
+- Adjust grid to 30px OR change terminal spacing to 40px
+- Simplify terminal interactions for current components
+- Remove unnecessary hover states and visual complexity
+- Improve grid snapping for rotated components
+
+**Grid Fix Options**:
+```typescript
+// Option A: Adjust grid to match terminals
+const gridSize = 30 // Changed from 20
+
+// Option B: Adjust terminals to match grid  
+// In ResistorComponent.vue: terminals at ±40 instead of ±30
+<circuit-terminal :position="{ x: -40, y: 0 }" />
+<circuit-terminal :position="{ x: 40, y: 0 }" />
+```
+
+#### Phase 2: Prepare for Complexity (2-3 days)
+**Architecture Enhancements**:
+- Add component complexity classification system
+- Implement adaptive connection behavior
+- Create larger click targets for simple components
+- Maintain backward compatibility with current components
+
+**Enhanced Connection System**:
+```typescript
+function handleComponentClick(component: CircuitComponent, position: Position) {
+  switch (component.complexity) {
+    case ComponentComplexity.SIMPLE:
+      return handleSimpleConnection(component, position)
+    case ComponentComplexity.MODERATE:  
+      return handleModerateConnection(component, position)
+    case ComponentComplexity.COMPLEX:
+      return handleComplexConnection(component, position)
+  }
+}
+```
+
+#### Phase 3: Complex Component Support (1-2 weeks)
+**Full IC Implementation**:
+- Implement IC component types with pinout definitions
+- Add pin labeling and numbering systems
+- Create IC-specific connection and validation logic
+- Implement package-specific visual representations
+- Add pin compatibility checking
+
+**IC Visual System**:
+```vue
+<!-- IC with pin-specific terminals -->
+<v-group v-for="terminal in component.terminals" :key="terminal.id">
+  <v-circle :config="terminalConfig(terminal)" @click="handlePinConnect" />
+  <v-text :config="pinLabelConfig(terminal)" />
+  <v-text :config="pinNumberConfig(terminal)" />
+</v-group>
+```
+
+### Benefits of Hierarchical Approach
+
+#### ✅ **Scalability**
+- Works with current simple components  
+- Scales seamlessly to complex ICs
+- Maintains consistent interaction patterns
+- Supports future component types
+
+#### ✅ **UX Progression**
+- Beginners: Forgiving auto-connection for simple components
+- Intermediate: Terminal selection for moderate complexity
+- Advanced: Full pin-level control for complex components
+
+#### ✅ **Technical Benefits**
+- Maintains current codebase compatibility
+- Provides clear migration path
+- Reduces complexity for simple cases
+- Enables precision for complex cases
+
+#### ✅ **Educational Value**
+- Students learn progressively complex connection concepts
+- Real-world IC connection practices
+- Pin function awareness
+- Proper circuit design habits
+
+### Migration Timeline
+
+**Phase 1** (Immediate): Fix current grid/terminal alignment
+- Solve existing UX friction
+- Maintain current functionality  
+- Prepare foundation for scaling
+
+**Phase 2** (Short-term): Add complexity classification
+- Enhance simple component experience
+- Implement adaptive behavior
+- Maintain backward compatibility
+
+**Phase 3** (Medium-term): Full IC support
+- Add complex component types
+- Implement pin-specific connections
+- Complete the scalable architecture
+
+### Decision Points for Review
+
+1. **Grid Size**: 30px (matches terminals) vs 20px (current) vs flexible system?
+2. **Terminal Simplification**: Remove hover states and complexity for current components?
+3. **IC Priority**: When to implement complex component support?
+4. **Backward Compatibility**: Maintain current component behavior vs enhance UX?
+
+### 🎯 **REVISED ARCHITECTURE: Modal Interaction System**
+
+#### The Modal Toolbar Approach
+**Key Insight**: Instead of making components handle multiple interaction types, use application-level modes that change how the entire canvas behaves.
+
+**Modal Toolbar Design**:
+```
+[Select/Move] [Wire] [Pan/Zoom] [Rotate] [Delete] | [Resistor] [Voltage] [Ground] [IC] ...
+    ^active mode                                         ^component placement tools
+```
+
+#### Interaction Modes
+
+**1. Select/Move Mode** (Default)
+- Click to select components
+- Drag to move selected components  
+- Show properties panel for selected component
+- Grid snapping during movement
+
+**2. Wire Mode**
+- Click component → highlight available connection points
+- Click second component → auto-create wire between optimal terminals
+- Visual feedback showing "wire mode active"
+- For ICs: show pin labels and allow pin-specific selection
+
+**3. Pan/Zoom Mode**  
+- Mouse drag = pan canvas
+- Mouse wheel = zoom
+- No component interactions
+
+**4. Rotate Mode**
+- Click component → rotate 90° (or show rotation handle)
+- Visual indicator of rotation center
+- Wires automatically follow rotated components
+
+**5. Delete Mode**
+- Click component → delete (with confirmation)
+- Visual feedback (red highlighting, delete cursor)
+
+**6. Component Placement Modes**
+- Select component type from toolbar
+- Click canvas → place component
+- Auto-exit to Select mode after placement
+
+#### Benefits of Modal System
+
+**✅ Simplified Component Architecture**:
+- Components only handle rendering and basic selection
+- No complex terminal interaction logic needed
+- Remove 200+ lines of terminal complexity
+
+**✅ Intuitive UX**:
+- Clear visual indication of current mode
+- Predictable behavior (mode determines interaction)
+- Discoverable functionality (toolbar shows available actions)
+
+**✅ Scalable to Complex Components**:
+- Wire mode can adapt behavior per component type
+- IC connections handled at mode level, not component level
+- Future modes easy to add (measurement, simulation, etc.)
+
+**✅ Professional Feel**:
+- Matches CAD tool conventions
+- Keyboard shortcuts for mode switching
+- Status bar showing current mode
+
+#### Implementation Strategy - Revised
+
+**Phase 1: Modal Toolbar Implementation** (2-3 days)
+- Create mode management system in store
+- Implement toolbar with mode selection
+- Update canvas event handling for different modes
+- Simplify component interactions
+
+**Phase 2: Mode-Specific Behaviors** (2-3 days)  
+- Implement each mode's specific logic
+- Add visual feedback for active mode
+- Test mode transitions and interactions
+- Remove complex terminal logic
+
+**Phase 3: Advanced Mode Features** (1-2 days)
+- Keyboard shortcuts (W=Wire, M=Move, etc.)
+- Mode-specific cursors and visual feedback
+- Undo/redo system that works with modes
+
+**Phase 4: IC-Ready Wire Mode** (Future)
+- Adaptive wire mode for different component complexities
+- Pin-specific selection for complex components
+- Connection validation and error handling
+
+#### Modal Store Architecture
+
+```typescript
+export enum InteractionMode {
+  SELECT_MOVE = 'select_move',
+  WIRE = 'wire', 
+  PAN_ZOOM = 'pan_zoom',
+  ROTATE = 'rotate',
+  DELETE = 'delete',
+  PLACE_RESISTOR = 'place_resistor',
+  PLACE_VOLTAGE = 'place_voltage',
+  // ... other placement modes
+}
+
+// In circuit store
+const currentMode = ref(InteractionMode.SELECT_MOVE)
+const modeData = ref<any>(null) // Mode-specific state
+```
+
+#### Canvas Event Handling
+
+```typescript
+function handleCanvasClick(event) {
+  switch (currentMode.value) {
+    case InteractionMode.SELECT_MOVE:
+      return handleSelectMove(event)
+    case InteractionMode.WIRE:
+      return handleWireMode(event)  
+    case InteractionMode.ROTATE:
+      return handleRotateMode(event)
+    // ... etc
+  }
+}
+```
+
+### Recommended Next Steps - UPDATED
+
+**Immediate (This Sprint)**:
+1. **Implement Modal Toolbar System** - Core mode management
+2. **Fix grid alignment** - 30px grid for better terminal alignment  
+3. **Simplify components** - Remove complex terminal interaction logic
+
+**Next Sprint**:
+1. **Complete all interaction modes** - Wire, Pan/Zoom, Rotate, Delete
+2. **Add visual mode feedback** - Cursors, highlights, status indicators
+3. **Test mode transitions** - Ensure smooth UX between modes
+
+**Future Sprints**:
+1. **Advanced wire mode** - IC-aware connection handling
+2. **Keyboard shortcuts** - Professional tool feel
+3. **Mode-specific features** - Undo/redo, advanced selection, etc.
+
+This modal approach is **much cleaner architecture** and solves complexity at the right level - the application, not individual components.
+
 ## Resources & References
 
 - [EEcircuit Repository](https://github.com/eelab-dev/EEcircuit)
