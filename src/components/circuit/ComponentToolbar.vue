@@ -1,20 +1,38 @@
 <template>
   <div class="component-toolbar">
-    <h3 class="toolbar-title">Components</h3>
+    <h3 class="toolbar-title">Circuit Lab</h3>
 
+    <!-- Interaction Modes -->
     <div class="toolbar-section">
-      <h4>Basic</h4>
+      <h4>Tools</h4>
       <button
-        v-for="component in basicComponents"
-        :key="component.type"
-        :class="['toolbar-button', { active: selectedTool === component.type }]"
-        @click="selectTool(component.type)"
+        v-for="mode in interactionModes"
+        :key="mode.mode"
+        :class="['toolbar-button', { active: circuitStore.currentMode === mode.mode }]"
+        @click="setMode(mode.mode)"
       >
-        <div class="button-icon">{{ component.icon }}</div>
-        <span class="button-label">{{ component.label }}</span>
+        <div class="button-icon">{{ mode.icon }}</div>
+        <span class="button-label">{{ mode.label }}</span>
       </button>
     </div>
 
+    <!-- Component Categories -->
+    <div v-for="category in componentCategories" :key="category.name" class="toolbar-section">
+      <h4>{{ category.name }}</h4>
+      <button
+        v-for="component in category.components"
+        :key="component.type"
+        :class="['toolbar-button', {
+          active: circuitStore.currentMode === 'place_component' && selectedComponentType === component.type
+        }]"
+        @click="selectComponent(component.type)"
+      >
+        <div class="button-icon">{{ component.icon }}</div>
+        <span class="button-label">{{ component.name }}</span>
+      </button>
+    </div>
+
+    <!-- Actions -->
     <div class="toolbar-section">
       <h4>Actions</h4>
       <button
@@ -37,46 +55,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
-import { ComponentType } from '@/types/circuit'
+import { InteractionMode } from '@/types/components'
+import { getAllComponents } from '@/registry/components'
+import type { ComponentDefinition } from '@/types/components'
 
 const circuitStore = useCircuitStore()
+const selectedComponentType = ref<string | null>(null)
 
-const selectedTool = ref<ComponentType | null>(null)
-
-const basicComponents = [
-  {
-    type: ComponentType.RESISTOR,
-    label: 'Resistor',
-    icon: '〰️',
-  },
-  {
-    type: ComponentType.VOLTAGE_SOURCE,
-    label: 'Voltage Source',
-    icon: '⊕',
-  },
-  {
-    type: ComponentType.GROUND,
-    label: 'Ground',
-    icon: '⏚',
-  },
-  {
-    type: ComponentType.NODE,
-    label: 'Node',
-    icon: '⚫',
-  },
+// Define interaction modes
+const interactionModes = [
+  { mode: InteractionMode.SELECT_MOVE, label: 'Select', icon: '👆' },
+  { mode: InteractionMode.WIRE, label: 'Wire', icon: '🔌' },
+  { mode: InteractionMode.ROTATE, label: 'Rotate', icon: '🔄' },
+  { mode: InteractionMode.DELETE, label: 'Delete', icon: '🗑️' },
+  { mode: InteractionMode.PAN_ZOOM, label: 'Pan', icon: '🖐️' },
 ]
 
-interface Emits {
-  (e: 'tool-selected', tool: ComponentType): void
+// Organize components by category
+interface ComponentCategory {
+  name: string
+  components: ComponentDefinition[]
 }
 
-const emit = defineEmits<Emits>()
+const componentCategories = computed(() => {
+  const categories = new Map<string, ComponentCategory>()
 
-function selectTool(componentType: ComponentType) {
-  selectedTool.value = componentType
-  emit('tool-selected', componentType)
+  getAllComponents().forEach(component => {
+    if (component.type === 'wire') return // Skip wire as it's not placeable
+
+    if (!categories.has(component.category)) {
+      categories.set(component.category, {
+        name: component.category.charAt(0).toUpperCase() + component.category.slice(1),
+        components: []
+      })
+    }
+    categories.get(component.category)!.components.push(component)
+  })
+
+  return Array.from(categories.values())
+})
+
+// Functions
+function setMode(mode: InteractionMode) {
+  circuitStore.setMode(mode)
+  selectedComponentType.value = null
+}
+
+function selectComponent(componentType: string) {
+  selectedComponentType.value = componentType
+  circuitStore.setComponentPlacementMode(componentType)
 }
 
 function runSimulation() {
@@ -86,7 +115,8 @@ function runSimulation() {
 function clearCircuit() {
   if (confirm('Are you sure you want to clear the circuit?')) {
     circuitStore.clearCircuit()
-    selectedTool.value = null
+    selectedComponentType.value = null
+    circuitStore.setMode(InteractionMode.SELECT_MOVE)
   }
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
   <v-group>
     <!-- Resistor component -->
-    <v-group v-if="component.type === ComponentType.RESISTOR">
+    <v-group v-if="component.type === 'resistor'">
       <resistor-component
         :component="component as Resistor"
         @select="handleSelect"
@@ -13,7 +13,7 @@
     </v-group>
 
     <!-- Voltage source component -->
-    <v-group v-else-if="component.type === ComponentType.VOLTAGE_SOURCE">
+    <v-group v-else-if="component.type === 'voltage_source'">
       <voltage-source-component
         :component="component as VoltageSource"
         @select="handleSelect"
@@ -25,7 +25,7 @@
     </v-group>
 
     <!-- Ground component -->
-    <v-group v-else-if="component.type === ComponentType.GROUND">
+    <v-group v-else-if="component.type === 'ground'">
       <ground-component
         :component="component as Ground"
         @select="handleSelect"
@@ -37,7 +37,7 @@
     </v-group>
 
     <!-- Node component -->
-    <v-group v-else-if="component.type === ComponentType.NODE">
+    <v-group v-else-if="component.type === 'node'">
       <node-component
         :component="component as CircuitNode"
         @select="handleSelect"
@@ -50,7 +50,7 @@
     </v-group>
 
     <!-- Wire component -->
-    <v-group v-else-if="component.type === ComponentType.WIRE">
+    <v-group v-else-if="component.type === 'wire'">
       <wire-component
         :component="component as Wire"
         :start-position="wireStartPosition"
@@ -72,8 +72,7 @@ import type {
   Wire,
   CircuitNode,
   Position,
-} from '@/types/circuit'
-import { ComponentType } from '@/types/circuit'
+} from '@/types/components'
 import ResistorComponent from '@/components/circuit/components/ResistorComponent.vue'
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
@@ -99,7 +98,7 @@ const circuitStore = useCircuitStore()
 
 // Computed properties for wire positions (reactive to component position changes)
 const wireStartPosition = computed(() => {
-  if (props.component.type === ComponentType.WIRE) {
+  if (props.component.type === 'wire') {
     const wire = props.component as Wire
     const components = circuitStore.currentCircuit.components
 
@@ -107,7 +106,7 @@ const wireStartPosition = computed(() => {
     if (wire.startTerminal) {
       const startComponent = components.find(
         (c: CircuitComponent) =>
-          c.type !== ComponentType.WIRE && hasTerminal(c, wire.startTerminal!),
+          c.type !== 'wire' && hasTerminal(c, wire.startTerminal!),
       )
       if (startComponent) {
         return getTerminalWorldPosition(startComponent, wire.startTerminal)
@@ -121,7 +120,7 @@ const wireStartPosition = computed(() => {
 })
 
 const wireEndPosition = computed(() => {
-  if (props.component.type === ComponentType.WIRE) {
+  if (props.component.type === 'wire') {
     const wire = props.component as Wire
     const components = circuitStore.currentCircuit.components
 
@@ -133,7 +132,7 @@ const wireEndPosition = computed(() => {
     // Check if connected to a terminal
     if (wire.endTerminal) {
       const endComponent = components.find(
-        (c: CircuitComponent) => c.type !== ComponentType.WIRE && hasTerminal(c, wire.endTerminal!),
+        (c: CircuitComponent) => c.type !== 'wire' && hasTerminal(c, wire.endTerminal!),
       )
       if (endComponent) {
         const terminalPos = getTerminalWorldPosition(endComponent, wire.endTerminal)
@@ -182,12 +181,12 @@ function handleWireDelete() {
 
 function hasTerminal(component: CircuitComponent, terminalId: string): boolean {
   switch (component.type) {
-    case ComponentType.RESISTOR:
-    case ComponentType.VOLTAGE_SOURCE:
+    case 'resistor':
+    case 'voltage_source':
       return (component as Resistor | VoltageSource).terminals.includes(terminalId)
-    case ComponentType.GROUND:
+    case 'ground':
       return (component as Ground).terminal === terminalId
-    case ComponentType.NODE:
+    case 'node':
       return (component as CircuitNode).terminal === terminalId
     default:
       return false
@@ -198,8 +197,8 @@ function getTerminalWorldPosition(component: CircuitComponent, terminalId: strin
   let localOffset: Position
 
   switch (component.type) {
-    case ComponentType.RESISTOR:
-    case ComponentType.VOLTAGE_SOURCE: {
+    case 'resistor':
+    case 'voltage_source': {
       const terminals = (component as Resistor | VoltageSource).terminals
       const terminalIndex = terminals.indexOf(terminalId)
       // Left terminal at -30, right terminal at +30
@@ -207,12 +206,12 @@ function getTerminalWorldPosition(component: CircuitComponent, terminalId: strin
       localOffset = { x: offsetX, y: 0 }
       break
     }
-    case ComponentType.GROUND: {
+    case 'ground': {
       // Ground has single terminal at top
       localOffset = { x: 0, y: -15 }
       break
     }
-    case ComponentType.NODE: {
+    case 'node': {
       // Node terminal is at the center
       localOffset = { x: 0, y: 0 }
       break

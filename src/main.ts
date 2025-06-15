@@ -7,6 +7,9 @@ import VueKonva from 'vue-konva'
 import App from './App.vue'
 import router from './router'
 
+// Load component registry
+import '@/registry/components'
+
 const app = createApp(App)
 
 app.use(createPinia())

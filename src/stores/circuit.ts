@@ -10,8 +10,8 @@ import type {
   Ground,
   Wire,
   CircuitNode,
-} from '@/types/circuit'
-import { ComponentType } from '@/types/circuit'
+} from '@/types/components'
+import { InteractionMode } from '@/types/components'
 
 export const useCircuitStore = defineStore('circuit', () => {
   // State
@@ -25,6 +25,10 @@ export const useCircuitStore = defineStore('circuit', () => {
   const selectedComponentId = ref<string | null>(null)
   const isSimulating = ref(false)
   const simulationResults = ref<SimulationResult | null>(null)
+
+  // Modal interaction system
+  const currentMode = ref<InteractionMode>(InteractionMode.SELECT_MOVE)
+  const modeData = ref<Record<string, string | number | boolean> | null>(null) // Mode-specific state data
 
   // Wire connection state
   const selectedTerminal = ref<{
@@ -104,7 +108,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     updateComponent(componentId, { position })
   }
 
-  function generateComponentId(type: ComponentType): string {
+  function generateComponentId(type: string): string {
     const typePrefix = type.substring(0, 1).toUpperCase()
     const existingIds = currentCircuit.value.components
       .filter((c) => c.type === type)
@@ -175,11 +179,11 @@ export const useCircuitStore = defineStore('circuit', () => {
     startTerminal: { terminalId: string; componentId: string; position: Position },
     endTerminal: { terminalId: string; componentId: string; position: Position },
   ) {
-    const wireId = generateComponentId(ComponentType.WIRE)
+    const wireId = generateComponentId('wire')
 
     const wire = {
       id: wireId,
-      type: ComponentType.WIRE,
+      type: 'wire',
       position: { x: 0, y: 0 }, // Wires don't have a single position
       rotation: 0,
       selected: false,
@@ -269,11 +273,11 @@ export const useCircuitStore = defineStore('circuit', () => {
     startTerminal: { terminalId: string; componentId: string; position: Position },
     endPosition: Position,
   ) {
-    const wireId = generateComponentId(ComponentType.WIRE)
+    const wireId = generateComponentId('wire')
 
     const wire = {
       id: wireId,
-      type: ComponentType.WIRE,
+      type: 'wire',
       position: { x: 0, y: 0 },
       rotation: 0,
       selected: false,
@@ -303,14 +307,14 @@ export const useCircuitStore = defineStore('circuit', () => {
       y: Math.round(position.y / 20) * 20,
     }
 
-    const nodeId = generateComponentId(ComponentType.NODE)
+    const nodeId = generateComponentId('node')
     const terminalId = `${nodeId}_terminal`
 
     console.log('🟢 Generated node ID:', nodeId, 'terminal ID:', terminalId)
 
     const node = {
       id: nodeId,
-      type: ComponentType.NODE,
+      type: 'node',
       position: snappedPosition,
       rotation: 0,
       selected: false,
@@ -325,7 +329,7 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   function findNodeAtPosition(position: Position): { nodeId: string; position: Position } | null {
     for (const component of currentCircuit.value.components) {
-      if (component.type === ComponentType.NODE) {
+      if (component.type === 'node') {
         const distance = Math.sqrt(
           Math.pow(position.x - component.position.x, 2) +
             Math.pow(position.y - component.position.y, 2),
@@ -361,17 +365,17 @@ export const useCircuitStore = defineStore('circuit', () => {
   ): { terminalId: string; componentId: string; position: Position } | null {
     // Find all terminals in the circuit
     for (const component of currentCircuit.value.components) {
-      if (component.type === ComponentType.WIRE) continue
+      if (component.type === 'wire') continue
 
       let terminals: string[] = []
       if (
-        component.type === ComponentType.RESISTOR ||
-        component.type === ComponentType.VOLTAGE_SOURCE
+        component.type === 'resistor' ||
+        component.type === 'voltage_source'
       ) {
         terminals = (component as Resistor | VoltageSource).terminals
-      } else if (component.type === ComponentType.GROUND) {
+      } else if (component.type === 'ground') {
         terminals = [(component as Ground).terminal]
-      } else if (component.type === ComponentType.NODE) {
+      } else if (component.type === 'node') {
         terminals = [(component as CircuitNode).terminal]
       }
 
@@ -389,19 +393,19 @@ export const useCircuitStore = defineStore('circuit', () => {
           let localOffset: Position
 
           switch (component.type) {
-            case ComponentType.RESISTOR:
-            case ComponentType.VOLTAGE_SOURCE: {
+            case 'resistor':
+            case 'voltage_source': {
               const terminals = (component as Resistor | VoltageSource).terminals
               const terminalIndex = terminals.indexOf(terminalId)
               const offsetX = terminalIndex === 0 ? -30 : 30
               localOffset = { x: offsetX, y: 0 }
               break
             }
-            case ComponentType.GROUND: {
+            case 'ground': {
               localOffset = { x: 0, y: -15 }
               break
             }
-            case ComponentType.NODE: {
+            case 'node': {
               localOffset = { x: 0, y: 0 }
               break
             }
@@ -428,8 +432,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     let localOffset: Position
 
     switch (component.type) {
-      case ComponentType.RESISTOR:
-      case ComponentType.VOLTAGE_SOURCE: {
+      case 'resistor':
+      case 'voltage_source': {
         const terminals = (component as Resistor | VoltageSource).terminals
         const terminalIndex = terminals.indexOf(terminalId)
         // Left terminal at -30, right terminal at +30
@@ -437,12 +441,12 @@ export const useCircuitStore = defineStore('circuit', () => {
         localOffset = { x: offsetX, y: 0 }
         break
       }
-      case ComponentType.GROUND: {
+      case 'ground': {
         // Ground has single terminal at top
         localOffset = { x: 0, y: -15 }
         break
       }
-      case ComponentType.NODE: {
+      case 'node': {
         // Node terminal is at the center
         localOffset = { x: 0, y: 0 }
         break
@@ -488,6 +492,24 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
+  // Modal system functions
+  function setMode(mode: InteractionMode, data?: Record<string, string | number | boolean>) {
+    currentMode.value = mode
+    modeData.value = data || null
+
+    // Clear other states when switching modes
+    if (mode !== InteractionMode.WIRE) {
+      cancelWireCreation()
+    }
+    if (mode !== InteractionMode.SELECT_MOVE) {
+      clearSelection()
+    }
+  }
+
+  function setComponentPlacementMode(componentType: string) {
+    setMode(InteractionMode.PLACE_COMPONENT, { componentType })
+  }
+
   return {
     // State
     currentCircuit,
@@ -497,6 +519,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     selectedTerminal,
     isWiringMode,
     wireCreationState,
+    currentMode,
+    modeData,
 
     // Getters
     selectedComponent,
@@ -531,5 +555,9 @@ export const useCircuitStore = defineStore('circuit', () => {
     findNodeAtPosition,
     getTerminalWorldPosition,
     createNodeAtPosition,
+
+    // Modal system functions
+    setMode,
+    setComponentPlacementMode,
   }
 })

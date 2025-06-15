@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { Position } from '@/types/circuit'
+import type { Position } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useCircuitStore } from '@/stores/circuit'
 

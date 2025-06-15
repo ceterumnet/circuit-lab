@@ -2,7 +2,7 @@
   <div class="circuit-editor">
     <div class="editor-layout">
       <!-- Component toolbar -->
-      <component-toolbar class="sidebar" @tool-selected="handleToolSelected" />
+      <component-toolbar class="sidebar" />
 
       <!-- Main canvas area -->
       <div class="canvas-area">
@@ -10,9 +10,14 @@
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
             <span class="component-count"> Components: {{ circuitStore.componentCount }} </span>
-            <span v-if="selectedTool" class="selected-tool"> Selected: {{ selectedTool }} </span>
-            <span v-if="circuitStore.isWiringMode" class="wiring-mode">
-              🔌 Click terminal to complete wire
+            <span v-if="circuitStore.currentMode" class="current-mode">
+              Mode: {{ formatModeName(circuitStore.currentMode) }}
+            </span>
+            <span v-if="circuitStore.modeData?.componentType && typeof circuitStore.modeData.componentType === 'string'" class="selected-component">
+              Placing: {{ getComponentName(circuitStore.modeData.componentType as string) }}
+            </span>
+            <span v-if="circuitStore.wireCreationState.isActive" class="wiring-mode">
+              🔌 Click to complete wire
             </span>
             <span v-if="circuitStore.isSimulating" class="simulation-status">
               🔄 Simulating...
@@ -21,11 +26,7 @@
         </div>
 
         <div class="canvas-container">
-          <circuit-canvas
-            :selected-tool="selectedTool"
-            @component-placed="handleComponentPlaced"
-            class="circuit-canvas"
-          />
+          <circuit-canvas class="circuit-canvas" />
         </div>
       </div>
 
@@ -44,23 +45,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
-import { ComponentType } from '@/types/circuit'
+import { InteractionMode } from '@/types/components'
+import { getComponentDefinition } from '@/registry/components'
 
 import ComponentToolbar from '@/components/circuit/ComponentToolbar.vue'
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 
 const circuitStore = useCircuitStore()
-const selectedTool = ref<ComponentType | null>(null)
 
-function handleToolSelected(tool: ComponentType) {
-  selectedTool.value = tool
+function formatModeName(mode: InteractionMode): string {
+  return mode.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-function handleComponentPlaced() {
-  selectedTool.value = null // Clear selection after adding
+function getComponentName(componentType: string): string {
+  const definition = getComponentDefinition(componentType)
+  return definition?.name || componentType
 }
 </script>
 
@@ -124,11 +125,20 @@ function handleComponentPlaced() {
   font-weight: 500;
 }
 
-.selected-tool {
+.current-mode {
   font-size: 0.875rem;
   color: #007bff;
   font-weight: 500;
   background: #e7f3ff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.selected-component {
+  font-size: 0.875rem;
+  color: #28a745;
+  font-weight: 500;
+  background: #d4edda;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
 }

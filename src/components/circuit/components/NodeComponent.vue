@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CircuitNode, Position } from '@/types/circuit'
+import type { CircuitNode, Position } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
 
 interface Props {

@@ -9,41 +9,75 @@ export interface ComponentValue {
   unit: string
 }
 
-// Component types enum - must be declared before interfaces that use it
-export enum ComponentType {
-  RESISTOR = 'resistor',
-  VOLTAGE_SOURCE = 'voltage_source',
+// Extensible component system
+export interface TerminalDefinition {
+  id: string
+  pin?: number // For ICs: pin number
+  label?: string // For ICs: pin label like "VCC", "A1"
+  position: Position // Relative to component center
+  type: 'input' | 'output' | 'io' | 'power' | 'ground'
+}
+
+export interface PropertyDefinition {
+  key: string
+  type: 'number' | 'string' | 'select' | 'boolean'
+  label: string
+  unit?: string
+  default: string | number | boolean
+  options?: string[] // For select type
+}
+
+export interface ComponentDefinition {
+  type: string
+  name: string
+  category: 'passive' | 'active' | 'digital' | 'power' | 'measurement' | 'connection'
+  complexity: 'simple' | 'moderate' | 'complex'
+  terminals: TerminalDefinition[]
+  properties: PropertyDefinition[]
+  icon?: string
+  package?: string // For ICs: "DIP-14", "SOIC-8", etc.
+}
+
+// Component registry for extensible system
+export const ComponentRegistry = new Map<string, ComponentDefinition>()
+
+// Interaction modes for modal toolbar system
+export enum InteractionMode {
+  SELECT_MOVE = 'select_move',
   WIRE = 'wire',
-  GROUND = 'ground',
-  NODE = 'node',
+  PAN_ZOOM = 'pan_zoom',
+  ROTATE = 'rotate',
+  DELETE = 'delete',
+  PLACE_COMPONENT = 'place_component', // Generic placement mode
 }
 
 // Base component interface
 export interface CircuitComponent {
   id: string
-  type: ComponentType
+  type: string // Now extensible string instead of enum
   position: Position
   rotation: number
   label?: string
   selected: boolean
+  properties?: { [key: string]: string | number | boolean } // Dynamic properties based on component definition
 }
 
-// Specific component types
+// Specific component types (backwards compatibility)
 export interface Resistor extends CircuitComponent {
-  type: ComponentType.RESISTOR
+  type: 'resistor'
   resistance: ComponentValue
   terminals: [string, string] // Terminal IDs
 }
 
 export interface VoltageSource extends CircuitComponent {
-  type: ComponentType.VOLTAGE_SOURCE
+  type: 'voltage_source'
   voltage: ComponentValue
   sourceType: 'dc' | 'ac' | 'pulse'
   terminals: [string, string] // Terminal IDs
 }
 
 export interface Wire extends CircuitComponent {
-  type: ComponentType.WIRE
+  type: 'wire'
   startTerminal?: string // Optional - can connect to any terminal (component or node)
   endTerminal?: string // Optional - can connect to any terminal (component or node)
   startPosition?: Position // Optional - for free-floating wire ends
@@ -52,12 +86,12 @@ export interface Wire extends CircuitComponent {
 }
 
 export interface Ground extends CircuitComponent {
-  type: ComponentType.GROUND
+  type: 'ground'
   terminal: string
 }
 
 export interface CircuitNode extends CircuitComponent {
-  type: ComponentType.NODE
+  type: 'node'
   terminal: string // Single terminal ID, just like Ground
 }
 

@@ -22,7 +22,7 @@
     </div>
 
     <!-- Resistor specific properties -->
-    <template v-if="component.type === ComponentType.RESISTOR">
+    <template v-if="component.type === 'resistor'">
       <div class="property-item">
         <label for="resistance-value">Resistance:</label>
         <div class="value-input-group">
@@ -43,7 +43,7 @@
     </template>
 
     <!-- Voltage source specific properties -->
-    <template v-else-if="component.type === ComponentType.VOLTAGE_SOURCE">
+    <template v-else-if="component.type === 'voltage_source'">
       <div class="property-item">
         <label for="voltage-value">Voltage:</label>
         <div class="value-input-group">
@@ -78,12 +78,12 @@
     </template>
 
     <!-- Wire specific properties -->
-    <template v-else-if="component.type === ComponentType.WIRE">
+    <template v-else-if="component.type === 'wire'">
       <!-- Wires don't have additional properties beyond delete -->
     </template>
 
     <!-- Common properties for non-wire components -->
-    <div v-if="component.type !== ComponentType.WIRE" class="property-item">
+    <div v-if="component.type !== 'wire'" class="property-item">
       <label for="rotation">Rotation:</label>
       <input
         id="rotation"
@@ -109,8 +109,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
-import type { CircuitComponent, Resistor, VoltageSource } from '@/types/circuit'
-import { ComponentType } from '@/types/circuit'
+import type { CircuitComponent, Resistor, VoltageSource } from '@/types/components'
+import { getComponentDefinition } from '@/registry/components'
 
 interface Props {
   component: CircuitComponent
@@ -139,11 +139,11 @@ watch(
     labelValue.value = newComponent.label || ''
     rotationValue.value = newComponent.rotation
 
-    if (newComponent.type === ComponentType.RESISTOR) {
+    if (newComponent.type === 'resistor') {
       const resistor = newComponent as Resistor
       resistanceValue.value = resistor.resistance.value
       resistanceUnit.value = resistor.resistance.unit
-    } else if (newComponent.type === ComponentType.VOLTAGE_SOURCE) {
+    } else if (newComponent.type === 'voltage_source') {
       const source = newComponent as VoltageSource
       voltageValue.value = source.voltage.value
       voltageUnit.value = source.voltage.unit
@@ -167,7 +167,7 @@ function updateRotation() {
 }
 
 function updateResistance() {
-  if (props.component.type === ComponentType.RESISTOR) {
+  if (props.component.type === 'resistor') {
     const resistor = props.component as Resistor
     circuitStore.updateComponent(props.component.id, {
       ...resistor,
@@ -180,7 +180,7 @@ function updateResistance() {
 }
 
 function updateVoltage() {
-  if (props.component.type === ComponentType.VOLTAGE_SOURCE) {
+  if (props.component.type === 'voltage_source') {
     const source = props.component as VoltageSource
     circuitStore.updateComponent(props.component.id, {
       ...source,
@@ -193,7 +193,7 @@ function updateVoltage() {
 }
 
 function updateSourceType() {
-  if (props.component.type === ComponentType.VOLTAGE_SOURCE) {
+  if (props.component.type === 'voltage_source') {
     const source = props.component as VoltageSource
     circuitStore.updateComponent(props.component.id, {
       ...source,
@@ -206,19 +206,9 @@ function deleteComponent() {
   circuitStore.removeComponent(props.component.id)
 }
 
-function getComponentTypeName(type: ComponentType): string {
-  switch (type) {
-    case ComponentType.RESISTOR:
-      return 'Resistor'
-    case ComponentType.VOLTAGE_SOURCE:
-      return 'Voltage Source'
-    case ComponentType.GROUND:
-      return 'Ground'
-    case ComponentType.WIRE:
-      return 'Wire'
-    default:
-      return 'Component'
-  }
+function getComponentTypeName(type: string): string {
+  const definition = getComponentDefinition(type)
+  return definition?.name || type.charAt(0).toUpperCase() + type.slice(1)
 }
 </script>
 

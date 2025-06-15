@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import type { VoltageSource, Position } from '@/types/circuit'
+import type { VoltageSource, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 
 interface Props {

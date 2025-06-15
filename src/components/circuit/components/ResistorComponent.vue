@@ -64,8 +64,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Resistor } from '@/types/circuit'
-import type { Position } from '@/types/circuit'
+import type { Resistor, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 
 interface Props {

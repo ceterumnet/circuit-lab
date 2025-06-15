@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Wire, Position } from '@/types/circuit'
+import type { Wire, Position } from '@/types/components'
 
 interface Props {
   component: Wire

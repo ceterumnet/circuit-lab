@@ -84,18 +84,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
-import { ComponentType } from '@/types/circuit'
-import type { Resistor, VoltageSource, Ground, CircuitNode } from '@/types/circuit'
-
-interface Props {
-  selectedTool?: ComponentType | null
-}
+import type { Resistor, VoltageSource, Ground, CircuitNode } from '@/types/components'
+import { InteractionMode } from '@/types/components'
 
 interface Emits {
   (e: 'component-placed'): void
 }
 
-const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 // Stage configuration
@@ -153,9 +148,10 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
     if (isBackground && circuitStore.wireCreationState.isActive) {
       // If wire creation is active and clicking on background, create node and finish wire
       circuitStore.finishWireCreationToPosition(snappedPos)
-    } else if (isBackground && props.selectedTool) {
-      // If clicking on background and a tool is selected, place component
-      addComponentAtPosition(props.selectedTool, snappedPos)
+    } else if (isBackground && circuitStore.currentMode === InteractionMode.PLACE_COMPONENT && circuitStore.modeData?.componentType) {
+      // If clicking on background and in component placement mode, place component
+      const componentType = circuitStore.modeData.componentType as string
+      addComponentAtPosition(componentType, snappedPos)
       emit('component-placed')
     } else if (isBackground) {
       // If no tool selected and clicking on background, clear selection and cancel wiring
@@ -165,7 +161,7 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
   }
 }
 
-function addComponentAtPosition(type: ComponentType, position: { x: number; y: number }) {
+function addComponentAtPosition(type: string, position: { x: number; y: number }) {
   const id = circuitStore.generateComponentId(type)
 
   const baseComponent = {
@@ -179,37 +175,37 @@ function addComponentAtPosition(type: ComponentType, position: { x: number; y: n
   let component
 
   switch (type) {
-    case ComponentType.RESISTOR:
+    case 'resistor':
       component = {
         ...baseComponent,
-        type: ComponentType.RESISTOR,
+        type: 'resistor',
         resistance: { value: 1000, unit: 'Ω' },
         terminals: [`${id}_1`, `${id}_2`],
       } as Resistor
       break
 
-    case ComponentType.VOLTAGE_SOURCE:
+    case 'voltage_source':
       component = {
         ...baseComponent,
-        type: ComponentType.VOLTAGE_SOURCE,
+        type: 'voltage_source',
         voltage: { value: 5, unit: 'V' },
         sourceType: 'dc' as const,
         terminals: [`${id}_pos`, `${id}_neg`],
       } as VoltageSource
       break
 
-    case ComponentType.GROUND:
+    case 'ground':
       component = {
         ...baseComponent,
-        type: ComponentType.GROUND,
+        type: 'ground',
         terminal: `${id}_gnd`,
       } as Ground
       break
 
-    case ComponentType.NODE:
+    case 'node':
       component = {
         ...baseComponent,
-        type: ComponentType.NODE,
+        type: 'node',
         terminal: `${id}_terminal`,
       } as CircuitNode
       break
