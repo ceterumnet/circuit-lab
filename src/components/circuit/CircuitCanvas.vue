@@ -1,11 +1,12 @@
 <template>
-  <div class="circuit-canvas-container">
+  <div class="circuit-canvas-container" @contextmenu.prevent>
     <v-stage
       ref="stage"
       :config="stageConfig"
       @mousedown="handleStageClick"
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
+      @contextmenu="handleContextMenu"
     >
       <v-layer ref="mainLayer">
         <!-- Grid background -->
@@ -49,31 +50,24 @@
           :component="component"
           @select="handleComponentSelect"
           @move="handleComponentMove"
-          @terminal-click="
-            (terminalId, componentId) => handleTerminalClick(terminalId, componentId)
-          "
-          @terminal-drag-start="
-            (terminalId, componentId) => handleTerminalDragStart(terminalId, componentId)
-          "
-          @terminal-drag-move="handleTerminalDragMove"
-          @terminal-drag-end="handleTerminalDragEnd"
+          @terminal-click="handleTerminalClick"
           @node-connect="handleNodeConnect"
           @wire-delete="handleWireDelete"
         />
 
-        <!-- Drag connection preview -->
+        <!-- Wire creation preview -->
         <v-line
           v-if="
-            circuitStore.dragConnectionState.isActive &&
-            circuitStore.dragConnectionState.startTerminal &&
-            circuitStore.dragConnectionState.currentPosition
+            circuitStore.wireCreationState.isActive &&
+            circuitStore.wireCreationState.startTerminal &&
+            circuitStore.wireCreationState.previewPosition
           "
           :config="{
             points: [
-              circuitStore.dragConnectionState.startTerminal.position.x,
-              circuitStore.dragConnectionState.startTerminal.position.y,
-              circuitStore.dragConnectionState.currentPosition.x,
-              circuitStore.dragConnectionState.currentPosition.y,
+              circuitStore.wireCreationState.startTerminal.position.x,
+              circuitStore.wireCreationState.startTerminal.position.y,
+              circuitStore.wireCreationState.previewPosition.x,
+              circuitStore.wireCreationState.previewPosition.y,
             ],
             stroke: '#007bff',
             strokeWidth: 2,
@@ -91,7 +85,7 @@ import { useCircuitStore } from '@/stores/circuit'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { ComponentType } from '@/types/circuit'
-import type { Resistor, VoltageSource, Ground, CircuitNode, Position } from '@/types/circuit'
+import type { Resistor, VoltageSource, Ground, CircuitNode } from '@/types/circuit'
 
 interface Props {
   selectedTool?: ComponentType | null
@@ -149,22 +143,25 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
     e.target.className === 'Rect' ||
     e.target.className === 'Line'
 
-  // If clicking on background and a tool is selected, place component
-  if (isBackground && props.selectedTool) {
-    const pos = e.target.getStage()?.getPointerPosition()
-    if (pos) {
-      // Snap to grid
-      const snappedPos = {
-        x: Math.round(pos.x / gridSize) * gridSize,
-        y: Math.round(pos.y / gridSize) * gridSize,
-      }
+  const pos = e.target.getStage()?.getPointerPosition()
+  if (pos) {
+    const snappedPos = {
+      x: Math.round(pos.x / gridSize) * gridSize,
+      y: Math.round(pos.y / gridSize) * gridSize,
+    }
+
+    if (isBackground && circuitStore.wireCreationState.isActive) {
+      // If wire creation is active and clicking on background, create node and finish wire
+      circuitStore.finishWireCreationToPosition(snappedPos)
+    } else if (isBackground && props.selectedTool) {
+      // If clicking on background and a tool is selected, place component
       addComponentAtPosition(props.selectedTool, snappedPos)
       emit('component-placed')
+    } else if (isBackground) {
+      // If no tool selected and clicking on background, clear selection and cancel wiring
+      circuitStore.clearSelection()
+      circuitStore.cancelWiring()
     }
-  } else if (isBackground) {
-    // If no tool selected and clicking on background, clear selection and cancel wiring
-    circuitStore.clearSelection()
-    circuitStore.cancelWiring()
   }
 }
 
@@ -225,15 +222,18 @@ function addComponentAtPosition(type: ComponentType, position: { x: number; y: n
 }
 
 function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
-  if (isDragging.value && dragTarget.value) {
-    const pos = e.target.getStage()?.getPointerPosition()
-    if (pos) {
-      // Snap to grid
+  const pos = e.target.getStage()?.getPointerPosition()
+  if (pos) {
+    if (isDragging.value && dragTarget.value) {
+      // Handle component dragging
       const snappedPos = {
         x: Math.round(pos.x / gridSize) * gridSize,
         y: Math.round(pos.y / gridSize) * gridSize,
       }
       circuitStore.moveComponent(dragTarget.value, snappedPos)
+    } else if (circuitStore.wireCreationState.isActive) {
+      // Handle wire preview during creation
+      circuitStore.updateWirePreview(pos)
     }
   }
 }
@@ -241,6 +241,11 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
 function handleMouseUp() {
   isDragging.value = false
   dragTarget.value = null
+}
+
+function handleContextMenu(e: Event) {
+  // Prevent browser's default right-click context menu
+  e.preventDefault()
 }
 
 function handleComponentSelect(componentId: string) {
@@ -255,51 +260,19 @@ function handleComponentMove(componentId: string, startDrag: boolean) {
 }
 
 function handleTerminalClick(terminalId: string, componentId: string) {
-  // For rotated components, we need to calculate the world position using the rotation-aware method
-  const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId)
-  if (component) {
-    const worldPosition = circuitStore.getTerminalWorldPosition(component, terminalId)
-    circuitStore.selectTerminal(terminalId, componentId, worldPosition)
-  }
-}
-
-function handleTerminalDragStart(terminalId: string, componentId: string) {
-  circuitStore.startDragConnection(terminalId, componentId)
-}
-
-function handleTerminalDragMove(terminalId: string, componentId: string, position: Position) {
-  circuitStore.updateDragConnection(position)
-}
-
-function handleTerminalDragEnd(terminalId: string, componentId: string, position: Position) {
-  // Check if we're ending on a terminal
-  const targetTerminal = circuitStore.findTerminalAtPosition(position)
-
-  if (targetTerminal) {
-    // End drag on a terminal - create connection
-    circuitStore.finishDragConnection(
-      targetTerminal.terminalId,
-      targetTerminal.componentId,
-      targetTerminal.position,
-    )
+  if (circuitStore.wireCreationState.isActive) {
+    // Second click - finish wire creation
+    circuitStore.finishWireCreation(terminalId, componentId)
   } else {
-    // Check if we're ending on a node
-    const targetNode = circuitStore.findNodeAtPosition(position)
-
-    if (targetNode) {
-      // End drag on a node - create connection to node
-      circuitStore.finishDragConnectionToNode(targetNode.nodeId)
-    } else {
-      // End drag in empty space - create a free-form wire
-      circuitStore.finishDragConnectionToPosition(position)
-    }
+    // First click - start wire creation
+    circuitStore.startWireCreation(terminalId, componentId)
   }
 }
 
 function handleNodeConnect(nodeId: string) {
   // Handle connections to nodes (for existing wires connecting to nodes)
-  if (circuitStore.dragConnectionState.isActive) {
-    circuitStore.finishDragConnectionToNode(nodeId)
+  if (circuitStore.wireCreationState.isActive) {
+    circuitStore.finishWireCreationToNode(nodeId)
   }
 }
 

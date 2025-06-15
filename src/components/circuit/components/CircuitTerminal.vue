@@ -3,18 +3,15 @@
     :config="{
       x: position.x,
       y: position.y,
-      radius: isHovered || isDragging || isValidDropTarget ? 6 : 3,
-      fill: isDragging ? '#28a745' : isValidDropTarget ? '#ffc107' : isHovered ? '#007bff' : '#666',
+      radius: isHovered || isValidDropTarget ? 6 : 3,
+      fill: isValidDropTarget ? '#ffc107' : isHovered ? '#007bff' : '#666',
       stroke: isSelected ? '#ff0000' : isValidDropTarget ? '#fd7e14' : '#333',
       strokeWidth: isSelected || isValidDropTarget ? 2 : 1,
-      draggable: true,
+      draggable: false,
     }"
     @click="handleClick"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
-    @dragstart="handleDragStart"
-    @dragmove="handleDragMove"
-    @dragend="handleDragEnd"
   />
 </template>
 
@@ -34,9 +31,6 @@ interface Props {
 interface Emits {
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-hover', terminalId: string, componentId: string, isHovered: boolean): void
-  (e: 'terminal-drag-start', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-move', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-end', terminalId: string, componentId: string, position: Position): void
 }
 
 const props = defineProps<Props>()
@@ -44,16 +38,15 @@ const emit = defineEmits<Emits>()
 const circuitStore = useCircuitStore()
 
 const isHovered = ref(false)
-const isDragging = ref(false)
 
-// Check if this terminal can accept a drag connection
+// Check if this terminal can accept a wire connection
 const isValidDropTarget = computed(() => {
-  const dragState = circuitStore.dragConnectionState
+  const wireState = circuitStore.wireCreationState
   return (
-    dragState.isActive &&
-    dragState.startTerminal &&
-    dragState.startTerminal.terminalId !== props.terminalId &&
-    dragState.startTerminal.componentId !== props.componentId
+    wireState.isActive &&
+    wireState.startTerminal &&
+    wireState.startTerminal.terminalId !== props.terminalId &&
+    wireState.startTerminal.componentId !== props.componentId
   )
 })
 
@@ -73,31 +66,5 @@ function handleMouseLeave() {
   emit('terminal-hover', props.terminalId, props.componentId, false)
 }
 
-function handleDragStart(e: KonvaEventObject<DragEvent>) {
-  e.cancelBubble = true
-  isDragging.value = true
-  emit('terminal-drag-start', props.terminalId, props.componentId, props.position)
-}
-
-function handleDragMove(e: KonvaEventObject<DragEvent>) {
-  e.cancelBubble = true
-  const stage = e.target.getStage()
-  const pointerPos = stage?.getPointerPosition()
-  if (pointerPos) {
-    emit('terminal-drag-move', props.terminalId, props.componentId, pointerPos)
-  }
-}
-
-function handleDragEnd(e: KonvaEventObject<DragEvent>) {
-  e.cancelBubble = true
-  isDragging.value = false
-  const stage = e.target.getStage()
-  const pointerPos = stage?.getPointerPosition()
-  if (pointerPos) {
-    emit('terminal-drag-end', props.terminalId, props.componentId, pointerPos)
-  }
-
-  // Reset terminal position (it shouldn't actually move)
-  e.target.position({ x: props.position.x, y: props.position.y })
-}
+// Drag functionality removed - terminals are now click-only for solid architecture
 </script>

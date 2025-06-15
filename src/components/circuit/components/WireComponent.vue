@@ -49,17 +49,27 @@ const wirePoints = computed(() => {
   const start = props.startPosition || props.component.startPosition || { x: 0, y: 0 }
   const end = props.endPosition || props.component.endPosition || { x: 0, y: 0 }
 
+  // Validate positions to prevent NaN values
+  const validStart = {
+    x: isNaN(start.x) ? 0 : start.x,
+    y: isNaN(start.y) ? 0 : start.y,
+  }
+  const validEnd = {
+    x: isNaN(end.x) ? 0 : end.x,
+    y: isNaN(end.y) ? 0 : end.y,
+  }
+
   console.log('🔗 WireComponent rendering:', {
     wireId: props.component.id,
-    startPos: start,
-    endPos: end,
+    startPos: validStart,
+    endPos: validEnd,
     hasStartTerminal: !!props.component.startTerminal,
     hasEndTerminal: !!props.component.endTerminal,
-    points: [start.x, start.y, end.x, end.y],
+    points: [validStart.x, validStart.y, validEnd.x, validEnd.y],
   })
 
   // Simple straight line for now
-  return [start.x, start.y, end.x, end.y]
+  return [validStart.x, validStart.y, validEnd.x, validEnd.y]
 })
 
 function handleClick() {

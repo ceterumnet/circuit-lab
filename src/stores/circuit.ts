@@ -34,25 +34,19 @@ export const useCircuitStore = defineStore('circuit', () => {
   } | null>(null)
   const isWiringMode = ref(false)
 
-  // Drag connection state
-  const dragConnectionState = ref<{
+  // Click-based wire creation state (replaces drag connection)
+  const wireCreationState = ref<{
     isActive: boolean
     startTerminal: {
       terminalId: string
       componentId: string
       position: Position
     } | null
-    currentPosition: Position | null
-    targetTerminal: {
-      terminalId: string
-      componentId: string
-      position: Position
-    } | null
+    previewPosition: Position | null
   }>({
     isActive: false,
     startTerminal: null,
-    currentPosition: null,
-    targetTerminal: null,
+    previewPosition: null,
   })
 
   // Getters
@@ -197,43 +191,41 @@ export const useCircuitStore = defineStore('circuit', () => {
     addComponent(wire)
   }
 
-  // Drag connection functions
-  function startDragConnection(terminalId: string, componentId: string) {
-    // Use the rotation-aware terminal position calculation
+  // Click-based wire creation functions (replaces drag connection)
+  function startWireCreation(terminalId: string, componentId: string) {
     const component = currentCircuit.value.components.find((c) => c.id === componentId)
     if (component) {
       const worldPosition = getTerminalWorldPosition(component, terminalId)
 
-      dragConnectionState.value = {
+      wireCreationState.value = {
         isActive: true,
         startTerminal: { terminalId, componentId, position: worldPosition },
-        currentPosition: worldPosition,
-        targetTerminal: null,
+        previewPosition: worldPosition,
       }
+
+      // Also set the legacy wiring mode for compatibility
+      selectedTerminal.value = { terminalId, componentId, position: worldPosition }
+      isWiringMode.value = true
     }
   }
 
-  function updateDragConnection(position: Position) {
-    if (dragConnectionState.value.isActive) {
-      dragConnectionState.value.currentPosition = position
+  function updateWirePreview(position: Position) {
+    if (wireCreationState.value.isActive) {
+      wireCreationState.value.previewPosition = position
     }
   }
 
-  function finishDragConnection(terminalId: string, componentId: string, position: Position) {
-    if (!dragConnectionState.value.isActive || !dragConnectionState.value.startTerminal) {
-      cancelDragConnection()
+  function finishWireCreation(terminalId: string, componentId: string) {
+    if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
+      cancelWireCreation()
       return
     }
 
-    // Calculate world position (component position + terminal offset)
     const component = currentCircuit.value.components.find((c) => c.id === componentId)
     if (component) {
-      const worldPosition = {
-        x: component.position.x + position.x,
-        y: component.position.y + position.y,
-      }
+      const worldPosition = getTerminalWorldPosition(component, terminalId)
 
-      const startTerminal = dragConnectionState.value.startTerminal
+      const startTerminal = wireCreationState.value.startTerminal
       const endTerminal = { terminalId, componentId, position: worldPosition }
 
       // Don't allow connecting to same terminal or same component
@@ -245,34 +237,32 @@ export const useCircuitStore = defineStore('circuit', () => {
       }
     }
 
-    cancelDragConnection()
+    cancelWireCreation()
   }
 
-  function finishDragConnectionToNode(nodeId: string) {
-    if (!dragConnectionState.value.startTerminal) return
+  function finishWireCreationToNode(nodeId: string) {
+    if (!wireCreationState.value.startTerminal) return
 
-    // Find the node component
     const node = currentCircuit.value.components.find((c) => c.id === nodeId) as CircuitNode
     if (!node) return
 
-    // Create wire connecting to the node's terminal
-    createWire(dragConnectionState.value.startTerminal, {
+    createWire(wireCreationState.value.startTerminal, {
       terminalId: node.terminal,
       componentId: nodeId,
       position: node.position,
     })
 
-    cancelDragConnection()
+    cancelWireCreation()
   }
 
-  function finishDragConnectionToPosition(position: Position) {
-    if (!dragConnectionState.value.isActive || !dragConnectionState.value.startTerminal) {
-      cancelDragConnection()
+  function finishWireCreationToPosition(position: Position) {
+    if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
+      cancelWireCreation()
       return
     }
 
-    createFreeFormWire(dragConnectionState.value.startTerminal, position)
-    cancelDragConnection()
+    createFreeFormWire(wireCreationState.value.startTerminal, position)
+    cancelWireCreation()
   }
 
   function createFreeFormWire(
@@ -354,13 +344,16 @@ export const useCircuitStore = defineStore('circuit', () => {
     return null
   }
 
-  function cancelDragConnection() {
-    dragConnectionState.value = {
+  function cancelWireCreation() {
+    wireCreationState.value = {
       isActive: false,
       startTerminal: null,
-      currentPosition: null,
-      targetTerminal: null,
+      previewPosition: null,
     }
+
+    // Also clear legacy wiring mode
+    selectedTerminal.value = null
+    isWiringMode.value = false
   }
 
   function findTerminalAtPosition(
@@ -482,7 +475,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   function cancelWiring() {
     selectedTerminal.value = null
     isWiringMode.value = false
-    cancelDragConnection()
+    cancelWireCreation()
   }
 
   function deleteWire(wireId: string) {
@@ -503,7 +496,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     simulationResults,
     selectedTerminal,
     isWiringMode,
-    dragConnectionState,
+    wireCreationState,
 
     // Getters
     selectedComponent,
@@ -527,13 +520,13 @@ export const useCircuitStore = defineStore('circuit', () => {
     deleteWire,
     deleteSelectedComponent,
 
-    // Drag connection functions
-    startDragConnection,
-    updateDragConnection,
-    finishDragConnection,
-    finishDragConnectionToNode,
-    finishDragConnectionToPosition,
-    cancelDragConnection,
+    // Click-based wire creation functions
+    startWireCreation,
+    updateWirePreview,
+    finishWireCreation,
+    finishWireCreationToNode,
+    finishWireCreationToPosition,
+    cancelWireCreation,
     findTerminalAtPosition,
     findNodeAtPosition,
     getTerminalWorldPosition,

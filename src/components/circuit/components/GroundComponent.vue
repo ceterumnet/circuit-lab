@@ -50,9 +50,6 @@
       :position="{ x: 0, y: -15 }"
       :component-id="component.id"
       @terminal-click="handleTerminalClick"
-      @terminal-drag-start="handleTerminalDragStart"
-      @terminal-drag-move="handleTerminalDragMove"
-      @terminal-drag-end="handleTerminalDragEnd"
     />
 
     <!-- Component label -->
@@ -83,9 +80,6 @@ interface Emits {
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-start', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-move', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-end', terminalId: string, componentId: string, position: Position): void
 }
 
 defineProps<Props>()
@@ -117,17 +111,5 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
 
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
   emit('terminal-click', terminalId, componentId, position)
-}
-
-function handleTerminalDragStart(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-drag-start', terminalId, componentId, position)
-}
-
-function handleTerminalDragMove(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-drag-move', terminalId, componentId, position)
-}
-
-function handleTerminalDragEnd(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-drag-end', terminalId, componentId, position)
 }
 </script>

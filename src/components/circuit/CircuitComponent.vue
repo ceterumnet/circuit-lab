@@ -9,9 +9,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-click="handleTerminalClick"
-        @terminal-drag-start="handleTerminalDragStart"
-        @terminal-drag-move="handleTerminalDragMove"
-        @terminal-drag-end="handleTerminalDragEnd"
       />
     </v-group>
 
@@ -24,9 +21,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-click="handleTerminalClick"
-        @terminal-drag-start="handleTerminalDragStart"
-        @terminal-drag-move="handleTerminalDragMove"
-        @terminal-drag-end="handleTerminalDragEnd"
       />
     </v-group>
 
@@ -39,9 +33,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-click="handleTerminalClick"
-        @terminal-drag-start="handleTerminalDragStart"
-        @terminal-drag-move="handleTerminalDragMove"
-        @terminal-drag-end="handleTerminalDragEnd"
       />
     </v-group>
 
@@ -53,6 +44,7 @@
         @dragstart="handleDragStart"
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
+        @terminal-click="handleTerminalClick"
         @node-connect="handleNodeConnect"
       />
     </v-group>
@@ -97,9 +89,6 @@ interface Emits {
   (e: 'select', componentId: string): void
   (e: 'move', componentId: string, startDrag: boolean): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-start', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-move', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-drag-end', terminalId: string, componentId: string, position: Position): void
   (e: 'node-connect', nodeId: string): void
   (e: 'wire-delete', wireId: string): void
 }
@@ -183,18 +172,6 @@ function handleTerminalClick(terminalId: string, componentId: string, position: 
   emit('terminal-click', terminalId, componentId, position)
 }
 
-function handleTerminalDragStart(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-drag-start', terminalId, componentId, position)
-}
-
-function handleTerminalDragMove(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-drag-move', terminalId, componentId, position)
-}
-
-function handleTerminalDragEnd(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-drag-end', terminalId, componentId, position)
-}
-
 function handleNodeConnect(nodeId: string) {
   emit('node-connect', nodeId)
 }
@@ -235,16 +212,31 @@ function getTerminalWorldPosition(component: CircuitComponent, terminalId: strin
       localOffset = { x: 0, y: -15 }
       break
     }
+    case ComponentType.NODE: {
+      // Node terminal is at the center
+      localOffset = { x: 0, y: 0 }
+      break
+    }
     default:
-      return component.position
+      // Fallback with validation
+      const pos = component.position
+      return {
+        x: isNaN(pos.x) ? 0 : pos.x,
+        y: isNaN(pos.y) ? 0 : pos.y,
+      }
   }
 
   // Apply rotation transformation to local offset
   const rotatedOffset = rotatePoint(localOffset, component.rotation)
 
+  // Calculate final position
+  const finalX = component.position.x + rotatedOffset.x
+  const finalY = component.position.y + rotatedOffset.y
+
+  // Only fallback to 0 if both component position AND offset are invalid
   return {
-    x: component.position.x + rotatedOffset.x,
-    y: component.position.y + rotatedOffset.y,
+    x: isNaN(finalX) ? (isNaN(component.position.x) ? 0 : component.position.x) : finalX,
+    y: isNaN(finalY) ? (isNaN(component.position.y) ? 0 : component.position.y) : finalY,
   }
 }
 
