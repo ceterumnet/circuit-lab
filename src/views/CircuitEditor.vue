@@ -10,13 +10,13 @@
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
             <span class="component-count"> Components: {{ circuitStore.componentCount }} </span>
-            <span v-if="circuitStore.currentMode" class="current-mode">
-              Mode: {{ formatModeName(circuitStore.currentMode) }}
+            <span v-if="interactionStore.currentMode" class="current-mode">
+              Mode: {{ formatModeName(interactionStore.currentMode) }}
             </span>
-            <span v-if="circuitStore.modeData?.componentType && typeof circuitStore.modeData.componentType === 'string'" class="selected-component">
-              Placing: {{ getComponentName(circuitStore.modeData.componentType as string) }}
+            <span v-if="interactionStore.modeData?.componentType && typeof interactionStore.modeData.componentType === 'string'" class="selected-component">
+              Placing: {{ getComponentName(interactionStore.modeData.componentType as string) }}
             </span>
-            <span v-if="circuitStore.wireCreationState.isActive" class="wiring-mode">
+            <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
               🔌 Click to complete wire
             </span>
             <span v-if="circuitStore.isSimulating" class="simulation-status">
@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { useCircuitStore } from '@/stores/circuit'
+import { useInteractionStore } from '@/stores/interaction'
 import { InteractionMode } from '@/types/components'
 import { getComponentDefinition } from '@/registry/components'
 
@@ -54,6 +55,7 @@ import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 
 const circuitStore = useCircuitStore()
+const interactionStore = useInteractionStore()
 
 function formatModeName(mode: InteractionMode): string {
   return mode.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())

@@ -19,7 +19,7 @@
 import { ref, computed } from 'vue'
 import type { Position } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
-import { useCircuitStore } from '@/stores/circuit'
+import { useInteractionStore } from '@/stores/interaction'
 
 interface Props {
   terminalId: string
@@ -35,13 +35,13 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
-const circuitStore = useCircuitStore()
+const interactionStore = useInteractionStore()
 
 const isHovered = ref(false)
 
 // Check if this terminal can accept a wire connection
 const isValidDropTarget = computed(() => {
-  const wireState = circuitStore.wireCreationState
+  const wireState = interactionStore.wireCreationState
   return (
     wireState.isActive &&
     wireState.startTerminal &&

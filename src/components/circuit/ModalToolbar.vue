@@ -59,11 +59,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useCircuitStore } from '@/stores/circuit'
+import { useInteractionStore } from '@/stores/interaction'
 import { InteractionMode } from '@/types/components'
 import { getAllComponents, getComponentsByCategory } from '@/registry/components'
 
-const circuitStore = useCircuitStore()
+const interactionStore = useInteractionStore()
 
 // Interaction modes configuration
 const interactionModes = [
@@ -118,18 +118,18 @@ const componentCategories = computed(() => [
   }
 ])
 
-const currentMode = computed(() => circuitStore.currentMode)
+const currentMode = computed(() => interactionStore.currentMode)
 const selectedComponentType = computed(() => {
-  const componentType = circuitStore.modeData?.componentType
+  const componentType = interactionStore.modeData?.componentType
   return typeof componentType === 'string' ? componentType : undefined
 })
 
 function selectMode(mode: InteractionMode) {
-  circuitStore.setMode(mode)
+  interactionStore.setMode(mode)
 }
 
 function selectComponent(componentType: string) {
-  circuitStore.setMode(InteractionMode.PLACE_COMPONENT, { componentType: componentType })
+  interactionStore.setComponentPlacementMode(componentType)
 }
 
 function getCurrentModeLabel(): string {

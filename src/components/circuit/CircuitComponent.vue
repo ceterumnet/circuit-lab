@@ -86,7 +86,9 @@ interface Props {
 
 interface Emits {
   (e: 'select', componentId: string): void
-  (e: 'move', componentId: string, startDrag: boolean): void
+  (e: 'move-start', componentId: string): void
+  (e: 'move', componentId: string, position: Position): void
+  (e: 'move-end', componentId: string, position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'node-connect', nodeId: string): void
   (e: 'wire-delete', wireId: string): void
@@ -154,17 +156,17 @@ function handleSelect() {
 }
 
 function handleDragStart() {
-  emit('move', props.component.id, true)
+  emit('move-start', props.component.id)
 }
 
 function handleDragMove(position: Position) {
   // Update the component position in the store during drag for real-time wire updates
-  circuitStore.moveComponent(props.component.id, position)
+  emit('move', props.component.id, position)
 }
 
 function handleDragEnd(position: Position) {
   // Final position update with grid snapping
-  circuitStore.moveComponent(props.component.id, position)
+  emit('move-end', props.component.id, position)
 }
 
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
