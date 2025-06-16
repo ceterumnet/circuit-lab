@@ -165,13 +165,13 @@ function handleDragStart() {
 }
 
 function handleDragMove(position: Position) {
-  // Update the component position in the store during drag for real-time wire updates
+  // Update the component position in the store for real-time wire updates
   emit('move', props.component.id, position)
 }
 
-function handleDragEnd() {
+function handleDragEnd(position: Position) {
   // Final position update with grid snapping
-  emit('move-end', props.component.id)
+  emit('move-end', props.component.id, position)
 }
 
 function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {

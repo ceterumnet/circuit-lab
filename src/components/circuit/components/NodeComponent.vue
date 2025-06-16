@@ -5,13 +5,13 @@
       y: component.position.y,
       draggable: true,
     }"
-    @dragstart="handleClick"
-    @dragmove="(e: KonvaEventObject<DragEvent>) => emit('drag', e)"
-    @dragend="(e: KonvaEventObject<DragEvent>) => emit('dragend', e)"
+    @dragstart="handleDragStart"
+    @dragmove="handleDragMove"
+    @dragend="handleDragEnd"
     @click="handleClick"
-    @mouseenter="() => emit('mouseenter')"
-    @mouseleave="() => emit('mouseleave')"
-    @mousedown="handleMouseDown"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
+    @mousedown="handleTerminalMouseDown"
   >
     <v-circle
       :config="{
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CircuitNode } from '@/types/components'
+import type { CircuitNode, Position } from '@/types/components'
 import { useInteractionStore } from '@/stores/interaction'
 import { computed } from 'vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
@@ -33,12 +33,15 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', id: string): void
-  (e: 'drag', event: KonvaEventObject<DragEvent>): void
-  (e: 'dragend', event: KonvaEventObject<DragEvent>): void
+  (e: 'select'): void
+  (e: 'dragstart'): void
+  (e: 'dragmove', position: Position): void
+  (e: 'dragend', position: Position): void
   (e: 'mouseenter'): void
   (e: 'mouseleave'): void
-  (e: 'mousedown', event: KonvaEventObject<MouseEvent>): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'node-connect', nodeId: string): void
 }>()
 
 const interactionStore = useInteractionStore()
@@ -58,10 +61,58 @@ const isHighlighted = computed(() => {
 })
 
 function handleClick() {
-  emit('select', props.component.id)
+  emit('select')
 }
 
-function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
-  emit('mousedown', event)
+function handleDragStart() {
+  emit('dragstart')
+}
+
+function handleDragMove(e: KonvaEventObject<DragEvent>) {
+  const newPosition = {
+    x: e.target.x(),
+    y: e.target.y(),
+  }
+  emit('dragmove', newPosition)
+}
+
+function handleDragEnd(e: KonvaEventObject<DragEvent>) {
+  const newPosition = {
+    x: Math.round(e.target.x() / 30) * 30, // Snap to grid on end
+    y: Math.round(e.target.y() / 30) * 30,
+  }
+  emit('dragend', newPosition)
+}
+
+function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'pointer'
+  }
+  emit('mouseenter')
+}
+
+function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'default'
+  }
+  emit('mouseleave')
+}
+
+function handleTerminalMouseDown(event: KonvaEventObject<MouseEvent>) {
+  const stage = event.target.getStage()
+  if (!stage) return
+
+  const pos = stage.getPointerPosition()
+  if (!pos) return
+
+  // For a node, the component and terminal IDs are the same
+  emit(
+    'terminal-mousedown',
+    props.component.terminal,
+    props.component.id,
+    pos
+  )
 }
 </script>
