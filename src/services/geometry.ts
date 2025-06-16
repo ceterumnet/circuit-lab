@@ -77,37 +77,10 @@ export function findTerminalAtPosition(
       )
 
       if (distance <= 15) {
-        // Calculate local terminal position with rotation applied
-        let localOffset: Position
-
-        switch (component.type) {
-          case 'resistor':
-          case 'voltage_source': {
-            const terminals = (component as Resistor | VoltageSource).terminals
-            const terminalIndex = terminals.indexOf(terminalId)
-            const offsetX = terminalIndex === 0 ? -30 : 30
-            localOffset = { x: offsetX, y: 0 }
-            break
-          }
-          case 'ground': {
-            localOffset = { x: 0, y: -15 }
-            break
-          }
-          case 'node': {
-            localOffset = { x: 0, y: 0 }
-            break
-          }
-          default:
-            localOffset = { x: 0, y: 0 }
-        }
-
-        // Apply rotation to get the local terminal position that matches the visual component
-        const rotatedLocalOffset = rotatePoint(localOffset, component.rotation)
-
         return {
           terminalId,
           componentId: component.id,
-          position: rotatedLocalOffset,
+          position: terminalWorldPos,
         }
       }
     }

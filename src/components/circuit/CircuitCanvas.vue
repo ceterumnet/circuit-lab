@@ -86,6 +86,7 @@
             stroke: '#007bff',
             strokeWidth: 2,
             dash: [5, 5],
+            listening: false,
           }"
         />
       </v-layer>
