@@ -153,15 +153,23 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
 }
 
 function handleTerminalMouseDown(terminalId: string, componentId: string) {
-  // A mousedown on a terminal always starts a wire drag
-  interactionStore.startWireCreation(terminalId, componentId)
+  console.log(
+    `[Canvas] handleTerminalMouseDown: terminal=${terminalId}, component=${componentId}, active=${interactionStore.wireCreationState.isActive}`
+  )
+  if (interactionStore.wireCreationState.isActive) {
+    // If a wire is being created, this mousedown finishes it.
+    interactionStore.finishWireCreation(terminalId, componentId);
+  } else {
+    // Otherwise, this mousedown starts a new wire.
+    interactionStore.startWireCreation(terminalId, componentId);
+  }
 }
 
 function handleTerminalClick(terminalId: string, componentId: string) {
-  // A click on a terminal will finish a wire if one is being created
-  if (interactionStore.wireCreationState.isActive) {
-    interactionStore.finishWireCreation(terminalId, componentId)
-  }
+  // This function is now redundant, but we'll keep it for now.
+  console.log(
+    `[Canvas] handleTerminalClick: terminal=${terminalId}, component=${componentId}, active=${interactionStore.wireCreationState.isActive}`
+  )
 }
 
 function handleNodeConnect(nodeId: string) {

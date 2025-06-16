@@ -49,6 +49,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   function cancelWireCreation() {
+    console.log('[Interaction] cancelWireCreation');
     wireCreationState.value = {
       isActive: false,
       startTerminal: null,
@@ -58,6 +59,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   function startWireCreation(terminalId: string, componentId: string) {
+    console.log(`[Interaction] startWireCreation: terminal=${terminalId}, component=${componentId}`);
     const circuitStore = useCircuitStore();
     const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId);
     if (component) {
@@ -68,6 +70,7 @@ export const useInteractionStore = defineStore('interaction', () => {
         startTerminal: { terminalId, componentId, position: worldPosition },
         previewPosition: worldPosition,
       };
+      console.log('[Interaction] wireCreationState started:', wireCreationState.value);
     }
   }
 
@@ -78,6 +81,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   function finishWireCreation(terminalId: string, componentId: string) {
+    console.log(`[Interaction] finishWireCreation: terminal=${terminalId}, component=${componentId}`);
     if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
       cancelWireCreation();
       return;
@@ -120,6 +124,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   function finishWireCreationToPosition(position: Position) {
+    console.log('[Interaction] finishWireCreationToPosition', position);
     if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
       cancelWireCreation()
       return
