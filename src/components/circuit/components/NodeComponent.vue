@@ -5,8 +5,8 @@
       :config="{
         x: component.position.x,
         y: component.position.y,
-        radius: 4,
-        fill: component.selected ? '#2196f3' : '#000',
+        radius: 10,
+        fill: component.selected ? '#2196f3' : 'rgba(0,0,0,0.01)',
         stroke: component.selected ? '#2196f3' : '#333',
         strokeWidth: component.selected ? 2 : 1,
         draggable: true,
@@ -15,6 +15,19 @@
       @dragmove="handleDragMove"
       @dragend="handleDragEnd"
       @click="handleClick"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
+    />
+
+    <!-- Visual indicator for the node center -->
+    <v-circle
+      :config="{
+        x: component.position.x,
+        y: component.position.y,
+        radius: 2,
+        fill: '#000',
+        listening: false,
+      }"
     />
 
     <!-- Selection indicator (separate element) -->
@@ -85,5 +98,19 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
   emit('move', props.component.id, false)
   // Also emit dragend with final position
   emit('dragend', newPosition)
+}
+
+function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'pointer'
+  }
+}
+
+function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'default'
+  }
 }
 </script>

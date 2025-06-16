@@ -10,7 +10,20 @@
     @dragstart="handleDragStart"
     @dragmove="handleDragMove"
     @dragend="handleDragEnd"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
+    <!-- Hit area -->
+    <v-rect
+      :config="{
+        x: -40,
+        y: -25,
+        width: 80,
+        height: 50,
+        fill: 'rgba(0,0,0,0.01)',
+      }"
+    />
+
     <!-- Voltage source body (circle) -->
     <v-circle
       :config="{
@@ -107,6 +120,7 @@
 <script setup lang="ts">
 import type { VoltageSource, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
+import type { KonvaEventObject } from 'konva/lib/Node'
 
 interface Props {
   component: VoltageSource
@@ -149,5 +163,19 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
 
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
   emit('terminal-click', terminalId, componentId, position)
+}
+
+function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'pointer'
+  }
+}
+
+function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'default'
+  }
 }
 </script>

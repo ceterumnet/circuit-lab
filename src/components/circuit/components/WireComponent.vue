@@ -1,15 +1,28 @@
 <template>
   <v-group>
-    <!-- Wire line -->
+    <!-- Hit area line -->
+    <v-line
+      :config="{
+        points: wirePoints,
+        stroke: 'rgba(0,0,0,0.01)',
+        strokeWidth: 10,
+        lineCap: 'round',
+      }"
+      @click="handleClick"
+      @dblclick="handleDoubleClick"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
+    />
+
+    <!-- Visible wire line -->
     <v-line
       :config="{
         points: wirePoints,
         stroke: component.selected ? '#2196f3' : '#333',
         strokeWidth: component.selected ? 3 : 2,
         lineCap: 'round',
+        listening: false, // Make this line non-interactive
       }"
-      @click="handleClick"
-      @dblclick="handleDoubleClick"
     />
 
     <!-- Selection indicator -->
@@ -21,6 +34,7 @@
         strokeWidth: 6,
         opacity: 0.3,
         lineCap: 'round',
+        listening: false, // Make this line non-interactive
       }"
     />
   </v-group>
@@ -29,6 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Wire, Position } from '@/types/components'
+import type { KonvaEventObject } from 'konva/lib/Node'
 
 interface Props {
   component: Wire
@@ -78,5 +93,19 @@ function handleClick() {
 
 function handleDoubleClick() {
   emit('delete')
+}
+
+function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'pointer'
+  }
+}
+
+function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (stage) {
+    stage.container().style.cursor = 'default'
+  }
 }
 </script>
