@@ -58,6 +58,48 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] Visual feedback during wire creation
 - [x] Complex circuit topology support (voltage dividers, etc.)
 
+### Phase 1.5 - UX Overhaul (Modeless Interaction)
+
+**Goal**: Refactor the user experience to be "modeless", intuitive, and contextual. This replaces the rigid, mode-based toolbar with a fluid, direct-interaction workflow.
+
+**1. Deprecate Modal Toolbar & Simplify State**
+- [ ] Remove the `ModalToolbar` component entirely.
+- [ ] Eliminate `currentMode` and `modeData` from the `interactionStore`.
+- [ ] Refactor state to rely on direct user actions (e.g., `isDragging`, `isWiring`, `selectedComponentId`).
+
+**2. Implement a Component Palette**
+- [ ] Create a new, always-visible `ComponentPalette` component.
+- [ ] Clicking a component in the palette activates a "placement" state.
+- [ ] Clicking on the canvas places the selected component.
+- [ ] The cursor should provide clear visual feedback for placement mode.
+
+**3. "Smart" Cursor & Contextual Highlighting**
+- [ ] Implement dynamic cursor changes based on context:
+    - **Default Arrow:** On canvas background.
+    - **Pointer (`cursor: pointer`):** When hovering over a selectable/draggable component body.
+    - **Crosshair (`cursor: crosshair`):** When hovering over a terminal to indicate a wire can be started.
+- [ ] Enhance terminal highlighting on hover to make connection points more obvious.
+
+**4. Redesigned Component Interactions**
+- [ ] **Selection:** A single click selects a component.
+- [ ] **Drag & Drop:** Click and drag a component body to move it (no special mode needed).
+- [ ] **Deletion:** Keep the existing keyboard shortcut (`Delete`/`Backspace`) for selected components.
+- [ ] **Contextual Rotation:**
+    - [ ] When a component is selected, render a "selection box" or "adorners" around it.
+    - [ ] Include a dedicated rotation handle on the selection box.
+    - [ ] Users can click and drag this handle to rotate the component smoothly.
+
+**5. Intuitive Wiring Workflow**
+- [ ] **No "Wire Mode":** Remove the explicit need to enter a wire mode.
+- [ ] **Hover to Connect:** Terminals should highlight when hovered, indicating they are interactive.
+- [ ] **Click-and-Drag Wiring:**
+    - [ ] Click and hold on a highlighted terminal to start dragging a new wire.
+    - [ ] A preview line follows the cursor.
+- [ ] **Smart Wire Termination:**
+    - [ ] When dragging the wire preview over another valid terminal, the target terminal should highlight.
+    - [ ] Releasing the mouse over a highlighted terminal completes the connection.
+    - [ ] Releasing the mouse over an empty part of the canvas automatically creates a `Node` component and connects the wire to it.
+
 ### Phase 2 - Passive Components
 
 **Goal**: AC analysis and energy storage elements
