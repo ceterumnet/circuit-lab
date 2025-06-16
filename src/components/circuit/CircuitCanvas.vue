@@ -43,9 +43,22 @@
           }"
         />
 
-        <!-- Circuit components -->
+        <!-- Wires (rendered first, so they are in the background) -->
         <circuit-component
-          v-for="component in circuitStore.currentCircuit.components"
+          v-for="component in wires"
+          :key="component.id"
+          :component="component"
+          @select="handleComponentSelect"
+          @move-start="handleComponentMoveStart"
+          @move="handleComponentMove"
+          @move-end="handleComponentMoveEnd"
+          @terminal-click="handleTerminalClick"
+          @node-connect="handleNodeConnect"
+        />
+
+        <!-- Other components (rendered on top of wires) -->
+        <circuit-component
+          v-for="component in otherComponents"
           :key="component.id"
           :component="component"
           @select="handleComponentSelect"
@@ -123,6 +136,14 @@ const gridLinesY = computed(() => {
 // Store
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
+
+// Computed properties for rendering order
+const wires = computed(() =>
+  circuitStore.currentCircuit.components.filter(c => c.type === 'wire')
+)
+const otherComponents = computed(() =>
+  circuitStore.currentCircuit.components.filter(c => c.type !== 'wire')
+)
 
 // Refs
 const stage = ref()
