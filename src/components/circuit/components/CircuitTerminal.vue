@@ -9,7 +9,7 @@
       strokeWidth: isSelected || isValidDropTarget ? 2 : 1,
       draggable: false,
     }"
-    @click="handleClick"
+    @mousedown="handleMouseDown"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   />
@@ -29,7 +29,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-hover', terminalId: string, componentId: string, isHovered: boolean): void
 }
 
@@ -37,23 +37,33 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const interactionStore = useInteractionStore()
 
-const isHovered = ref(false)
+const isSelected = computed(
+  () => interactionStore.selectedComponentId === props.componentId
+)
 
-// Check if this terminal can accept a wire connection
 const isValidDropTarget = computed(() => {
   const wireState = interactionStore.wireCreationState
+  const hovered = interactionStore.hoveredTerminal
+
+  if (!wireState.isActive || !hovered) return false
+
   return (
-    wireState.isActive &&
-    wireState.startTerminal &&
-    wireState.startTerminal.terminalId !== props.terminalId &&
-    wireState.startTerminal.componentId !== props.componentId
+    hovered.componentId === props.componentId &&
+    hovered.terminalId === props.terminalId &&
+    wireState.startTerminal?.terminalId !== props.terminalId
   )
 })
 
-function handleClick(e: KonvaEventObject<MouseEvent>) {
+const isHovered = ref(false)
+
+const position = computed(() => {
+  return props.position
+})
+
+function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
   // Prevent component selection (Konva event)
   e.cancelBubble = true
-  emit('terminal-click', props.terminalId, props.componentId, props.position)
+  emit('terminal-mousedown', props.terminalId, props.componentId, props.position)
 }
 
 function handleMouseEnter() {

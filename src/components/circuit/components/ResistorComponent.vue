@@ -28,8 +28,8 @@
     <v-line
       :config="{
         points: zigzagPoints,
-        stroke: component.selected ? '#2196f3' : '#333',
-        strokeWidth: component.selected ? 3 : 2,
+        stroke: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
+        strokeWidth: isSelected || isHighlighted ? 2 : 1,
         lineCap: 'round',
         lineJoin: 'round',
       }"
@@ -40,13 +40,13 @@
       :terminal-id="component.terminals[0]"
       :position="{ x: -30, y: 0 }"
       :component-id="component.id"
-      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
     />
     <circuit-terminal
       :terminal-id="component.terminals[1]"
       :position="{ x: 30, y: 0 }"
       :component-id="component.id"
-      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
     />
 
     <!-- Component label -->
@@ -80,6 +80,7 @@ import { computed } from 'vue'
 import type { Resistor, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
+import { useInteractionStore } from '@/stores/interaction'
 
 interface Props {
   component: Resistor
@@ -90,11 +91,29 @@ interface Emits {
   (e: 'dragstart'): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
-  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const interactionStore = useInteractionStore()
+
+const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id)
+
+const isHighlighted = computed(() => {
+  const wireState = interactionStore.wireCreationState
+  const hovered = interactionStore.hoveredTerminal
+
+  // Highlight only during wire creation
+  if (!wireState.isActive) return false
+
+  // Don't highlight the component the wire is starting from
+  if (wireState.startTerminal?.componentId === props.component.id) return false
+
+  // Check if the hovered terminal belongs to this component
+  return hovered?.componentId === props.component.id
+})
 
 // Create zigzag pattern for resistor
 const zigzagPoints = computed(() => {
@@ -145,8 +164,8 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
   emit('dragend', newPosition)
 }
 
-function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-click', terminalId, componentId, position)
+function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-mousedown', terminalId, componentId, position)
 }
 
 function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {

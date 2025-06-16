@@ -29,8 +29,8 @@
     <v-line
       :config="{
         points: [0, -15, 0, 15],
-        stroke: component.selected ? '#2196f3' : '#333',
-        strokeWidth: component.selected ? 3 : 2,
+        stroke: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
+        strokeWidth: isSelected || isHighlighted ? 2 : 1,
       }"
     />
 
@@ -38,22 +38,22 @@
     <v-line
       :config="{
         points: [-15, 15, 15, 15],
-        stroke: component.selected ? '#2196f3' : '#333',
-        strokeWidth: component.selected ? 3 : 2,
+        stroke: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
+        strokeWidth: isSelected || isHighlighted ? 2 : 1,
       }"
     />
     <v-line
       :config="{
         points: [-10, 20, 10, 20],
-        stroke: component.selected ? '#2196f3' : '#333',
-        strokeWidth: component.selected ? 3 : 2,
+        stroke: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
+        strokeWidth: isSelected || isHighlighted ? 2 : 1,
       }"
     />
     <v-line
       :config="{
         points: [-5, 25, 5, 25],
-        stroke: component.selected ? '#2196f3' : '#333',
-        strokeWidth: component.selected ? 3 : 2,
+        stroke: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
+        strokeWidth: isSelected || isHighlighted ? 2 : 1,
       }"
     />
 
@@ -62,7 +62,7 @@
       :terminal-id="component.terminal"
       :position="{ x: 0, y: -15 }"
       :component-id="component.id"
-      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
     />
 
     <!-- Component label -->
@@ -83,6 +83,8 @@
 import type { Ground, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
+import { useInteractionStore } from '@/stores/interaction';
+import { computed } from 'vue';
 
 interface Props {
   component: Ground
@@ -93,11 +95,26 @@ interface Emits {
   (e: 'dragstart'): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
-  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const interactionStore = useInteractionStore();
+
+const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id);
+
+const isHighlighted = computed(() => {
+  const wireState = interactionStore.wireCreationState;
+  const hovered = interactionStore.hoveredTerminal;
+
+  if (!wireState.isActive) return false;
+
+  // Ground component has only one terminal, so no need to check for startTerminal's componentId
+
+  return hovered?.componentId === props.component.id;
+});
 
 function handleClick() {
   emit('select')
@@ -123,8 +140,8 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
   emit('dragend', newPosition)
 }
 
-function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-click', terminalId, componentId, position)
+function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-mousedown', terminalId, componentId, position)
 }
 
 function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {

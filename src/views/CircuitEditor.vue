@@ -1,8 +1,7 @@
 <template>
   <div class="circuit-editor">
     <div class="editor-layout">
-      <!-- Modal toolbar -->
-      <modal-toolbar class="sidebar" />
+      <component-palette class="sidebar" />
 
       <!-- Main canvas area -->
       <div class="canvas-area">
@@ -10,12 +9,6 @@
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
             <span class="component-count"> Components: {{ circuitStore.componentCount }} </span>
-            <span v-if="interactionStore.currentMode" class="current-mode">
-              Mode: {{ formatModeName(interactionStore.currentMode) }}
-            </span>
-            <span v-if="interactionStore.modeData?.componentType && typeof interactionStore.modeData.componentType === 'string'" class="selected-component">
-              Placing: {{ getComponentName(interactionStore.modeData.componentType as string) }}
-            </span>
             <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
               🔌 Click to complete wire
             </span>
@@ -47,24 +40,13 @@
 <script setup lang="ts">
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
-import { InteractionMode } from '@/types/components'
-import { getComponentDefinition } from '@/registry/components'
 
-import ModalToolbar from '@/components/circuit/ModalToolbar.vue'
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
+import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
 
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
-
-function formatModeName(mode: InteractionMode): string {
-  return mode.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
-}
-
-function getComponentName(componentType: string): string {
-  const definition = getComponentDefinition(componentType)
-  return definition?.name || componentType
-}
 </script>
 
 <style scoped>
@@ -125,24 +107,6 @@ function getComponentName(componentType: string): string {
   font-size: 0.875rem;
   color: #28a745;
   font-weight: 500;
-}
-
-.current-mode {
-  font-size: 0.875rem;
-  color: #007bff;
-  font-weight: 500;
-  background: #e7f3ff;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.selected-component {
-  font-size: 0.875rem;
-  color: #28a745;
-  font-weight: 500;
-  background: #d4edda;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
 }
 
 .wiring-mode {

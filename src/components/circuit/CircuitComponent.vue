@@ -8,6 +8,7 @@
         @dragstart="handleDragStart"
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
+        @terminal-mousedown="handleTerminalMouseDown"
         @terminal-click="handleTerminalClick"
       />
     </v-group>
@@ -20,6 +21,7 @@
         @dragstart="handleDragStart"
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
+        @terminal-mousedown="handleTerminalMouseDown"
         @terminal-click="handleTerminalClick"
       />
     </v-group>
@@ -32,6 +34,7 @@
         @dragstart="handleDragStart"
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
+        @terminal-mousedown="handleTerminalMouseDown"
         @terminal-click="handleTerminalClick"
       />
     </v-group>
@@ -44,6 +47,7 @@
         @dragstart="handleDragStart"
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
+        @terminal-mousedown="handleTerminalMouseDown"
         @terminal-click="handleTerminalClick"
         @node-connect="handleNodeConnect"
       />
@@ -89,6 +93,7 @@ interface Emits {
   (e: 'move-start', componentId: string): void
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'node-connect', nodeId: string): void
   (e: 'wire-delete', wireId: string): void
@@ -164,9 +169,13 @@ function handleDragMove(position: Position) {
   emit('move', props.component.id, position)
 }
 
-function handleDragEnd(position: Position) {
+function handleDragEnd() {
   // Final position update with grid snapping
-  emit('move-end', props.component.id, position)
+  emit('move-end', props.component.id)
+}
+
+function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-mousedown', terminalId, componentId, position)
 }
 
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {

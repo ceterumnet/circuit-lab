@@ -116,6 +116,15 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
+  function deleteWire(wireId: string) {
+    const index = currentCircuit.value.components.findIndex(
+      (c) => c.type === 'wire' && c.id === wireId
+    );
+    if (index !== -1) {
+      currentCircuit.value.components.splice(index, 1);
+    }
+  }
+
   return {
     // State
     currentCircuit,
@@ -135,5 +144,6 @@ export const useCircuitStore = defineStore('circuit', () => {
     startSimulation,
     createWire,
     deleteSelectedComponent,
+    deleteWire,
   }
 })

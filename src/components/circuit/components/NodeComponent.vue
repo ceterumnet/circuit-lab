@@ -1,116 +1,67 @@
 <template>
-  <v-group>
-    <!-- Single draggable circle - no nested groups, no terminal conflicts -->
+  <v-group
+    :config="{
+      x: component.position.x,
+      y: component.position.y,
+      draggable: true,
+    }"
+    @dragstart="handleClick"
+    @dragmove="(e: KonvaEventObject<DragEvent>) => emit('drag', e)"
+    @dragend="(e: KonvaEventObject<DragEvent>) => emit('dragend', e)"
+    @click="handleClick"
+    @mouseenter="() => emit('mouseenter')"
+    @mouseleave="() => emit('mouseleave')"
+    @mousedown="handleMouseDown"
+  >
     <v-circle
       :config="{
-        x: component.position.x,
-        y: component.position.y,
-        radius: 10,
-        fill: component.selected ? '#2196f3' : 'rgba(0,0,0,0.01)',
-        stroke: component.selected ? '#2196f3' : '#333',
-        strokeWidth: component.selected ? 2 : 1,
-        draggable: true,
-      }"
-      @dragstart="handleDragStart"
-      @dragmove="handleDragMove"
-      @dragend="handleDragEnd"
-      @click="handleClick"
-      @mouseenter="handleMouseEnter"
-      @mouseleave="handleMouseLeave"
-    />
-
-    <!-- Visual indicator for the node center -->
-    <v-circle
-      :config="{
-        x: component.position.x,
-        y: component.position.y,
-        radius: 2,
-        fill: '#000',
-        listening: false,
-      }"
-    />
-
-    <!-- Selection indicator (separate element) -->
-    <v-circle
-      v-if="component.selected"
-      :config="{
-        x: component.position.x,
-        y: component.position.y,
-        radius: 8,
-        stroke: '#2196f3',
-        strokeWidth: 2,
-        opacity: 0.5,
-        listening: false,
+        radius: 6,
+        fill: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
       }"
     />
   </v-group>
 </template>
 
 <script setup lang="ts">
-import type { CircuitNode, Position } from '@/types/components'
+import type { CircuitNode } from '@/types/components'
+import { useInteractionStore } from '@/stores/interaction'
+import { computed } from 'vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 
-interface Props {
+const props = defineProps<{
   component: CircuitNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'select', id: string): void
+  (e: 'drag', event: KonvaEventObject<DragEvent>): void
+  (e: 'dragend', event: KonvaEventObject<DragEvent>): void
+  (e: 'mouseenter'): void
+  (e: 'mouseleave'): void
+  (e: 'mousedown', event: KonvaEventObject<MouseEvent>): void
+}>()
+
+const interactionStore = useInteractionStore()
+
+const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id)
+
+const isHighlighted = computed(() => {
+  const wireState = interactionStore.wireCreationState
+  const hovered = interactionStore.hoveredTerminal
+
+  if (!wireState.isActive) return false
+
+  // Don't highlight the node the wire is starting from
+  if (wireState.startTerminal?.componentId === props.component.id) return false
+
+  return hovered?.componentId === props.component.id
+})
+
+function handleClick() {
+  emit('select', props.component.id)
 }
 
-interface Emits {
-  (e: 'select'): void
-  (e: 'move', componentId: string, startDrag: boolean): void
-  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
-  (e: 'dragmove', position: Position): void
-  (e: 'dragend', position: Position): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-function handleClick(e: KonvaEventObject<MouseEvent>) {
-  // Handle both component selection AND terminal clicks
-  e.cancelBubble = true
-
-  // Emit component selection
-  emit('select')
-
-  // Also emit terminal click for wire creation (node terminal is at center)
-  emit('terminal-click', props.component.terminal, props.component.id, { x: 0, y: 0 })
-}
-
-function handleDragStart() {
-  emit('move', props.component.id, true)
-}
-
-function handleDragMove(e: { target: { x(): number; y(): number } }) {
-  const newPosition = {
-    x: e.target.x(), // Don't snap during drag for smooth movement
-    y: e.target.y(),
-  }
-  emit('move', props.component.id, false)
-  // Also emit dragmove with position for real-time wire updates
-  emit('dragmove', newPosition)
-}
-
-function handleDragEnd(e: { target: { x(): number; y(): number } }) {
-  const newPosition = {
-    x: Math.round(e.target.x() / 30) * 30, // Snap to grid on end
-    y: Math.round(e.target.y() / 30) * 30,
-  }
-  emit('move', props.component.id, false)
-  // Also emit dragend with final position
-  emit('dragend', newPosition)
-}
-
-function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
-  const stage = e.target.getStage()
-  if (stage) {
-    stage.container().style.cursor = 'pointer'
-  }
-}
-
-function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
-  const stage = e.target.getStage()
-  if (stage) {
-    stage.container().style.cursor = 'default'
-  }
+function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
+  emit('mousedown', event)
 }
 </script>

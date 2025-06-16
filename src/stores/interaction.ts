@@ -1,15 +1,15 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { Position, CircuitNode } from '@/types/components';
-import { InteractionMode } from '@/types/components';
 import { useCircuitStore } from './circuit';
 import { getTerminalWorldPosition } from '@/services/geometry';
+import * as componentFactory from '@/services/componentFactory';
 
 export const useInteractionStore = defineStore('interaction', () => {
   // State
   const selectedComponentId = ref<string | null>(null);
-  const currentMode = ref<InteractionMode>(InteractionMode.SELECT_MOVE);
-  const modeData = ref<Record<string, string | number | boolean> | null>(null);
+  const componentToPlace = ref<string | null>(null);
+  const hoveredTerminal = ref<{ componentId: string; terminalId: string } | null>(null);
 
   const wireCreationState = ref<{
     isActive: boolean;
@@ -26,21 +26,17 @@ export const useInteractionStore = defineStore('interaction', () => {
   });
 
   // Actions
-  function setMode(mode: InteractionMode, data?: Record<string, string | number | boolean>) {
-    currentMode.value = mode;
-    modeData.value = data || null;
-
-    // Clear other states when switching modes
-    if (mode !== InteractionMode.WIRE) {
-      cancelWireCreation();
-    }
-    if (mode !== InteractionMode.SELECT_MOVE) {
-      // clearSelection(); // will be handled by component
-    }
+  function setHoveredTerminal(info: { componentId: string; terminalId: string } | null) {
+    hoveredTerminal.value = info;
   }
 
-  function setComponentPlacementMode(componentType: string) {
-    setMode(InteractionMode.PLACE_COMPONENT, { componentType });
+  function setComponentToPlace(type: string | null) {
+    componentToPlace.value = type;
+    // When entering placement mode, cancel any other actions
+    if (type) {
+      clearSelection();
+      cancelWireCreation();
+    }
   }
 
   function selectComponent(componentId: string | null) {
@@ -58,6 +54,7 @@ export const useInteractionStore = defineStore('interaction', () => {
       startTerminal: null,
       previewPosition: null,
     };
+    setHoveredTerminal(null); // Clear hovered terminal on cancel
   }
 
   function startWireCreation(terminalId: string, componentId: string) {
@@ -122,15 +119,35 @@ export const useInteractionStore = defineStore('interaction', () => {
     cancelWireCreation()
   }
 
+  function finishWireCreationToPosition(position: Position) {
+    if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
+      cancelWireCreation()
+      return
+    }
+
+    const circuitStore = useCircuitStore()
+    const newNode = componentFactory.createComponent(circuitStore.currentCircuit, 'node', position) as CircuitNode;
+    if (newNode) {
+      circuitStore.addComponent(newNode);
+      circuitStore.createWire(wireCreationState.value.startTerminal, {
+        terminalId: newNode.terminal,
+        componentId: newNode.id,
+        position: newNode.position,
+      });
+    }
+
+    cancelWireCreation();
+  }
+
   return {
     // State
     selectedComponentId,
-    currentMode,
-    modeData,
+    componentToPlace,
+    hoveredTerminal,
     wireCreationState,
     // Actions
-    setMode,
-    setComponentPlacementMode,
+    setHoveredTerminal,
+    setComponentToPlace,
     selectComponent,
     clearSelection,
     cancelWireCreation,
@@ -138,5 +155,6 @@ export const useInteractionStore = defineStore('interaction', () => {
     updateWirePreview,
     finishWireCreation,
     finishWireCreationToNode,
+    finishWireCreationToPosition,
   };
 });
