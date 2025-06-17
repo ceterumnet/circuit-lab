@@ -66,6 +66,16 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
     e.target.className === 'Line'
 
   if (isBackground) {
+    // If a wire is being drawn, a click on the background should finish it.
+    if (interactionStore.wireCreationState.isActive) {
+      const pos = e.target.getStage()?.getPointerPosition()
+      if (pos) {
+        interactionStore.finishWireCreationToPosition(pos)
+      }
+      // Prevent other click logic from running
+      return
+    }
+
     const componentToPlace = interactionStore.componentToPlace
     if (componentToPlace) {
       const pos = e.target.getStage()?.getPointerPosition()
@@ -130,6 +140,15 @@ function handleComponentSelect(componentId: string) {
 }
 
 function handleComponentMoveStart(componentId: string) {
+  // If a drag starts on a component that just initiated a wire draw,
+  // cancel the wire draw. The user's intent is to move the component.
+  if (
+    interactionStore.wireCreationState.isActive &&
+    interactionStore.wireCreationState.startTerminal?.componentId === componentId
+  ) {
+    interactionStore.cancelWireCreation()
+  }
+
   isDragging.value = true
   dragTarget.value = componentId
 }
