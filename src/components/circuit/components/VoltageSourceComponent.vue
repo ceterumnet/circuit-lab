@@ -36,31 +36,6 @@
       }"
     />
 
-    <!-- Plus symbol -->
-    <v-line
-      :config="{
-        points: [-8, -8, 8, -8],
-        stroke: '#333',
-        strokeWidth: 2,
-      }"
-    />
-    <v-line
-      :config="{
-        points: [0, -12, 0, -4],
-        stroke: '#333',
-        strokeWidth: 2,
-      }"
-    />
-
-    <!-- Minus symbol -->
-    <v-line
-      :config="{
-        points: [-8, 8, 8, 8],
-        stroke: '#333',
-        strokeWidth: 2,
-      }"
-    />
-
     <!-- Connection terminals -->
     <circuit-terminal
       v-if="componentDefinition"
@@ -80,16 +55,38 @@
     <!-- Connection lines -->
     <v-line
       :config="{
-        points: [-30, 0, -20, 0],
+        points: [0, -20, 0, -30],
         stroke: '#333',
-        strokeWidth: 2,
+        strokeWidth: 1,
       }"
     />
     <v-line
       :config="{
-        points: [20, 0, 30, 0],
+        points: [0, 20, 0, 30],
         stroke: '#333',
-        strokeWidth: 2,
+        strokeWidth: 1,
+      }"
+    />
+
+    <!-- Polarity markers -->
+    <v-text
+      :config="{
+        x: -6,
+        y: -15,
+        text: '+',
+        fontSize: 18,
+        fontFamily: 'Arial',
+        fill: '#555',
+      }"
+    />
+    <v-text
+      :config="{
+        x: -4,
+        y: -2,
+        text: '-',
+        fontSize: 22,
+        fontFamily: 'Arial',
+        fill: '#555',
       }"
     />
 

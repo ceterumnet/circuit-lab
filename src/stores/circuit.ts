@@ -8,6 +8,7 @@ import type {
   Wire,
   CircuitNode,
 } from '@/types/components'
+import type { DC_Result } from '@/services/simulation'
 import { generateComponentId } from '@/services/componentFactory'
 import { useInteractionStore } from './interaction'
 
@@ -22,6 +23,7 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   const isSimulating = ref(false)
   const simulationResults = ref<SimulationResult | null>(null)
+  const dcSolution = ref<DC_Result | null>(null);
 
   const interactionStore = useInteractionStore()
 
@@ -72,6 +74,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
     interactionStore.selectComponent(null)
     simulationResults.value = null
+    dcSolution.value = null;
   }
 
   function startSimulation() {
@@ -86,6 +89,10 @@ export const useCircuitStore = defineStore('circuit', () => {
         timestamp: Date.now(),
       }
     }, 1000)
+  }
+
+  function setDcSolution(solution: DC_Result | null) {
+    dcSolution.value = solution;
   }
 
   function createWire(
@@ -132,6 +139,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     currentCircuit,
     isSimulating,
     simulationResults,
+    dcSolution,
 
     // Getters
     singleSelectedComponent,
@@ -144,6 +152,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     moveComponent,
     clearCircuit,
     startSimulation,
+    setDcSolution,
     createWire,
     deleteSelectedComponent,
     deleteWire,

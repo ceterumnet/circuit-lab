@@ -22,8 +22,8 @@ const voltageSourceDefinition: ComponentDefinition = {
   category: 'power',
   complexity: 'simple',
   terminals: [
-    { id: 'positive', position: { x: -30, y: 0 }, type: 'power', label: '+' },
-    { id: 'negative', position: { x: 30, y: 0 }, type: 'ground', label: '-' }
+    { id: 'positive', position: { x: 0, y: -30 }, type: 'power', label: '+' },
+    { id: 'negative', position: { x: 0, y: 30 }, type: 'ground', label: '-' }
   ],
   properties: [
     { key: 'voltage', type: 'number', label: 'Voltage', unit: 'V', default: 5 },

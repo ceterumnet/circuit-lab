@@ -5,8 +5,9 @@ import { useInteractionStore } from '@/stores/interaction'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
-import { findTerminalAtPosition } from '@/services/geometry'
 import { screenToWorld } from '@/services/coordinates'
+import type { CircuitComponent as CircuitComponentType } from '@/types/components'
+import { getComponentDefinition } from '@/registry/components'
 
 // Stage configuration
 const stageConfig = ref({
@@ -58,8 +59,11 @@ const interactionStore = useInteractionStore()
 const wires = computed(() =>
   circuitStore.currentCircuit.components.filter(c => c.type === 'wire')
 )
+const nodes = computed(() =>
+  circuitStore.currentCircuit.components.filter(c => c.type === 'node')
+)
 const otherComponents = computed(() =>
-  circuitStore.currentCircuit.components.filter(c => c.type !== 'wire')
+  circuitStore.currentCircuit.components.filter(c => c.type !== 'wire' && c.type !== 'node')
 )
 
 // Computed property for placement cursor
@@ -222,12 +226,6 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
     isDragging.value = false
     dragTarget.value = null
     dragStartPositions.value.clear()
-  } else if (interactionStore.wireCreationState.isActive) {
-    const pos = screenToWorld(stage.getPointerPosition()!)
-    const terminal = findTerminalAtPosition(circuitStore.currentCircuit, pos)
-    if (!terminal) {
-      interactionStore.finishWireCreationToPosition(pos)
-    }
   }
 }
 
@@ -374,6 +372,44 @@ function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
   }
 }
 
+function getVoltageLabelConfig(nodeComponent: CircuitComponentType) {
+  if (!circuitStore.dcSolution) return { visible: false };
+  const { voltages, termToNodeIndex } = circuitStore.dcSolution;
+
+  const nodeDef = getComponentDefinition('node');
+  if (!nodeDef) return { visible: false };
+
+  // Find the unique terminal ID for this node component
+  const terminalId = `${nodeComponent.id}:${nodeDef.terminals[0].id}`;
+
+  // Find the electrical node index this terminal belongs to
+  const electricalNodeIndex = termToNodeIndex.get(terminalId);
+  if (electricalNodeIndex === undefined) return { visible: false };
+
+  // Find the node name (representative ID) for this electrical node
+  let representativeNodeId = '';
+  for(const [key, val] of termToNodeIndex.entries()){
+    if(val === electricalNodeIndex){
+      representativeNodeId = key;
+      break;
+    }
+  }
+
+  const voltage = voltages[representativeNodeId];
+
+  if (voltage === undefined) return { visible: false };
+
+  return {
+    x: nodeComponent.position.x + 8,
+    y: nodeComponent.position.y - 18,
+    text: `${voltage.toFixed(2)}V`,
+    fontSize: 14,
+    fontFamily: 'Arial',
+    fill: 'blue',
+    visible: true,
+  };
+}
+
 onMounted(() => {
   const container = document.querySelector('.circuit-canvas-container')
   if (container) {
@@ -490,6 +526,19 @@ watch(
           @node-connect="handleNodeConnect"
         />
 
+        <!-- Nodes -->
+        <circuit-component
+          v-for="component in nodes"
+          :key="component.id"
+          :component="component"
+          @select="handleComponentSelect"
+          @move-start="handleComponentMoveStart"
+          @move="handleComponentMove"
+          @move-end="handleComponentMoveEnd"
+          @terminal-mousedown="handleTerminalMouseDown"
+          @node-connect="handleNodeConnect"
+        />
+
         <!-- Other components (rendered on top of wires) -->
         <circuit-component
           v-for="component in otherComponents"
@@ -501,6 +550,13 @@ watch(
           @move-end="handleComponentMoveEnd"
           @terminal-mousedown="handleTerminalMouseDown"
           @node-connect="handleNodeConnect"
+        />
+
+        <!-- DC Voltage Labels -->
+        <v-text
+          v-for="component in nodes"
+          :key="`voltage-${component.id}`"
+          :config="getVoltageLabelConfig(component)"
         />
 
         <!-- Wire creation preview -->

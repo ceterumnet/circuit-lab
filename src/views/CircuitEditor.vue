@@ -8,6 +8,7 @@
         <div class="canvas-header">
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
+            <button class="simulate-button" @click="runSimulation">▶️ Simulate</button>
             <span class="component-count"> Components: {{ circuitStore.componentCount }} </span>
             <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
               🔌 Click to complete wire
@@ -49,11 +50,18 @@ import { useInteractionStore } from '@/stores/interaction'
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
+import { solveDC } from '@/services/simulation'
 
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
 
 const singleSelectedComponent = computed(() => circuitStore.singleSelectedComponent)
+
+async function runSimulation() {
+  const results = await solveDC(circuitStore.currentCircuit)
+  circuitStore.setDcSolution(results)
+  console.log('Simulation Results:', results)
+}
 </script>
 
 <style scoped>
@@ -103,6 +111,22 @@ const singleSelectedComponent = computed(() => circuitStore.singleSelectedCompon
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.simulate-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.simulate-button:hover {
+  background-color: #218838;
 }
 
 .component-count {

@@ -99,6 +99,13 @@ Building a web-based circuit simulation application focused on educational purpo
     - Releasing the mouse over a highlighted terminal completes the connection.
     - Releasing the mouse over an empty part of the canvas automatically creates a `Node` component and connects the wire to it.
 
+**6. Canvas Navigation & Advanced Selection**
+- [x] **Pan:** Hold `Spacebar` and drag to pan the canvas.
+- [x] **Zoom:** Use the mouse wheel to zoom in and out, centered on the cursor.
+- [x] **Multi-Select (Shift-Click):** Hold `Shift` while clicking components to add or remove them from the selection.
+- [x] **Multi-Select (Marquee):** Click and drag on the canvas background to draw a selection box (marquee) and select multiple components.
+- [x] **Group Movement:** Dragging any component in a selection group moves all selected components together.
+
 ### Phase 2 - Passive Components
 
 **Goal**: AC analysis and energy storage elements
