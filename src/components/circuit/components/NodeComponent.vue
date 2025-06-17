@@ -23,13 +23,14 @@
 </template>
 
 <script setup lang="ts">
-import type { CircuitNode, Position } from '@/types/components'
+import type { CircuitComponent, Position } from '@/types/components'
 import { useInteractionStore } from '@/stores/interaction'
 import { computed } from 'vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
+import { getComponentDefinition } from '@/registry/components'
 
 const props = defineProps<{
-  component: CircuitNode
+  component: CircuitComponent
 }>()
 
 const emit = defineEmits<{
@@ -44,6 +45,7 @@ const emit = defineEmits<{
 }>()
 
 const interactionStore = useInteractionStore()
+const componentDefinition = computed(() => getComponentDefinition(props.component.type))
 
 const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id)
 
@@ -104,12 +106,12 @@ function handleTerminalMouseDown(event: KonvaEventObject<MouseEvent>) {
   if (!stage) return
 
   const pos = stage.getPointerPosition()
-  if (!pos) return
+  if (!pos || !componentDefinition.value) return
 
   // For a node, the component and terminal IDs are the same
   emit(
     'terminal-mousedown',
-    props.component.terminal,
+    componentDefinition.value.terminals[0].id,
     props.component.id,
     pos
   )

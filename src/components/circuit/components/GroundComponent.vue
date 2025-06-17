@@ -59,8 +59,9 @@
 
     <!-- Connection terminal -->
     <circuit-terminal
-      :terminal-id="component.terminal"
-      :position="{ x: 0, y: -15 }"
+      v-if="componentDefinition"
+      :terminal-id="componentDefinition.terminals[0].id"
+      :position="componentDefinition.terminals[0].position"
       :component-id="component.id"
       @terminal-mousedown="handleTerminalMouseDown"
     />
@@ -80,14 +81,15 @@
 </template>
 
 <script setup lang="ts">
-import type { Ground, Position } from '@/types/components'
+import type { CircuitComponent, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useInteractionStore } from '@/stores/interaction';
 import { computed } from 'vue';
+import { getComponentDefinition } from '@/registry/components'
 
 interface Props {
-  component: Ground
+  component: CircuitComponent
 }
 
 interface Emits {
@@ -102,6 +104,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const interactionStore = useInteractionStore();
+const componentDefinition = computed(() => getComponentDefinition(props.component.type))
 
 const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id);
 

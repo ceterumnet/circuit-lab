@@ -42,11 +42,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Wire, Position } from '@/types/components'
+import type { CircuitComponent, Position } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
 
 interface Props {
-  component: Wire
+  component: CircuitComponent
   startPosition?: Position
   endPosition?: Position
 }
@@ -60,28 +60,21 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const wirePoints = computed(() => {
+  const componentProps = props.component.properties || {}
+
   // Use the provided positions if available, otherwise fall back to component's stored positions
-  const start = props.startPosition || props.component.startPosition || { x: 0, y: 0 }
-  const end = props.endPosition || props.component.endPosition || { x: 0, y: 0 }
+  const start = props.startPosition || componentProps.startPosition || { x: 0, y: 0 }
+  const end = props.endPosition || componentProps.endPosition || { x: 0, y: 0 }
 
   // Validate positions to prevent NaN values
   const validStart = {
-    x: isNaN(start.x) ? 0 : start.x,
-    y: isNaN(start.y) ? 0 : start.y,
+    x: isNaN((start as Position).x) ? 0 : (start as Position).x,
+    y: isNaN((start as Position).y) ? 0 : (start as Position).y,
   }
   const validEnd = {
-    x: isNaN(end.x) ? 0 : end.x,
-    y: isNaN(end.y) ? 0 : end.y,
+    x: isNaN((end as Position).x) ? 0 : (end as Position).x,
+    y: isNaN((end as Position).y) ? 0 : (end as Position).y,
   }
-
-  console.log('🔗 WireComponent rendering:', {
-    wireId: props.component.id,
-    startPos: validStart,
-    endPos: validEnd,
-    hasStartTerminal: !!props.component.startTerminal,
-    hasEndTerminal: !!props.component.endTerminal,
-    points: [validStart.x, validStart.y, validEnd.x, validEnd.y],
-  })
 
   // Simple straight line for now
   return [validStart.x, validStart.y, validEnd.x, validEnd.y]

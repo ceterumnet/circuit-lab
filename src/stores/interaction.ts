@@ -4,6 +4,7 @@ import type { Position, CircuitNode } from '@/types/components';
 import { useCircuitStore } from './circuit';
 import { getTerminalWorldPosition } from '@/services/geometry';
 import * as componentFactory from '@/services/componentFactory';
+import { getComponentDefinition } from '@/registry/components'
 
 export const useInteractionStore = defineStore('interaction', () => {
   // State
@@ -91,11 +92,13 @@ export const useInteractionStore = defineStore('interaction', () => {
       const startTerminal = wireCreationState.value.startTerminal;
       const endTerminal = { terminalId, componentId, position: worldPosition };
 
-      // Don't allow connecting to same terminal or same component
+      // Don't allow connecting a terminal to itself
       if (
-        startTerminal.terminalId !== endTerminal.terminalId &&
-        startTerminal.componentId !== endTerminal.componentId
+        startTerminal.componentId === endTerminal.componentId &&
+        startTerminal.terminalId === endTerminal.terminalId
       ) {
+        // Just cancel the wire creation, do nothing else
+      } else {
         circuitStore.createWire(startTerminal, endTerminal);
       }
     }
@@ -108,10 +111,11 @@ export const useInteractionStore = defineStore('interaction', () => {
 
     const circuitStore = useCircuitStore();
     const node = circuitStore.currentCircuit.components.find((c) => c.id === nodeId) as CircuitNode
-    if (!node) return
+    const nodeDef = getComponentDefinition('node');
+    if (!node || !nodeDef) return
 
     circuitStore.createWire(wireCreationState.value.startTerminal, {
-      terminalId: node.terminal,
+      terminalId: nodeDef.terminals[0].id,
       componentId: nodeId,
       position: node.position,
     })
@@ -127,10 +131,12 @@ export const useInteractionStore = defineStore('interaction', () => {
 
     const circuitStore = useCircuitStore()
     const newNode = componentFactory.createComponent(circuitStore.currentCircuit, 'node', position) as CircuitNode;
-    if (newNode) {
+    const nodeDef = getComponentDefinition('node');
+
+    if (newNode && nodeDef) {
       circuitStore.addComponent(newNode);
       circuitStore.createWire(wireCreationState.value.startTerminal, {
-        terminalId: newNode.terminal,
+        terminalId: nodeDef.terminals[0].id,
         componentId: newNode.id,
         position: newNode.position,
       });

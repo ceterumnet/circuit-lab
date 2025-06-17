@@ -1,4 +1,5 @@
-import type { Circuit, Resistor, VoltageSource, Ground, CircuitNode, Position, CircuitComponent } from '@/types/components';
+import type { Circuit, CircuitComponent, Position } from '@/types/components';
+import { getComponentDefinition } from '@/registry/components';
 
 export function generateComponentId(circuit: Circuit, type: string): string {
   const typePrefix = type.substring(0, 1).toUpperCase();
@@ -18,54 +19,30 @@ export function generateComponentId(circuit: Circuit, type: string): string {
 }
 
 export function createComponent(circuit: Circuit, type: string, position: Position): CircuitComponent | null {
+  const definition = getComponentDefinition(type);
+  if (!definition) {
+    console.error(`Component definition not found for type: ${type}`);
+    return null;
+  }
+
   const id = generateComponentId(circuit, type);
 
-  const baseComponent = {
+  const newComponent: CircuitComponent = {
     id,
     type,
     position,
     rotation: 0,
     selected: false,
+    label: definition.name,
+    properties: {},
   };
 
-  let component: CircuitComponent | null = null;
-
-  switch (type) {
-    case 'resistor':
-      component = {
-        ...baseComponent,
-        type: 'resistor',
-        resistance: { value: 1000, unit: 'Ω' },
-        terminals: [`${id}_1`, `${id}_2`],
-      } as Resistor;
-      break;
-
-    case 'voltage_source':
-      component = {
-        ...baseComponent,
-        type: 'voltage_source',
-        voltage: { value: 5, unit: 'V' },
-        sourceType: 'dc' as const,
-        terminals: [`${id}_pos`, `${id}_neg`],
-      } as VoltageSource;
-      break;
-
-    case 'ground':
-      component = {
-        ...baseComponent,
-        type: 'ground',
-        terminal: `${id}_gnd`,
-      } as Ground;
-      break;
-
-    case 'node':
-      component = {
-        ...baseComponent,
-        type: 'node',
-        terminal: `${id}_terminal`,
-      } as CircuitNode;
-      break;
+  // Populate default properties
+  if (definition.properties) {
+    for (const propDef of definition.properties) {
+      newComponent.properties![propDef.key] = propDef.default;
+    }
   }
 
-  return component;
+  return newComponent;
 }

@@ -63,14 +63,13 @@ Building a web-based circuit simulation application focused on educational purpo
 **Goal**: Refactor the user experience to be "modeless", intuitive, and contextual. This replaces the rigid, mode-based toolbar with a fluid, direct-interaction workflow.
 
 **1. Deprecate Modal Toolbar & Simplify State**
-- [ ] Remove the `ModalToolbar` component entirely.
-- [ ] Eliminate `currentMode` and `modeData` from the `interactionStore`.
-- [ ] Refactor state to rely on direct user actions (e.g., `isDragging`, `isWiring`, `selectedComponentId`).
+- [x] Implemented a modeless system, avoiding a complex modal toolbar.
+- [x] State relies on direct user actions (e.g., `isWiring`, `selectedComponentId`).
 
 **2. Implement a Component Palette**
-- [ ] Create a new, always-visible `ComponentPalette` component.
-- [ ] Clicking a component in the palette activates a "placement" state.
-- [ ] Clicking on the canvas places the selected component.
+- [x] Created an always-visible `ComponentPalette.vue` component.
+- [x] Clicking a component in the palette activates a "placement" state.
+- [x] Clicking on the canvas places the selected component.
 - [ ] The cursor should provide clear visual feedback for placement mode.
 
 **3. "Smart" Cursor & Contextual Highlighting**
@@ -78,27 +77,27 @@ Building a web-based circuit simulation application focused on educational purpo
     - **Default Arrow:** On canvas background.
     - **Pointer (`cursor: pointer`):** When hovering over a selectable/draggable component body.
     - **Crosshair (`cursor: crosshair`):** When hovering over a terminal to indicate a wire can be started.
-- [ ] Enhance terminal highlighting on hover to make connection points more obvious.
+- [x] Terminals highlight on hover to make connection points obvious.
 
 **4. Redesigned Component Interactions**
-- [ ] **Selection:** A single click selects a component.
-- [ ] **Drag & Drop:** Click and drag a component body to move it (no special mode needed).
-- [ ] **Deletion:** Keep the existing keyboard shortcut (`Delete`/`Backspace`) for selected components.
+- [x] **Selection:** A single click selects a component.
+- [x] **Drag & Drop:** Click and drag a component body to move it.
+- [x] **Deletion:** Keyboard shortcut (`Delete`/`Backspace`) for selected components is available.
 - [ ] **Contextual Rotation:**
     - [ ] When a component is selected, render a "selection box" or "adorners" around it.
     - [ ] Include a dedicated rotation handle on the selection box.
     - [ ] Users can click and drag this handle to rotate the component smoothly.
 
 **5. Intuitive Wiring Workflow**
-- [ ] **No "Wire Mode":** Remove the explicit need to enter a wire mode.
-- [ ] **Hover to Connect:** Terminals should highlight when hovered, indicating they are interactive.
-- [ ] **Click-and-Drag Wiring:**
-    - [ ] Click and hold on a highlighted terminal to start dragging a new wire.
-    - [ ] A preview line follows the cursor.
-- [ ] **Smart Wire Termination:**
-    - [ ] When dragging the wire preview over another valid terminal, the target terminal should highlight.
-    - [ ] Releasing the mouse over a highlighted terminal completes the connection.
-    - [ ] Releasing the mouse over an empty part of the canvas automatically creates a `Node` component and connects the wire to it.
+- [x] **No "Wire Mode":** Removed the explicit need to enter a wire mode.
+- [x] **Hover to Connect:** Terminals highlight when hovered, indicating they are interactive.
+- [x] **Click-to-Connect Wiring:**
+    - Click and hold on a highlighted terminal to start creating a new wire.
+    - A preview line follows the cursor.
+- [x] **Smart Wire Termination:**
+    - When dragging the wire preview over another valid terminal, the target terminal highlights.
+    - Releasing the mouse over a highlighted terminal completes the connection.
+    - Releasing the mouse over an empty part of the canvas automatically creates a `Node` component and connects the wire to it.
 
 ### Phase 2 - Passive Components
 
@@ -574,21 +573,18 @@ src/
 - Component rotation and movement ✅
 - Visual feedback and grid snapping ✅
 
-**Phase 1.5**: ✅ **COMPLETED** - Architecture Refactoring
+**Phase 1.5**: 🟡 **IN PROGRESS** - UX and Architecture Refinements
 
-- Removed all draggable terminals to eliminate conflicts ✅
-- Implemented comprehensive click-to-connect wire system ✅
-- Ensured rock-solid component movement ✅
-- Comprehensive testing of interaction system ✅
+- [x] Implemented comprehensive click-to-connect wire system
+- [x] **Action Item:** Refactored `componentFactory.ts` to use the `ComponentRegistry` for true extensibility. ✅
+- [ ] **Action Item:** Evolve the `ComponentPalette` and modeless interaction to support pan, zoom, and multi-select.
 
-**Phase 1.6**: ✅ **COMPLETED** - Modal Interaction System
+**Phase 1.6**: 📋 **PLANNED** - Modal Interaction System
 
-- Professional CAD-style modal toolbar ✅
-- Extensible component registry architecture ✅
-- TypeScript migration to string literals ✅
-- Modal system integration with canvas ✅
+- The architecture for a professional CAD-style modal toolbar is designed but **not implemented**.
+- This remains a future option if the modeless approach proves insufficient for growing complexity.
 
-**Phase 2**: 🎯 **READY TO BEGIN** - Basic Simulation Engine
+**Phase 2**: 📋 **PLANNED** - Basic Simulation Engine
 
 - DC circuit analysis (modified nodal analysis)
 - Voltage/current calculation and display
@@ -1060,19 +1056,17 @@ function handleCanvasClick(event) {
 ### Recommended Next Steps - UPDATED
 
 **Immediate (This Sprint)**:
-1. **Implement Modal Toolbar System** - Core mode management
-2. **Fix grid alignment** - 30px grid for better terminal alignment  
-3. **Simplify components** - Remove complex terminal interaction logic
+1.  **Refactor Component Factory**: Modify `createComponent` to be data-driven from the `ComponentRegistry`. This is critical for future scalability.
+2.  **Solidify Interaction Model**: Plan for and implement pan, zoom, and multi-select capabilities within the existing modeless framework.
+3.  **Address UX Issues**: Tackle the grid/terminal alignment problem to improve usability.
 
 **Next Sprint**:
-1. **Complete all interaction modes** - Wire, Pan/Zoom, Rotate, Delete
-2. **Add visual mode feedback** - Cursors, highlights, status indicators
-3. **Test mode transitions** - Ensure smooth UX between modes
+1.  **Expand Component Library**: With a refactored factory, begin adding new components like capacitors and inductors.
+2.  **Begin Simulation Engine**: Start work on the basic DC analysis engine.
 
 **Future Sprints**:
-1. **Advanced wire mode** - IC-aware connection handling
-2. **Keyboard shortcuts** - Professional tool feel
-3. **Mode-specific features** - Undo/redo, advanced selection, etc.
+1.  **Advanced Components**: Diodes, transistors, etc.
+2.  **AC Analysis**: Frequency response and plotting.
 
 This modal approach is **much cleaner architecture** and solves complexity at the right level - the application, not individual components.
 
@@ -1358,39 +1352,23 @@ This simulation system transforms Circuit Lab from a drawing tool into a **compl
 
 ## 📸 Current Application Status
 
-**Application Layout**: ✅ Professional interface with modal toolbar system
-**Modal Toolbar**: ✅ Complete with interaction modes and dynamic component categories
-**Interactive Canvas**: ✅ Mode-based interactions with grid snapping
-**Property Panel**: ✅ Dynamic editing including rotation controls
-**Wire System**: ✅ Click-based wire creation with visual feedback
-**Circuit Junctions**: ✅ Node-based junction system supporting complex topologies
-**Component System**: ✅ Extensible registry architecture ready for ICs
+**Application Layout**: ✅ A clean interface with a `ComponentPalette` for placing components.
+**Interaction Model**: ✅ A "modeless" system where user actions are contextual (selecting, moving, wiring).
+**Component System**: ✅ The component system is now fully data-driven. The `componentFactory` uses the `ComponentRegistry` to dynamically create components, making the system truly extensible.
+**Wiring**: ✅ A click-move-click wiring system is implemented and connects components reliably.
+**Core Features**: ✅ Component placement, selection, movement, deletion, and rotation are functional.
 
-**Demo Instructions**:
-
-1. Navigate to `http://localhost:5175/` (circuit editor - port auto-assigned)
-2. **Select interaction mode** from modal toolbar (Select/Move, Wire, Rotate, Delete, Pan/Zoom)
-3. **Place components** by selecting from organized categories (Passive, Power, Connections)
-4. **Create wires** by switching to Wire mode and clicking terminals
-5. **Move components** in Select/Move mode with grid snapping
-6. **Rotate components** using Rotate mode or property panel
-7. **Build complex circuits** with the professional CAD-style interface
-
-**Key Features Demonstrated**:
-
-- **Professional Modal System** - CAD-style interaction modes
-- **Extensible Architecture** - Dynamic component registry
-- **Type-Safe Codebase** - Zero compilation errors
-- **Visual Mode Feedback** - Clear indication of current mode
-- **Component Categories** - Organized toolbar with future IC support
-- **Grid Snapping & Positioning** - Precise component placement
+**Key Action Items**:
+- **Implement Pan & Zoom**: A critical feature for navigating larger circuits.
+- **Implement Multi-Select**: For editing multiple components at once.
+- **Resolve Grid/Terminal Alignment**: To improve the component placement UX.
 
 ---
 
 _Last Updated: January 2025_
 _Project: Circuit Lab - Educational Circuit Simulator_
-_Status: **Phase 1.6 COMPLETED - Modal System & Extensible Architecture** ✅_
-_Next: **Phase 2 - DC Simulation Engine** (Ready to Begin)_
+_Status: **Phase 1.5 IN PROGRESS - Foundational UX and Architecture Refinements** 🟡_
+_Next: **Implement Core Navigation Features (Pan, Zoom, Multi-select)**_
 
 ## 🎉 MAJOR MILESTONE ACHIEVED - MODAL SYSTEM COMPLETE
 

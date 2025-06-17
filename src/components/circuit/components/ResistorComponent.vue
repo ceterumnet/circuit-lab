@@ -37,14 +37,16 @@
 
     <!-- Connection terminals -->
     <circuit-terminal
-      :terminal-id="component.terminals[0]"
-      :position="{ x: -30, y: 0 }"
+      v-if="componentDefinition"
+      :terminal-id="componentDefinition.terminals[0].id"
+      :position="componentDefinition.terminals[0].position"
       :component-id="component.id"
       @terminal-mousedown="handleTerminalMouseDown"
     />
     <circuit-terminal
-      :terminal-id="component.terminals[1]"
-      :position="{ x: 30, y: 0 }"
+      v-if="componentDefinition"
+      :terminal-id="componentDefinition.terminals[1].id"
+      :position="componentDefinition.terminals[1].position"
       :component-id="component.id"
       @terminal-mousedown="handleTerminalMouseDown"
     />
@@ -66,7 +68,7 @@
       :config="{
         x: -20,
         y: 15,
-        text: `${component.resistance.value}${component.resistance.unit}`,
+        text: resistanceLabel,
         fontSize: 10,
         fontFamily: 'Arial',
         fill: '#666',
@@ -77,13 +79,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Resistor, Position } from '@/types/components'
+import type { CircuitComponent, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useInteractionStore } from '@/stores/interaction'
+import { getComponentDefinition } from '@/registry/components'
 
 interface Props {
-  component: Resistor
+  component: CircuitComponent
 }
 
 interface Emits {
@@ -98,6 +101,23 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const interactionStore = useInteractionStore()
+
+const componentDefinition = computed(() => getComponentDefinition(props.component.type))
+
+const resistanceLabel = computed(() => {
+  if (!props.component.properties) return ''
+  const resistance = props.component.properties.resistance || 0
+  const definition = componentDefinition.value?.properties.find(p => p.key === 'resistance')
+  const unit = definition?.unit || 'Ω'
+
+  if (typeof resistance === 'number' && resistance >= 1000000) {
+    return `${resistance / 1000000}M${unit}`
+  }
+  if (typeof resistance === 'number' && resistance >= 1000) {
+    return `${resistance / 1000}k${unit}`
+  }
+  return `${resistance}${unit}`
+})
 
 const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id)
 

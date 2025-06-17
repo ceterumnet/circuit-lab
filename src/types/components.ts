@@ -59,40 +59,25 @@ export interface CircuitComponent {
   rotation: number
   label?: string
   selected: boolean
-  properties?: { [key: string]: string | number | boolean } // Dynamic properties based on component definition
+  properties?: { [key: string]: string | number | boolean | Position } // Dynamic properties based on component definition
 }
 
-// Specific component types (backwards compatibility)
-export interface Resistor extends CircuitComponent {
-  type: 'resistor'
-  resistance: ComponentValue
-  terminals: [string, string] // Terminal IDs
-}
-
-export interface VoltageSource extends CircuitComponent {
-  type: 'voltage_source'
-  voltage: ComponentValue
-  sourceType: 'dc' | 'ac' | 'pulse'
-  terminals: [string, string] // Terminal IDs
-}
+// Specific component types have been deprecated in favor of a generic `CircuitComponent`
+// with a `properties` bag. The `type` stringdiscriminates between component types,
+// and their definitions are stored in the `ComponentRegistry`.
 
 export interface Wire extends CircuitComponent {
   type: 'wire'
-  startTerminal?: string // Optional - can connect to any terminal (component or node)
-  endTerminal?: string // Optional - can connect to any terminal (component or node)
-  startPosition?: Position // Optional - for free-floating wire ends
-  endPosition?: Position // Optional - for free-floating wire ends
-  points: Position[] // For curved wires
+  // start/end terminal IDs and positions are now stored in the generic `properties` object
+  // e.g., properties: { startTerminal: 'R1_1', endTerminal: 'C1_2' }
 }
 
 export interface Ground extends CircuitComponent {
   type: 'ground'
-  terminal: string
 }
 
 export interface CircuitNode extends CircuitComponent {
   type: 'node'
-  terminal: string // Single terminal ID, just like Ground
 }
 
 // Circuit simulation types

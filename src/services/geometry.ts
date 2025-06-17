@@ -1,4 +1,5 @@
-import type { Position, CircuitComponent, Resistor, VoltageSource, Ground, CircuitNode, Circuit } from '@/types/components'
+import type { Position, CircuitComponent, Circuit } from '@/types/components'
+import { getComponentDefinition } from '@/registry/components'
 
 export function rotatePoint(point: Position, angleInDegrees: number): Position {
   const angleInRadians = (angleInDegrees * Math.PI) / 180
@@ -12,34 +13,20 @@ export function rotatePoint(point: Position, angleInDegrees: number): Position {
 }
 
 export function getTerminalWorldPosition(component: CircuitComponent, terminalId: string): Position {
-  let localOffset: Position
+  const definition = getComponentDefinition(component.type)
+  if (!definition) {
+    console.error(`No definition for component type ${component.type}`)
+    return component.position
+  }
 
-  switch (component.type) {
-    case 'resistor':
-    case 'voltage_source': {
-      const terminals = (component as Resistor | VoltageSource).terminals
-      const terminalIndex = terminals.indexOf(terminalId)
-      // Left terminal at -30, right terminal at +30
-      const offsetX = terminalIndex === 0 ? -30 : 30
-      localOffset = { x: offsetX, y: 0 }
-      break
-    }
-    case 'ground': {
-      // Ground has single terminal at top
-      localOffset = { x: 0, y: -15 }
-      break
-    }
-    case 'node': {
-      // Node terminal is at the center
-      localOffset = { x: 0, y: 0 }
-      break
-    }
-    default:
-      return component.position
+  const terminalDef = definition.terminals.find(t => t.id === terminalId)
+  if (!terminalDef) {
+    console.error(`Terminal ${terminalId} not found on component ${component.id}`)
+    return component.position
   }
 
   // Apply rotation transformation to local offset
-  const rotatedOffset = rotatePoint(localOffset, component.rotation)
+  const rotatedOffset = rotatePoint(terminalDef.position, component.rotation)
 
   return {
     x: component.position.x + rotatedOffset.x,
@@ -55,20 +42,11 @@ export function findTerminalAtPosition(
   for (const component of circuit.components) {
     if (component.type === 'wire') continue
 
-    let terminals: string[] = []
-    if (
-      component.type === 'resistor' ||
-      component.type === 'voltage_source'
-    ) {
-      terminals = (component as Resistor | VoltageSource).terminals
-    } else if (component.type === 'ground') {
-      terminals = [(component as Ground).terminal]
-    } else if (component.type === 'node') {
-      terminals = [(component as CircuitNode).terminal]
-    }
+    const definition = getComponentDefinition(component.type)
+    if (!definition) continue
 
-    for (const terminalId of terminals) {
-      const terminalWorldPos = getTerminalWorldPosition(component, terminalId)
+    for (const terminalDef of definition.terminals) {
+      const terminalWorldPos = getTerminalWorldPosition(component, terminalDef.id)
 
       // Check if position is within 15 pixels of the terminal
       const distance = Math.sqrt(
@@ -78,7 +56,7 @@ export function findTerminalAtPosition(
 
       if (distance <= 15) {
         return {
-          terminalId,
+          terminalId: terminalDef.id,
           componentId: component.id,
           position: terminalWorldPos,
         }

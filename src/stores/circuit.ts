@@ -5,9 +5,6 @@ import type {
   CircuitComponent,
   Position,
   SimulationResult,
-  Resistor,
-  VoltageSource,
-  Ground,
   Wire,
   CircuitNode,
 } from '@/types/components'
@@ -53,7 +50,7 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   function updateComponent(
     componentId: string,
-    updates: Partial<Resistor | VoltageSource | Ground | Wire | CircuitNode>,
+    updates: Partial<Wire | CircuitNode>,
   ) {
     const component = currentCircuit.value.components.find((c) => c.id === componentId)
     if (component) {
@@ -96,16 +93,19 @@ export const useCircuitStore = defineStore('circuit', () => {
   ) {
     const wireId = generateComponentId(currentCircuit.value, 'wire')
 
-    const wire = {
+    const wire: CircuitComponent = {
       id: wireId,
       type: 'wire',
-      position: { x: 0, y: 0 }, // Wires don't have a single position
+      position: { x: 0, y: 0 },
       rotation: 0,
       selected: false,
-      startTerminal: startTerminal.terminalId,
-      endTerminal: endTerminal.terminalId,
-      points: [], // Will be calculated dynamically
-    } as Wire
+      properties: {
+        startTerminal: startTerminal.terminalId,
+        startComponentId: startTerminal.componentId,
+        endTerminal: endTerminal.terminalId,
+        endComponentId: endTerminal.componentId,
+      },
+    }
 
     addComponent(wire)
   }
