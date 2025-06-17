@@ -332,11 +332,23 @@ function handleContextMenu() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Delete' || e.key === 'Backspace') {
+  const targetNodeName = (e.target as HTMLElement)?.nodeName;
+  if (targetNodeName === 'INPUT' || targetNodeName === 'TEXTAREA') {
+    return; // Do not process keyboard shortcuts if focus is on an input field
+  }
+
+  // Cancel wire creation on Escape or Delete
+  if (
+    (e.key === 'Escape' || e.key === 'Delete' || e.key === 'Backspace') &&
+    interactionStore.wireCreationState.isActive
+  ) {
+    interactionStore.cancelWireCreation();
+    return; // Prevent other keydown actions
+  }
+
+  // Delete selected components
+  if ((e.key === 'Delete' || e.key === 'Backspace') && interactionStore.selectedComponentIds.length > 0) {
     circuitStore.deleteSelectedComponent()
-  } else if (e.key === 'Escape') {
-    interactionStore.cancelWireCreation()
-    interactionStore.clearSelection()
   } else if (e.code === 'Space') {
     e.preventDefault()
     if (!isPanning.value) {

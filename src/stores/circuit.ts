@@ -44,12 +44,32 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function removeComponent(componentId: string) {
-    const index = currentCircuit.value.components.findIndex((c) => c.id === componentId)
-    if (index !== -1) {
-      currentCircuit.value.components.splice(index, 1)
-      if (interactionStore.selectedComponentIds.includes(componentId)) {
-        interactionStore.removeFromSelection(componentId)
+    const componentToRemove = currentCircuit.value.components.find(c => c.id === componentId);
+    if (!componentToRemove) return;
+
+    // Find wires connected to the component being removed
+    const wiresToRemove = currentCircuit.value.components.filter(c => {
+      if (c.type !== 'wire') return false;
+      const props = c.properties;
+      return props?.startComponentId === componentId || props?.endComponentId === componentId;
+    }).map(w => w.id);
+
+    // Remove the component
+    const componentIndex = currentCircuit.value.components.findIndex((c) => c.id === componentId)
+    if (componentIndex !== -1) {
+      currentCircuit.value.components.splice(componentIndex, 1)
+    }
+
+    // Remove the connected wires
+    for (const wireId of wiresToRemove) {
+      const wireIndex = currentCircuit.value.components.findIndex(c => c.id === wireId);
+      if (wireIndex !== -1) {
+        currentCircuit.value.components.splice(wireIndex, 1);
       }
+    }
+
+    if (interactionStore.selectedComponentIds.includes(componentId)) {
+      interactionStore.removeFromSelection(componentId)
     }
   }
 
