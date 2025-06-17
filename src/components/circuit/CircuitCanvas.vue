@@ -6,11 +6,17 @@ import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
 import { findTerminalAtPosition } from '@/services/geometry'
+import { screenToWorld } from '@/services/coordinates'
 
 // Stage configuration
 const stageConfig = ref({
   width: 800,
   height: 600,
+  draggable: false,
+  scaleX: 1,
+  scaleY: 1,
+  x: 0,
+  y: 0,
 })
 
 const gridSize = 30
@@ -18,7 +24,13 @@ const gridSize = 30
 // Grid lines for visual reference
 const gridLinesX = computed(() => {
   const lines = []
-  for (let i = 0; i <= stageConfig.value.width; i += gridSize) {
+  const { scale, position } = interactionStore.canvasTransform
+  const { width } = stageConfig.value
+
+  const startX = Math.floor(-position.x / scale / gridSize) * gridSize
+  const endX = startX + Math.ceil(width / scale / gridSize) * gridSize
+
+  for (let i = startX; i <= endX; i += gridSize) {
     lines.push(i)
   }
   return lines
@@ -26,7 +38,13 @@ const gridLinesX = computed(() => {
 
 const gridLinesY = computed(() => {
   const lines = []
-  for (let i = 0; i <= stageConfig.value.height; i += gridSize) {
+  const { scale, position } = interactionStore.canvasTransform
+  const { height } = stageConfig.value
+
+  const startY = Math.floor(-position.y / scale / gridSize) * gridSize
+  const endY = startY + Math.ceil(height / scale / gridSize) * gridSize
+
+  for (let i = startY; i <= endY; i += gridSize) {
     lines.push(i)
   }
   return lines
@@ -51,13 +69,45 @@ const placementCursor = computed(() => {
 
 // Refs
 const stageRef = ref()
+const resizeObserver = ref<ResizeObserver | null>(null)
 
 // Mouse interaction state
 const isDragging = ref(false)
 const dragTarget = ref<string | null>(null)
+const isPanning = ref(false)
 
 // Event handlers
+function handleStageWheel(e: KonvaEventObject<WheelEvent>) {
+  e.evt.preventDefault()
+
+  const stage = e.target.getStage()
+  if (!stage) return
+
+  const oldScale = stage.scaleX()
+  const pointer = stage.getPointerPosition()
+  if (!pointer) return
+
+  const mousePointTo = {
+    x: (pointer.x - stage.x()) / oldScale,
+    y: (pointer.y - stage.y()) / oldScale,
+  }
+
+  const newScale = oldScale * (e.evt.deltaY > 0 ? 0.95 : 1.05)
+
+  const newPos = {
+    x: pointer.x - mousePointTo.x * newScale,
+    y: pointer.y - mousePointTo.y * newScale,
+  }
+
+  interactionStore.setCanvasTransform(newScale, newPos)
+}
+
 function handleStageClick(e: KonvaEventObject<MouseEvent>) {
+  // Prevent component placement/deselection when finishing a pan
+  if (isPanning.value || e.evt.button === 1) {
+    return
+  }
+
   // Check if we clicked on the background (stage or grid elements)
   const isBackground =
     e.target === e.target.getStage() ||
@@ -68,9 +118,13 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
   if (isBackground) {
     // If a wire is being drawn, a click on the background should finish it.
     if (interactionStore.wireCreationState.isActive) {
-      const pos = e.target.getStage()?.getPointerPosition()
-      if (pos) {
-        interactionStore.finishWireCreationToPosition(pos)
+      const stage = e.target.getStage()
+      if (stage) {
+        const pos = stage.getPointerPosition()
+        if (pos) {
+          const worldPos = screenToWorld(pos)
+          interactionStore.finishWireCreationToPosition(worldPos)
+        }
       }
       // Prevent other click logic from running
       return
@@ -78,22 +132,27 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
 
     const componentToPlace = interactionStore.componentToPlace
     if (componentToPlace) {
-      const pos = e.target.getStage()?.getPointerPosition()
-      if (pos) {
-        const snappedPos = {
-          x: Math.round(pos.x / gridSize) * gridSize,
-          y: Math.round(pos.y / gridSize) * gridSize,
+      const stage = e.target.getStage()
+      if (stage) {
+        const pos = stage.getPointerPosition()
+        if (pos) {
+          const worldPos = screenToWorld(pos)
+
+          const snappedPos = {
+            x: Math.round(worldPos.x / gridSize) * gridSize,
+            y: Math.round(worldPos.y / gridSize) * gridSize,
+          }
+          const newComponent = componentFactory.createComponent(
+            circuitStore.currentCircuit,
+            componentToPlace,
+            snappedPos,
+          )
+          if (newComponent) {
+            circuitStore.addComponent(newComponent)
+          }
+          // Deactivate placement mode after placing a component
+          interactionStore.setComponentToPlace(null)
         }
-        const newComponent = componentFactory.createComponent(
-          circuitStore.currentCircuit,
-          componentToPlace,
-          snappedPos,
-        )
-        if (newComponent) {
-          circuitStore.addComponent(newComponent)
-        }
-        // Deactivate placement mode after placing a component
-        interactionStore.setComponentToPlace(null)
       }
     } else {
       // Clear selection and cancel any active operations
@@ -104,18 +163,22 @@ function handleStageClick(e: KonvaEventObject<MouseEvent>) {
 }
 
 function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
-  const pos = e.target.getStage()?.getPointerPosition()
+  const stage = e.target.getStage()
+  if (!stage) return
+
+  const pos = stage.getPointerPosition()
   if (pos) {
+    const worldPos = screenToWorld(pos)
     if (isDragging.value && dragTarget.value) {
       // Handle component dragging
       const snappedPos = {
-        x: Math.round(pos.x / gridSize) * gridSize,
-        y: Math.round(pos.y / gridSize) * gridSize,
+        x: Math.round(worldPos.x / gridSize) * gridSize,
+        y: Math.round(worldPos.y / gridSize) * gridSize,
       }
       circuitStore.moveComponent(dragTarget.value, snappedPos)
     } else if (interactionStore.wireCreationState.isActive) {
       // Handle wire preview during creation
-      interactionStore.updateWirePreview(pos)
+      interactionStore.updateWirePreview(worldPos)
     }
   }
 }
@@ -125,11 +188,18 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
     isDragging.value = false
     dragTarget.value = null
   } else if (interactionStore.wireCreationState.isActive) {
-    const pos = e.target.getStage()?.getPointerPosition()
-    if (pos) {
-      const terminal = findTerminalAtPosition(circuitStore.currentCircuit, pos)
-      if (!terminal) {
-        interactionStore.finishWireCreationToPosition(pos)
+    const stage = e.target.getStage()
+    if (stage) {
+      const pos = stage.getPointerPosition()
+      if (pos) {
+        const worldPos = screenToWorld(pos)
+        const terminal = findTerminalAtPosition(
+          circuitStore.currentCircuit,
+          worldPos,
+        )
+        if (!terminal) {
+          interactionStore.finishWireCreationToPosition(worldPos)
+        }
       }
     }
   }
@@ -199,20 +269,64 @@ function handleKeyDown(e: KeyboardEvent) {
   } else if (e.key === 'Escape') {
     interactionStore.cancelWireCreation()
     interactionStore.clearSelection()
+  } else if (e.code === 'Space') {
+    e.preventDefault()
+    if (!isPanning.value) {
+      isPanning.value = true
+      stageConfig.value.draggable = true
+      const container = document.querySelector('.circuit-canvas-container')
+      if (container) (container as HTMLElement).style.cursor = 'grab'
+    }
+  }
+}
+
+function handleKeyUp(e: KeyboardEvent) {
+  if (e.code === 'Space') {
+    e.preventDefault()
+    if (isPanning.value) {
+      isPanning.value = false
+      stageConfig.value.draggable = false
+      const container = document.querySelector('.circuit-canvas-container')
+      if (container) {
+        container.classList.remove('grabbing')
+        ;(container as HTMLElement).style.cursor = placementCursor.value
+      }
+    }
+  }
+}
+
+function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
+  if (isPanning.value) {
+    const stage = e.target.getStage()
+    if (stage) {
+      interactionStore.setCanvasTransform(stage.scaleX(), stage.position())
+    }
   }
 }
 
 onMounted(() => {
   const container = document.querySelector('.circuit-canvas-container')
   if (container) {
-    stageConfig.value.width = container.clientWidth
-    stageConfig.value.height = container.clientHeight
+    const updateSize = () => {
+      stageConfig.value.width = container.clientWidth
+      stageConfig.value.height = container.clientHeight
+    }
+
+    resizeObserver.value = new ResizeObserver(updateSize)
+    resizeObserver.value.observe(container)
+
+    updateSize() // Initial size set
   }
   document.addEventListener('keydown', handleKeyDown)
+  document.addEventListener('keyup', handleKeyUp)
 })
 
 onUnmounted(() => {
+  if (resizeObserver.value) {
+    resizeObserver.value.disconnect()
+  }
   document.removeEventListener('keydown', handleKeyDown)
+  document.removeEventListener('keyup', handleKeyUp)
 })
 
 watch(
@@ -226,11 +340,23 @@ watch(
     }
   },
 )
+
+watch(
+  () => interactionStore.canvasTransform,
+  (newTransform) => {
+    stageConfig.value.scaleX = newTransform.scale
+    stageConfig.value.scaleY = newTransform.scale
+    stageConfig.value.x = newTransform.position.x
+    stageConfig.value.y = newTransform.position.y
+  },
+  { deep: true }
+)
 </script>
 
 <template>
   <div
     class="circuit-canvas-container"
+    :class="{ grabbing: isPanning }"
     :style="{ cursor: placementCursor }"
     @contextmenu.prevent
   >
@@ -241,19 +367,21 @@ watch(
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
       @contextmenu="handleContextMenu"
+      @wheel="handleStageWheel"
+      @dragmove="handleStageDragMove"
     >
       <v-layer>
         <!-- Grid background -->
         <v-rect
           :config="{
             name: 'grid-background',
-            x: 0,
-            y: 0,
-            width: stageConfig.width,
-            height: stageConfig.height,
+            x: gridLinesX[0] - gridSize,
+            y: gridLinesY[0] - gridSize,
+            width:
+              gridLinesX[gridLinesX.length - 1] - gridLinesX[0] + gridSize * 2,
+            height:
+              gridLinesY[gridLinesY.length - 1] - gridLinesY[0] + gridSize * 2,
             fill: '#fafafa',
-            stroke: '#e0e0e0',
-            strokeWidth: 1,
           }"
         />
 
@@ -262,8 +390,8 @@ watch(
           v-for="x in gridLinesX"
           :key="`grid-x-${x}`"
           :config="{
-            points: [x, 0, x, stageConfig.height],
-            stroke: '#f0f0f0',
+            points: [x, gridLinesY[0] - gridSize, x, gridLinesY[gridLinesY.length - 1] + gridSize],
+            stroke: '#e0e0e0',
             strokeWidth: 1,
           }"
         />
@@ -271,8 +399,8 @@ watch(
           v-for="y in gridLinesY"
           :key="`grid-y-${y}`"
           :config="{
-            points: [0, y, stageConfig.width, y],
-            stroke: '#f0f0f0',
+            points: [gridLinesX[0] - gridSize, y, gridLinesX[gridLinesX.length - 1] + gridSize, y],
+            stroke: '#e0e0e0',
             strokeWidth: 1,
           }"
         />
@@ -334,5 +462,9 @@ watch(
   overflow: hidden;
   position: relative;
   background-color: #fafafa;
+}
+
+.circuit-canvas-container.grabbing {
+  cursor: grabbing !important;
 }
 </style>

@@ -26,7 +26,16 @@ export const useInteractionStore = defineStore('interaction', () => {
     previewPosition: null,
   });
 
+  const canvasTransform = ref({
+    scale: 1,
+    position: { x: 0, y: 0 },
+  });
+
   // Actions
+  function setCanvasTransform(scale: number, position: Position) {
+    canvasTransform.value = { scale, position };
+  }
+
   function setHoveredTerminal(info: { componentId: string; terminalId: string } | null) {
     hoveredTerminal.value = info;
   }
@@ -151,7 +160,9 @@ export const useInteractionStore = defineStore('interaction', () => {
     componentToPlace,
     hoveredTerminal,
     wireCreationState,
+    canvasTransform,
     // Actions
+    setCanvasTransform,
     setHoveredTerminal,
     setComponentToPlace,
     selectComponent,

@@ -1355,7 +1355,7 @@ This simulation system transforms Circuit Lab from a drawing tool into a **compl
 **Application Layout**: ✅ A clean interface with a `ComponentPalette` for placing components.
 **Interaction Model**: ✅ A "modeless" system where user actions are contextual (selecting, moving, wiring).
 **Component System**: ✅ The component system is now fully data-driven. The `componentFactory` uses the `ComponentRegistry` to dynamically create components, making the system truly extensible.
-**Wiring**: ✅ A click-move-click wiring system is implemented and connects components reliably.
+**Wiring**: ✅ A click-move-click wiring system connects components reliably, and wires now visually "hop" over each other at intersection points to improve clarity.
 **Core Features**: ✅ Component placement, selection, movement, deletion, and rotation are functional.
 
 **Key Action Items**:
