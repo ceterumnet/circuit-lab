@@ -33,7 +33,6 @@ export function createComponent(circuit: Circuit, type: string, position: Positi
     position,
     rotation: 0,
     selected: false,
-    label: definition.name,
     properties: {},
   };
 
