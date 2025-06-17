@@ -40,7 +40,6 @@ const emit = defineEmits<{
   (e: 'mouseenter'): void
   (e: 'mouseleave'): void
   (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'node-connect', nodeId: string): void
 }>()
 

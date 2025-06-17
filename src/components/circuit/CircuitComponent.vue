@@ -9,7 +9,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-mousedown="handleTerminalMouseDown"
-        @terminal-click="handleTerminalClick"
       />
     </v-group>
 
@@ -22,7 +21,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-mousedown="handleTerminalMouseDown"
-        @terminal-click="handleTerminalClick"
       />
     </v-group>
 
@@ -35,7 +33,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-mousedown="handleTerminalMouseDown"
-        @terminal-click="handleTerminalClick"
       />
     </v-group>
 
@@ -48,7 +45,6 @@
         @dragmove="handleDragMove"
         @dragend="handleDragEnd"
         @terminal-mousedown="handleTerminalMouseDown"
-        @terminal-click="handleTerminalClick"
         @node-connect="handleNodeConnect"
       />
     </v-group>
@@ -94,7 +90,6 @@ interface Emits {
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
   (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
-  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'node-connect', nodeId: string): void
   (e: 'wire-delete', wireId: string): void
 }
@@ -176,10 +171,6 @@ function handleDragEnd(position: Position) {
 
 function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
   emit('terminal-mousedown', terminalId, componentId, position)
-}
-
-function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-click', terminalId, componentId, position)
 }
 
 function handleNodeConnect(nodeId: string) {
