@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type {
   Circuit,
   CircuitComponent,
@@ -11,6 +11,7 @@ import type {
 import type { DC_Result } from '@/services/simulation'
 import { generateComponentId } from '@/services/componentFactory'
 import { useInteractionStore } from './interaction'
+import { solveDC } from '@/services/simulation'
 
 export const useCircuitStore = defineStore('circuit', () => {
   // State
@@ -24,6 +25,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   const isSimulating = ref(false)
   const simulationResults = ref<SimulationResult | null>(null)
   const dcSolution = ref<DC_Result | null>(null);
+  const lastDcSolution = ref<DC_Result | null>(null);
 
   const interactionStore = useInteractionStore()
 
@@ -75,7 +77,28 @@ export const useCircuitStore = defineStore('circuit', () => {
     interactionStore.selectComponent(null)
     simulationResults.value = null
     dcSolution.value = null;
+    lastDcSolution.value = null;
   }
+
+  async function runDCSimulation() {
+    try {
+      const solution = await solveDC(currentCircuit.value);
+      dcSolution.value = solution;
+      lastDcSolution.value = dcSolution.value
+    } catch (error) {
+      console.error('DC analysis failed:', error);
+      // Restore the last valid solution if the current one fails
+      dcSolution.value = lastDcSolution.value;
+    }
+  }
+
+  watch(
+    () => currentCircuit.value,
+    () => {
+      runDCSimulation()
+    },
+    { deep: true }
+  )
 
   function startSimulation() {
     isSimulating.value = true
@@ -140,6 +163,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     isSimulating,
     simulationResults,
     dcSolution,
+    lastDcSolution,
 
     // Getters
     singleSelectedComponent,
@@ -156,5 +180,6 @@ export const useCircuitStore = defineStore('circuit', () => {
     createWire,
     deleteSelectedComponent,
     deleteWire,
+    runDCSimulation,
   }
 })

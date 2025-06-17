@@ -8,6 +8,7 @@ import { getComponentDefinition } from '@/registry/components';
  */
 export interface DC_Result {
   voltages: Record<string, number>;
+  currents: Record<string, number>;
   termToNodeIndex: Map<string, number>;
 }
 
@@ -182,23 +183,40 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
   }
 
   // Step 4: Format and return results
-  const results: DC_Result = {
-    voltages: {},
-    termToNodeIndex
-  };
+  const voltageResults: Record<string, number> = {};
   for (const [nodeIdx, nodeName] of nodeMap.entries()) {
     if (nodeIdx !== groundNodeIndex) {
-      results.voltages[nodeName] = solution.get([nodeIdx, 0]);
+      voltageResults[nodeName] = solution.get([nodeIdx, 0]);
     } else {
-      results.voltages[nodeName] = 0; // Ground is always 0
+      voltageResults[nodeName] = 0; // Ground is always 0
     }
+  }
+
+  // Step 5: Calculate currents through resistive components
+  const currentResults: Record<string, number> = {};
+  for (const r of resistors) {
+    if (!r.properties?.resistance) continue;
+    const def = getComponentDefinition('resistor')!;
+    const n1_idx = termToNodeIndex.get(getTerminalId(r, def.terminals[0].id))!;
+    const n2_idx = termToNodeIndex.get(getTerminalId(r, def.terminals[1].id))!;
+
+    const n1_volts = solution.get([n1_idx, 0]);
+    const n2_volts = solution.get([n2_idx, 0]);
+
+    const current = (n1_volts - n2_volts) / (r.properties.resistance as number);
+    currentResults[r.id] = current;
   }
 
   console.log('DC Analysis finished.');
   console.log('Matrix A:', A.toArray());
   console.log('Vector z:', z.toArray());
   console.log('Solution:', solution.toArray());
-  console.log('Final Results:', results);
+  console.log('Final Voltage Results:', voltageResults);
+  console.log('Final Current Results:', currentResults);
 
-  return results;
+  return {
+    voltages: voltageResults,
+    currents: currentResults,
+    termToNodeIndex
+  };
 }

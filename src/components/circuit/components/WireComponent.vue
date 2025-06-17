@@ -26,6 +26,31 @@
         listening: false,
       }"
     />
+    <v-text
+      v-if="formattedCurrent"
+      :config="{
+        x: annotationPosition.text.x,
+        y: annotationPosition.text.y,
+        text: formattedCurrent,
+        fontSize: 10,
+        fontFamily: 'monospace',
+        fill: '#00A',
+        align: 'center',
+        verticalAlign: 'middle',
+        rotation: textRotation
+      }"
+    />
+    <v-path
+      v-if="isFlowing"
+      :config="{
+        data: 'M -5 0 L 5 0 M 0 -4 L 5 0 L 0 4',
+        stroke: '#00A',
+        strokeWidth: 1.5,
+        x: annotationPosition.arrow.x,
+        y: annotationPosition.arrow.y,
+        rotation: arrowRotation,
+      }"
+    />
   </v-group>
 </template>
 
@@ -51,6 +76,100 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const circuitStore = useCircuitStore()
+
+const wireCurrent = computed(() => {
+  if (!circuitStore.dcSolution || !circuitStore.dcSolution.currents) {
+    return null;
+  }
+  const startComponentId = props.component.properties?.startComponentId as string;
+  if (!startComponentId) return null;
+
+  return circuitStore.dcSolution.currents[startComponentId] ?? null;
+});
+
+const formattedCurrent = computed(() => {
+  if (wireCurrent.value === null || wireCurrent.value === undefined) return '';
+  const current = wireCurrent.value;
+  if (Math.abs(current) < 1e-12) return '0A';
+
+  const sign = current > 0 ? '' : '-';
+  const absCurrent = Math.abs(current);
+  let value: string;
+  let unit: string;
+
+  if (absCurrent >= 1) {
+    value = absCurrent.toPrecision(3);
+    unit = 'A';
+  } else if (absCurrent >= 1e-3) {
+    value = (absCurrent * 1e3).toPrecision(3);
+    unit = 'mA';
+  } else if (absCurrent >= 1e-6) {
+    value = (absCurrent * 1e6).toPrecision(3);
+    unit = 'µA';
+  } else if (absCurrent >= 1e-9) {
+    value = (absCurrent * 1e9).toPrecision(3);
+    unit = 'nA';
+  } else {
+    value = (absCurrent * 1e12).toPrecision(3);
+    unit = 'pA';
+  }
+  return `${sign}${value}${unit}`;
+});
+
+const isFlowing = computed(() => {
+  return wireCurrent.value !== null && Math.abs(wireCurrent.value) > 1e-12;
+});
+
+const midpoint = computed(() => ({
+  x: (startPos.value.x + endPos.value.x) / 2,
+  y: (startPos.value.y + endPos.value.y) / 2
+}))
+
+const arrowRotation = computed(() => {
+  const dx = endPos.value.x - startPos.value.x;
+  const dy = endPos.value.y - startPos.value.y;
+  let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  if (wireCurrent.value && wireCurrent.value < 0) {
+    angle += 180;
+  }
+  return angle;
+})
+
+const textRotation = computed(() => {
+  const dx = endPos.value.x - startPos.value.x;
+  const dy = endPos.value.y - startPos.value.y;
+  let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  // Keep text right-side up
+  if (angle > 90) {
+    angle -= 180;
+  } else if (angle < -90) {
+    angle += 180;
+  }
+
+  return angle;
+});
+
+const annotationPosition = computed(() => {
+  const dx = endPos.value.x - startPos.value.x;
+  const dy = endPos.value.y - startPos.value.y;
+  const angleRad = Math.atan2(dy, dx);
+  const perpAngleRad = angleRad - Math.PI / 2;
+
+  const arrowOffset = 10;
+  const textOffset = 22;
+
+  return {
+    arrow: {
+      x: midpoint.value.x + arrowOffset * Math.cos(perpAngleRad),
+      y: midpoint.value.y + arrowOffset * Math.sin(perpAngleRad),
+    },
+    text: {
+      x: midpoint.value.x + textOffset * Math.cos(perpAngleRad),
+      y: midpoint.value.y + textOffset * Math.sin(perpAngleRad),
+    }
+  }
+});
 
 const allIntersections = computed(() => {
   return calculateWireIntersections(circuitStore.currentCircuit.components)

@@ -106,6 +106,20 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] **Multi-Select (Marquee):** Click and drag on the canvas background to draw a selection box (marquee) and select multiple components.
 - [x] **Group Movement:** Dragging any component in a selection group moves all selected components together.
 
+### Phase 1.75 - Node and Routing Refactor (Future)
+
+**Goal**: Transition from an explicit, visible node system to an implicit, schematic-standard system for a cleaner UI and more intuitive workflow. This will be a significant architectural change.
+
+- [ ] **Implicit Junctions**:
+    - [ ] Deprecate the visible `Node` component.
+    - [ ] Allow wires to terminate directly on other wires to create T-junctions.
+    - [ ] Automatically render a junction dot where three or more wire segments meet.
+- [ ] **Selective Annotation (Probe Tool)**:
+    - [ ] By default, do not display any voltages or currents on the canvas.
+    - [ ] Create a new "Probe" tool.
+    - [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
+    - [ ] Probes can be dragged and deleted.
+
 ### Phase 2 - Passive Components
 
 **Goal**: AC analysis and energy storage elements
@@ -590,6 +604,19 @@ src/
 
 - The architecture for a professional CAD-style modal toolbar is designed but **not implemented**.
 - This remains a future option if the modeless approach proves insufficient for growing complexity.
+
+**Phase 1.75**: 📋 **PLANNED** - Node and Routing Refactor (Future)
+
+- **Goal**: Transition from an explicit, visible node system to an implicit, schematic-standard system for a cleaner UI and more intuitive workflow.
+- [ ] **Implicit Junctions**:
+    - [ ] Deprecate the visible `Node` component.
+    - [ ] Allow wires to terminate directly on other wires to create T-junctions.
+    - [ ] Automatically render a junction dot where three or more wire segments meet.
+- [ ] **Selective Annotation (Probe Tool)**:
+    - [ ] By default, do not display any voltages or currents on the canvas.
+    - [ ] Create a new "Probe" tool.
+    - [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
+    - [ ] Probes can be dragged and deleted.
 
 **Phase 2**: 📋 **PLANNED** - Basic Simulation Engine
 
