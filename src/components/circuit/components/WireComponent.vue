@@ -1,12 +1,13 @@
 <template>
   <v-group>
-    <!-- Hit area line -->
-    <v-line
+    <!-- The hit area is now a complex path to match the visible wire -->
+    <v-path
       :config="{
-        points: wirePoints,
-        stroke: 'rgba(0,0,0,0.01)',
-        strokeWidth: 10,
+        data: wirePathData,
+        stroke: 'transparent',
+        strokeWidth: 12,
         lineCap: 'round',
+        lineJoin: 'round',
       }"
       @click="handleClick"
       @dblclick="handleDoubleClick"
@@ -14,27 +15,15 @@
       @mouseleave="handleMouseLeave"
     />
 
-    <!-- Visible wire line -->
-    <v-line
+    <!-- The visible wire path, which includes hops -->
+    <v-path
       :config="{
-        points: wirePoints,
+        data: wirePathData,
         stroke: component.selected ? '#2196f3' : '#333',
         strokeWidth: component.selected ? 3 : 2,
         lineCap: 'round',
-        listening: false, // Make this line non-interactive
-      }"
-    />
-
-    <!-- Selection indicator -->
-    <v-line
-      v-if="component.selected"
-      :config="{
-        points: wirePoints,
-        stroke: '#2196f3',
-        strokeWidth: 6,
-        opacity: 0.3,
-        lineCap: 'round',
-        listening: false, // Make this line non-interactive
+        lineJoin: 'round',
+        listening: false,
       }"
     />
   </v-group>
@@ -44,6 +33,8 @@
 import { computed } from 'vue'
 import type { CircuitComponent, Position } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
+import { useCircuitStore } from '@/stores/circuit'
+import { calculateWireIntersections } from '@/services/intersections'
 
 interface Props {
   component: CircuitComponent
@@ -59,25 +50,97 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const wirePoints = computed(() => {
-  const componentProps = props.component.properties || {}
+const circuitStore = useCircuitStore()
 
-  // Use the provided positions if available, otherwise fall back to component's stored positions
-  const start = props.startPosition || componentProps.startPosition || { x: 0, y: 0 }
-  const end = props.endPosition || componentProps.endPosition || { x: 0, y: 0 }
+const allIntersections = computed(() => {
+  return calculateWireIntersections(circuitStore.currentCircuit.components)
+})
 
-  // Validate positions to prevent NaN values
-  const validStart = {
-    x: isNaN((start as Position).x) ? 0 : (start as Position).x,
-    y: isNaN((start as Position).y) ? 0 : (start as Position).y,
+const intersections = computed(() => {
+  const allHops = allIntersections.value.get(props.component.id) || []
+  return allHops.filter(hop => {
+    for (const [wireId, hops] of allIntersections.value.entries()) {
+      if (wireId === props.component.id) continue
+      const hasSameHop = hops.some(h => Math.abs(h.x - hop.x) < 1e-6 && Math.abs(h.y - hop.y) < 1e-6)
+      if (hasSameHop) {
+        return props.component.id < wireId
+      }
+    }
+    return true
+  })
+})
+
+const startPos = computed(() => {
+  const p = props.startPosition || props.component.properties?.startPosition || { x: 0, y: 0 }
+  return {
+    x: isNaN((p as Position).x) ? 0 : (p as Position).x,
+    y: isNaN((p as Position).y) ? 0 : (p as Position).y,
   }
-  const validEnd = {
-    x: isNaN((end as Position).x) ? 0 : (end as Position).x,
-    y: isNaN((end as Position).y) ? 0 : (end as Position).y,
+})
+
+const endPos = computed(() => {
+  const p = props.endPosition || props.component.properties?.endPosition || { x: 0, y: 0 }
+  return {
+    x: isNaN((p as Position).x) ? 0 : (p as Position).x,
+    y: isNaN((p as Position).y) ? 0 : (p as Position).y,
+  }
+})
+
+const wirePathData = computed(() => {
+  const hopRadius = 6
+  const start = startPos.value
+  const end = endPos.value
+  const hops = intersections.value
+
+  // If there are no intersections, draw a simple straight line.
+  if (!hops || hops.length === 0) {
+    return `M ${start.x} ${start.y} L ${end.x} ${end.y}`
   }
 
-  // Simple straight line for now
-  return [validStart.x, validStart.y, validEnd.x, validEnd.y]
+  const wireVec = { x: end.x - start.x, y: end.y - start.y }
+  const length = Math.sqrt(wireVec.x ** 2 + wireVec.y ** 2)
+  if (length < 1e-9) return `M ${start.x} ${start.y} L ${end.x} ${end.y}`
+
+  const unitVec = { x: wireVec.x / length, y: wireVec.y / length }
+  const angle = (Math.atan2(unitVec.y, unitVec.x) * 180) / Math.PI
+
+  // Sort intersection points based on their distance from the start of the wire
+  const sortedHops = [...hops].sort((a, b) => {
+    const distA = (a.x - start.x) * unitVec.x + (a.y - start.y) * unitVec.y
+    const distB = (b.x - start.x) * unitVec.x + (b.y - start.y) * unitVec.y
+    return distA - distB
+  })
+
+  let path = `M ${start.x} ${start.y}`
+
+  for (const hopCenter of sortedHops) {
+    const distFromStart = Math.sqrt((hopCenter.x - start.x)**2 + (hopCenter.y - start.y)**2)
+    const distFromEnd = length - distFromStart
+
+    // Don't draw a hop if it's too close to an endpoint
+    if (distFromStart < hopRadius * 2 || distFromEnd < hopRadius * 2) {
+      continue
+    }
+
+    const pointBefore = {
+      x: hopCenter.x - unitVec.x * hopRadius,
+      y: hopCenter.y - unitVec.y * hopRadius,
+    }
+    const pointAfter = {
+      x: hopCenter.x + unitVec.x * hopRadius,
+      y: hopCenter.y + unitVec.y * hopRadius,
+    }
+
+    // Line to the start of the hop
+    path += ` L ${pointBefore.x} ${pointBefore.y}`
+    // Arc over the intersection point
+    path += ` A ${hopRadius} ${hopRadius} ${angle} 0 1 ${pointAfter.x} ${pointAfter.y}`
+  }
+
+  // Final line to the end of the wire
+  path += ` L ${end.x} ${end.y}`
+
+  return path
 })
 
 function handleClick() {
