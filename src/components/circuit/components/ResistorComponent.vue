@@ -90,8 +90,8 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'select'): void
-  (e: 'dragstart'): void
+  (e: 'select', event: KonvaEventObject<MouseEvent>): void
+  (e: 'dragstart', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
   (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
@@ -119,7 +119,7 @@ const resistanceLabel = computed(() => {
   return `${resistance}${unit}`
 })
 
-const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id)
+const isSelected = computed(() => interactionStore.selectedComponentIds.includes(props.component.id))
 
 const isHighlighted = computed(() => {
   const wireState = interactionStore.wireCreationState
@@ -160,12 +160,12 @@ const zigzagPoints = computed(() => {
   return points
 })
 
-function handleClick() {
-  emit('select')
+function handleClick(e: KonvaEventObject<MouseEvent>) {
+  emit('select', e)
 }
 
-function handleDragStart() {
-  emit('dragstart')
+function handleDragStart(e: KonvaEventObject<MouseEvent>) {
+  emit('dragstart', e)
 }
 
 function handleDragMove(e: { target: { x(): number; y(): number } }) {

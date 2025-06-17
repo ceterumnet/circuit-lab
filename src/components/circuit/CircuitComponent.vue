@@ -75,14 +75,15 @@ import WireComponent from '@/components/circuit/components/WireComponent.vue'
 import NodeComponent from '@/components/circuit/components/NodeComponent.vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { getTerminalWorldPosition } from '@/services/geometry'
+import type { KonvaEventObject } from 'konva/lib/Node'
 
 interface Props {
   component: CircuitComponent
 }
 
 interface Emits {
-  (e: 'select', componentId: string): void
-  (e: 'move-start', componentId: string): void
+  (e: 'select', componentId: string, event: KonvaEventObject<MouseEvent>): void
+  (e: 'move-start', componentId: string, event: KonvaEventObject<MouseEvent>): void
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
   (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
@@ -137,12 +138,12 @@ const wireEndPosition = computed(() => {
   return (wireProps.endPosition as Position) || { x: 0, y: 0 }
 })
 
-function handleSelect() {
-  emit('select', props.component.id)
+function handleSelect(event: KonvaEventObject<MouseEvent>) {
+  emit('select', props.component.id, event)
 }
 
-function handleDragStart() {
-  emit('move-start', props.component.id)
+function handleDragStart(event: KonvaEventObject<MouseEvent>) {
+  emit('move-start', props.component.id, event)
 }
 
 function handleDragMove(position: Position) {

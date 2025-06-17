@@ -26,9 +26,10 @@ export const useCircuitStore = defineStore('circuit', () => {
   const interactionStore = useInteractionStore()
 
   // Getters
-  const selectedComponent = computed(() => {
-    if (!interactionStore.selectedComponentId) return null
-    return currentCircuit.value.components.find((c) => c.id === interactionStore.selectedComponentId) || null
+  const singleSelectedComponent = computed(() => {
+    const ids = interactionStore.selectedComponentIds
+    if (ids.length !== 1) return null
+    return currentCircuit.value.components.find((c) => c.id === ids[0]) || null
   })
 
   const componentCount = computed(() => currentCircuit.value.components.length)
@@ -42,8 +43,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     const index = currentCircuit.value.components.findIndex((c) => c.id === componentId)
     if (index !== -1) {
       currentCircuit.value.components.splice(index, 1)
-      if (interactionStore.selectedComponentId === componentId) {
-        interactionStore.selectComponent(null)
+      if (interactionStore.selectedComponentIds.includes(componentId)) {
+        interactionStore.removeFromSelection(componentId)
       }
     }
   }
@@ -111,9 +112,10 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function deleteSelectedComponent() {
-    if (interactionStore.selectedComponentId) {
-      removeComponent(interactionStore.selectedComponentId)
-    }
+    interactionStore.selectedComponentIds.forEach(id => {
+      removeComponent(id)
+    })
+    interactionStore.clearSelection()
   }
 
   function deleteWire(wireId: string) {
@@ -132,7 +134,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     simulationResults,
 
     // Getters
-    selectedComponent,
+    singleSelectedComponent,
     componentCount,
 
     // Actions

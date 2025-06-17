@@ -8,7 +8,7 @@ import { getComponentDefinition } from '@/registry/components'
 
 export const useInteractionStore = defineStore('interaction', () => {
   // State
-  const selectedComponentId = ref<string | null>(null);
+  const selectedComponentIds = ref<string[]>([]);
   const componentToPlace = ref<string | null>(null);
   const hoveredTerminal = ref<{ componentId: string; terminalId: string } | null>(null);
 
@@ -49,13 +49,35 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
-  function selectComponent(componentId: string | null) {
-    // This action will now only manage the ID. The circuit store will be responsible for updating the component state.
-    selectedComponentId.value = componentId;
+  function selectComponent(componentId: string | null, isMultiSelect = false) {
+    if (isMultiSelect && componentId) {
+      if (selectedComponentIds.value.includes(componentId)) {
+        removeFromSelection(componentId);
+      } else {
+        addToSelection(componentId);
+      }
+    } else if (componentId) {
+      selectedComponentIds.value = [componentId];
+    } else {
+      selectedComponentIds.value = [];
+    }
+  }
+
+  function addToSelection(componentId: string) {
+    if (!selectedComponentIds.value.includes(componentId)) {
+      selectedComponentIds.value.push(componentId);
+    }
+  }
+
+  function removeFromSelection(componentId: string) {
+    const index = selectedComponentIds.value.indexOf(componentId);
+    if (index > -1) {
+      selectedComponentIds.value.splice(index, 1);
+    }
   }
 
   function clearSelection() {
-    selectedComponentId.value = null;
+    selectedComponentIds.value = [];
   }
 
   function cancelWireCreation() {
@@ -156,7 +178,7 @@ export const useInteractionStore = defineStore('interaction', () => {
 
   return {
     // State
-    selectedComponentId,
+    selectedComponentIds,
     componentToPlace,
     hoveredTerminal,
     wireCreationState,
@@ -166,6 +188,8 @@ export const useInteractionStore = defineStore('interaction', () => {
     setHoveredTerminal,
     setComponentToPlace,
     selectComponent,
+    addToSelection,
+    removeFromSelection,
     clearSelection,
     cancelWireCreation,
     startWireCreation,

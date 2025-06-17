@@ -75,6 +75,15 @@ const resizeObserver = ref<ResizeObserver | null>(null)
 const isDragging = ref(false)
 const dragTarget = ref<string | null>(null)
 const isPanning = ref(false)
+const dragStartPointerPosition = ref({ x: 0, y: 0 })
+const dragStartPositions = ref<Map<string, { x: number; y: number }>>(new Map())
+const selectionBox = ref({
+  visible: false,
+  x1: 0,
+  y1: 0,
+  x2: 0,
+  y2: 0,
+})
 
 // Event handlers
 function handleStageWheel(e: KonvaEventObject<WheelEvent>) {
@@ -102,62 +111,29 @@ function handleStageWheel(e: KonvaEventObject<WheelEvent>) {
   interactionStore.setCanvasTransform(newScale, newPos)
 }
 
-function handleStageClick(e: KonvaEventObject<MouseEvent>) {
-  // Prevent component placement/deselection when finishing a pan
+function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
+  // Prevent component placement/deselection when finishing a pan or middle clicking
   if (isPanning.value || e.evt.button === 1) {
     return
   }
 
-  // Check if we clicked on the background (stage or grid elements)
-  const isBackground =
-    e.target === e.target.getStage() ||
-    e.target.name() === 'grid-background' ||
-    e.target.className === 'Rect' ||
-    e.target.className === 'Line'
+  const stage = e.target.getStage()
+  if (!stage) return
 
+  // Check if we clicked on the background
+  const isBackground = e.target === stage || e.target.name() === 'grid-background'
   if (isBackground) {
-    // If a wire is being drawn, a click on the background should finish it.
-    if (interactionStore.wireCreationState.isActive) {
-      const stage = e.target.getStage()
-      if (stage) {
-        const pos = stage.getPointerPosition()
-        if (pos) {
-          const worldPos = screenToWorld(pos)
-          interactionStore.finishWireCreationToPosition(worldPos)
-        }
-      }
-      // Prevent other click logic from running
-      return
+    const pos = screenToWorld(stage.getPointerPosition()!)
+    selectionBox.value = {
+      visible: true,
+      x1: pos.x,
+      y1: pos.y,
+      x2: pos.x,
+      y2: pos.y,
     }
 
-    const componentToPlace = interactionStore.componentToPlace
-    if (componentToPlace) {
-      const stage = e.target.getStage()
-      if (stage) {
-        const pos = stage.getPointerPosition()
-        if (pos) {
-          const worldPos = screenToWorld(pos)
-
-          const snappedPos = {
-            x: Math.round(worldPos.x / gridSize) * gridSize,
-            y: Math.round(worldPos.y / gridSize) * gridSize,
-          }
-          const newComponent = componentFactory.createComponent(
-            circuitStore.currentCircuit,
-            componentToPlace,
-            snappedPos,
-          )
-          if (newComponent) {
-            circuitStore.addComponent(newComponent)
-          }
-          // Deactivate placement mode after placing a component
-          interactionStore.setComponentToPlace(null)
-        }
-      }
-    } else {
-      // Clear selection and cancel any active operations
+    if (!e.evt.shiftKey) {
       interactionStore.clearSelection()
-      interactionStore.cancelWireCreation()
     }
   }
 }
@@ -166,50 +142,100 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
 
-  const pos = stage.getPointerPosition()
-  if (pos) {
-    const worldPos = screenToWorld(pos)
-    if (isDragging.value && dragTarget.value) {
-      // Handle component dragging
-      const snappedPos = {
-        x: Math.round(worldPos.x / gridSize) * gridSize,
-        y: Math.round(worldPos.y / gridSize) * gridSize,
-      }
-      circuitStore.moveComponent(dragTarget.value, snappedPos)
-    } else if (interactionStore.wireCreationState.isActive) {
-      // Handle wire preview during creation
+  // Update selection box
+  if (selectionBox.value.visible) {
+    const pos = screenToWorld(stage.getPointerPosition()!)
+    selectionBox.value.x2 = pos.x
+    selectionBox.value.y2 = pos.y
+    return // Don't process other mouse move logic during marquee
+  }
+
+  // Handle wire preview during creation
+  if (interactionStore.wireCreationState.isActive) {
+    const pos = stage.getPointerPosition()
+    if (pos) {
+      const worldPos = screenToWorld(pos)
       interactionStore.updateWirePreview(worldPos)
     }
   }
 }
 
 function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage()
+  if (!stage) return
+
+  // Marquee selection logic
+  if (selectionBox.value.visible) {
+    // If the box is small, treat it as a click on the background
+    const isClick =
+      Math.abs(selectionBox.value.x1 - selectionBox.value.x2) < 5 &&
+      Math.abs(selectionBox.value.y1 - selectionBox.value.y2) < 5
+
+    selectionBox.value.visible = false // Hide the box immediately
+
+    if (isClick) {
+      // Background click logic (place component or finish wire)
+      if (interactionStore.wireCreationState.isActive) {
+        const pos = screenToWorld(stage.getPointerPosition()!)
+        interactionStore.finishWireCreationToPosition(pos)
+      } else if (interactionStore.componentToPlace) {
+        const worldPos = screenToWorld(stage.getPointerPosition()!)
+        const snappedPos = {
+          x: Math.round(worldPos.x / gridSize) * gridSize,
+          y: Math.round(worldPos.y / gridSize) * gridSize,
+        }
+        const newComponent = componentFactory.createComponent(
+          circuitStore.currentCircuit,
+          interactionStore.componentToPlace,
+          snappedPos,
+        )
+        if (newComponent) {
+          circuitStore.addComponent(newComponent)
+        }
+        interactionStore.setComponentToPlace(null)
+      } else if (!e.evt.shiftKey) {
+        // Only clear selection on a background click if shift isn't held
+        interactionStore.clearSelection()
+        interactionStore.cancelWireCreation()
+      }
+    } else {
+      // Marquee selection
+      const box = selectionBox.value
+      const x1 = Math.min(box.x1, box.x2)
+      const y1 = Math.min(box.y1, box.y2)
+      const x2 = Math.max(box.x1, box.x2)
+      const y2 = Math.max(box.y1, box.y2)
+
+      circuitStore.currentCircuit.components.forEach(component => {
+        if (component.type === 'wire') return // Wires can't be marquee selected for now
+
+        const { x, y } = component.position
+        if (x > x1 && x < x2 && y > y1 && y < y2) {
+          interactionStore.addToSelection(component.id)
+        }
+      })
+    }
+  }
+
+  // Dragging logic
   if (isDragging.value) {
     isDragging.value = false
     dragTarget.value = null
+    dragStartPositions.value.clear()
   } else if (interactionStore.wireCreationState.isActive) {
-    const stage = e.target.getStage()
-    if (stage) {
-      const pos = stage.getPointerPosition()
-      if (pos) {
-        const worldPos = screenToWorld(pos)
-        const terminal = findTerminalAtPosition(
-          circuitStore.currentCircuit,
-          worldPos,
-        )
-        if (!terminal) {
-          interactionStore.finishWireCreationToPosition(worldPos)
-        }
-      }
+    const pos = screenToWorld(stage.getPointerPosition()!)
+    const terminal = findTerminalAtPosition(circuitStore.currentCircuit, pos)
+    if (!terminal) {
+      interactionStore.finishWireCreationToPosition(pos)
     }
   }
 }
 
-function handleComponentSelect(componentId: string) {
-  interactionStore.selectComponent(componentId)
+function handleComponentSelect(componentId: string, e: KonvaEventObject<MouseEvent>) {
+  interactionStore.selectComponent(componentId, e.evt.shiftKey)
 }
 
-function handleComponentMoveStart(componentId: string) {
+function handleComponentMoveStart(componentId: string, e: KonvaEventObject<MouseEvent>) {
   // If a drag starts on a component that just initiated a wire draw,
   // cancel the wire draw. The user's intent is to move the component.
   if (
@@ -221,24 +247,68 @@ function handleComponentMoveStart(componentId: string) {
 
   isDragging.value = true
   dragTarget.value = componentId
+
+  const stage = e.target.getStage()
+  if (!stage) return
+  dragStartPointerPosition.value = screenToWorld(stage.getPointerPosition()!)
+
+  // If the dragged component is not selected, select only it.
+  if (!interactionStore.selectedComponentIds.includes(componentId)) {
+    interactionStore.selectComponent(componentId, e.evt.shiftKey)
+  }
+
+  // Store initial positions of all selected components
+  dragStartPositions.value.clear()
+  interactionStore.selectedComponentIds.forEach(id => {
+    const component = circuitStore.currentCircuit.components.find(c => c.id === id)
+    if (component && component.type !== 'wire') {
+      dragStartPositions.value.set(id, { ...component.position })
+    }
+  })
 }
 
 function handleComponentMove(componentId: string, position: { x: number; y: number }) {
-  if (isDragging.value) {
-    circuitStore.moveComponent(componentId, position)
-  }
+  const startPos = dragStartPositions.value.get(componentId)
+  if (!startPos) return
+
+  const dx = position.x - startPos.x
+  const dy = position.y - startPos.y
+
+  interactionStore.selectedComponentIds.forEach(id => {
+    // if (id === componentId) return // Skip the component that's already being dragged
+
+    const otherStartPos = dragStartPositions.value.get(id)
+    if (otherStartPos) {
+      const newPos = {
+        x: otherStartPos.x + dx,
+        y: otherStartPos.y + dy,
+      }
+      circuitStore.moveComponent(id, newPos)
+    }
+  })
 }
 
 function handleComponentMoveEnd(componentId: string, position: { x: number; y: number }) {
-  if (isDragging.value) {
-    const snappedPos = {
-      x: Math.round(position.x / gridSize) * gridSize,
-      y: Math.round(position.y / gridSize) * gridSize,
+  const startPos = dragStartPositions.value.get(componentId)
+  if (!startPos) return
+
+  const dx = position.x - startPos.x
+  const dy = position.y - startPos.y
+
+  interactionStore.selectedComponentIds.forEach(id => {
+    const otherStartPos = dragStartPositions.value.get(id)
+    if (otherStartPos) {
+      const newPos = {
+        x: otherStartPos.x + dx,
+        y: otherStartPos.y + dy,
+      }
+      const snappedPos = {
+        x: Math.round(newPos.x / gridSize) * gridSize,
+        y: Math.round(newPos.y / gridSize) * gridSize,
+      }
+      circuitStore.moveComponent(id, snappedPos)
     }
-    circuitStore.moveComponent(componentId, snappedPos)
-    isDragging.value = false
-    dragTarget.value = null
-  }
+  })
 }
 
 function handleTerminalMouseDown(terminalId: string, componentId: string) {
@@ -330,15 +400,19 @@ onUnmounted(() => {
 })
 
 watch(
-  () => interactionStore.selectedComponentId,
-  (newId, oldId) => {
-    if (oldId) {
-      circuitStore.updateComponent(oldId, { selected: false })
-    }
-    if (newId) {
-      circuitStore.updateComponent(newId, { selected: true })
-    }
+  () => interactionStore.selectedComponentIds,
+  (newIds, oldIds) => {
+    const idsToDeselect = oldIds.filter(id => !newIds.includes(id))
+    const idsToSelect = newIds.filter(id => !oldIds.includes(id))
+
+    idsToDeselect.forEach(id => {
+      circuitStore.updateComponent(id, { selected: false })
+    })
+    idsToSelect.forEach(id => {
+      circuitStore.updateComponent(id, { selected: true })
+    })
   },
+  { deep: true }
 )
 
 watch(
@@ -363,7 +437,7 @@ watch(
     <v-stage
       ref="stageRef"
       :config="stageConfig"
-      @mousedown="handleStageClick"
+      @mousedown="handleStageMouseDown"
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
       @contextmenu="handleContextMenu"
@@ -412,8 +486,6 @@ watch(
           :component="component"
           @select="handleComponentSelect"
           @move-start="handleComponentMoveStart"
-          @move="handleComponentMove"
-          @move-end="handleComponentMoveEnd"
           @terminal-mousedown="handleTerminalMouseDown"
           @node-connect="handleNodeConnect"
         />
@@ -448,6 +520,21 @@ watch(
             stroke: '#007bff',
             strokeWidth: 2,
             dash: [5, 5],
+            listening: false,
+          }"
+        />
+
+        <!-- Selection Rectangle -->
+        <v-rect
+          v-if="selectionBox.visible"
+          :config="{
+            x: Math.min(selectionBox.x1, selectionBox.x2),
+            y: Math.min(selectionBox.y1, selectionBox.y2),
+            width: Math.abs(selectionBox.x1 - selectionBox.x2),
+            height: Math.abs(selectionBox.y1 - selectionBox.y2),
+            fill: 'rgba(0, 123, 255, 0.2)',
+            stroke: 'rgba(0, 123, 255, 0.6)',
+            strokeWidth: 1,
             listening: false,
           }"
         />

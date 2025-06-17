@@ -29,47 +29,45 @@ import { computed } from 'vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { getComponentDefinition } from '@/registry/components'
 
-const props = defineProps<{
+interface Props {
   component: CircuitComponent
-}>()
+}
 
-const emit = defineEmits<{
-  (e: 'select'): void
-  (e: 'dragstart'): void
+interface Emits {
+  (e: 'select', event: KonvaEventObject<MouseEvent>): void
+  (e: 'dragstart', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
   (e: 'mouseenter'): void
   (e: 'mouseleave'): void
   (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
   (e: 'node-connect', nodeId: string): void
-}>()
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 
 const interactionStore = useInteractionStore()
-const componentDefinition = computed(() => getComponentDefinition(props.component.type))
+const componentDefinition = computed(() => getComponentDefinition('node'))
 
-const isSelected = computed(() => interactionStore.selectedComponentId === props.component.id)
+const isSelected = computed(() => interactionStore.selectedComponentIds.includes(props.component.id))
 
 const isHighlighted = computed(() => {
   const wireState = interactionStore.wireCreationState
-  const hovered = interactionStore.hoveredTerminal
-
   if (!wireState.isActive) return false
-
-  // Don't highlight the node the wire is starting from
   if (wireState.startTerminal?.componentId === props.component.id) return false
-
-  return hovered?.componentId === props.component.id
+  return interactionStore.hoveredTerminal?.componentId === props.component.id
 })
 
-function handleClick() {
-  emit('select')
+function handleClick(e: KonvaEventObject<MouseEvent>) {
+  emit('select', e)
 }
 
-function handleDragStart() {
-  emit('dragstart')
+function handleDragStart(e: KonvaEventObject<MouseEvent>) {
+  emit('dragstart', e)
 }
 
-function handleDragMove(e: KonvaEventObject<DragEvent>) {
+function handleDragMove(e: { target: { x(): number; y(): number } }) {
   const newPosition = {
     x: e.target.x(),
     y: e.target.y(),

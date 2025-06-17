@@ -26,9 +26,13 @@
       <!-- Component properties panel -->
       <div class="properties-panel">
         <component-properties
-          v-if="circuitStore.selectedComponent"
-          :component="circuitStore.selectedComponent"
+          v-if="singleSelectedComponent"
+          :component="singleSelectedComponent"
         />
+        <div v-else-if="interactionStore.selectedComponentIds.length > 1" class="no-selection">
+          <p>{{ interactionStore.selectedComponentIds.length }} components selected</p>
+          <p>Editing multiple components at once is not yet supported.</p>
+        </div>
         <div v-else class="no-selection">
           <p>Select a component to edit its properties</p>
         </div>
@@ -38,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 
@@ -47,6 +52,8 @@ import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
 
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
+
+const singleSelectedComponent = computed(() => circuitStore.singleSelectedComponent)
 </script>
 
 <style scoped>

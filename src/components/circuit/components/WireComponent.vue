@@ -19,7 +19,7 @@
     <v-path
       :config="{
         data: wirePathData,
-        stroke: component.selected ? '#2196f3' : '#333',
+        stroke: component.selected ? '#ff4d4d' : '#333',
         strokeWidth: component.selected ? 3 : 2,
         lineCap: 'round',
         lineJoin: 'round',
@@ -43,7 +43,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'select'): void
+  (e: 'select', event: KonvaEventObject<MouseEvent>): void
   (e: 'delete'): void
 }
 
@@ -143,8 +143,8 @@ const wirePathData = computed(() => {
   return path
 })
 
-function handleClick() {
-  emit('select')
+function handleClick(e: KonvaEventObject<MouseEvent>) {
+  emit('select', e)
 }
 
 function handleDoubleClick() {
