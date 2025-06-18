@@ -3,14 +3,14 @@ import { getComponentDefinition } from '@/registry/components';
 
 export function generateComponentId(circuit: Circuit, type: string): string {
   const typePrefix = type.substring(0, 1).toUpperCase();
-  const existingIds = circuit.components
-    .filter((c) => c.type === type)
-    .map((c) => c.id);
+  const allComponentIds = circuit.components.map((c) => c.id);
+  const allProbeIds = circuit.probes.map((p) => p.id);
+  const existingIds = new Set([...allComponentIds, ...allProbeIds]);
 
   let counter = 1;
   let newId = `${typePrefix}${counter}`;
 
-  while (existingIds.includes(newId)) {
+  while (existingIds.has(newId)) {
     counter++;
     newId = `${typePrefix}${counter}`;
   }

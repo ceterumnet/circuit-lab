@@ -27,12 +27,16 @@
       <!-- Component properties panel -->
       <div class="properties-panel">
         <component-properties
-          v-if="singleSelectedComponent"
-          :component="singleSelectedComponent"
+          v-if="itemIsComponent(singleSelectedItem)"
+          :component="singleSelectedItem"
+        />
+        <probe-properties
+          v-else-if="itemIsProbe(singleSelectedItem)"
+          :probe="singleSelectedItem"
         />
         <div v-else-if="interactionStore.selectedComponentIds.length > 1" class="no-selection">
-          <p>{{ interactionStore.selectedComponentIds.length }} components selected</p>
-          <p>Editing multiple components at once is not yet supported.</p>
+          <p>{{ interactionStore.selectedComponentIds.length }} items selected</p>
+          <p>Editing multiple items at once is not yet supported.</p>
         </div>
         <div v-else class="no-selection">
           <p>Select a component to edit its properties</p>
@@ -50,12 +54,22 @@ import { useInteractionStore } from '@/stores/interaction'
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
+import ProbeProperties from '@/components/circuit/probes/ProbeProperties.vue'
 import { solveDC } from '@/services/simulation'
+import type { CircuitComponent, Probe } from '@/types/components'
 
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
 
-const singleSelectedComponent = computed(() => circuitStore.singleSelectedComponent)
+const singleSelectedItem = computed(() => circuitStore.singleSelectedItem)
+
+function itemIsComponent(item: CircuitComponent | Probe | null): item is CircuitComponent {
+  return !!(item && 'properties' in item)
+}
+
+function itemIsProbe(item: CircuitComponent | Probe | null): item is Probe {
+  return !!(item && 'targetId' in item)
+}
 
 async function runSimulation() {
   const results = await solveDC(circuitStore.currentCircuit)

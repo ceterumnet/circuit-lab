@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
+import VoltageProbe from '@/components/circuit/probes/VoltageProbe.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
 import { screenToWorld } from '@/services/coordinates'
@@ -66,6 +67,7 @@ const nodes = computed(() =>
 const otherComponents = computed(() =>
   circuitStore.currentCircuit.components.filter((c) => c.type !== 'wire' && c.type !== 'node'),
 )
+const probes = computed(() => circuitStore.currentCircuit.probes);
 
 // Computed property for placement cursor
 const placementCursor = computed(() => {
@@ -407,63 +409,16 @@ function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
   }
 }
 
-function getVoltageLabelConfig(nodeComponent: CircuitComponentType) {
-  if (!circuitStore.dcSolution) return { visible: false }
-  const { voltages, termToNodeIndex } = circuitStore.dcSolution
-
-  const nodeDef = getComponentDefinition('node')
-  if (!nodeDef) return { visible: false }
-
-  // Find the unique terminal ID for this node component
-  const terminalId = `${nodeComponent.id}:${nodeDef.terminals[0].id}`
-
-  // Find the electrical node index this terminal belongs to
-  const electricalNodeIndex = termToNodeIndex.get(terminalId)
-  if (electricalNodeIndex === undefined) return { visible: false }
-
-  // Find the node name (representative ID) for this electrical node
-  let representativeNodeId = ''
-  for (const [key, val] of termToNodeIndex.entries()) {
-    if (val === electricalNodeIndex) {
-      representativeNodeId = key
-      break
-    }
-  }
-
-  const voltage = voltages[representativeNodeId]
-
-  if (voltage === undefined) return { visible: false }
-
-  return {
-    x: nodeComponent.position.x + 8,
-    y: nodeComponent.position.y - 18,
-    text: `${voltage.toFixed(2)}V`,
-    fontSize: 14,
-    fontFamily: 'Arial',
-    fill: 'blue',
-    visible: true,
-  }
+function handleWireMouseEnter(_componentId: string, _event: KonvaEventObject<MouseEvent>) {
+  // TODO: Implement this
 }
 
-function handleWireMouseEnter(wireId: string) {
-  if (interactionStore.wireCreationState.isActive) {
-    interactionStore.setHoveredWire(wireId)
-  }
+function handleWireMouseLeave(_componentId: string, _event: KonvaEventObject<MouseEvent>) {
+  // TODO: Implement this
 }
 
-function handleWireMouseLeave() {
-  interactionStore.setHoveredWire(null)
-}
-
-function handleWireMouseUp(wireId: string, event: KonvaEventObject<MouseEvent>) {
-  const stage = event.target.getStage()
-  if (!stage) return
-
-  if (interactionStore.wireCreationState.isActive) {
-    const pos = screenToWorld(stage.getPointerPosition()!)
-    circuitStore.splitWireAndConnect(wireId, pos, interactionStore.wireCreationState.startTerminal!)
-    interactionStore.cancelWireCreation()
-  }
+function handleWireMouseUp(_componentId: string, _event: KonvaEventObject<MouseEvent>) {
+  // TODO: Implement this
 }
 
 function handleTerminalClick(terminalId: string, componentId: string) {
@@ -494,6 +449,26 @@ function handleStageDblClick() {
   if (interactionStore.wireCreationState.isActive) {
     interactionStore.cancelWireCreation()
   }
+}
+
+function handleWireProbe(wireId: string, e: KonvaEventObject<MouseEvent>) {
+  const stage = e.target.getStage();
+  if (!stage) return;
+
+  const pointerPosition = stage.getPointerPosition();
+  if (!pointerPosition) return;
+
+  const worldPos = screenToWorld(pointerPosition);
+  circuitStore.addProbe(wireId, worldPos);
+}
+
+function handleProbeSelect(probeId: string, e: KonvaEventObject<MouseEvent>) {
+  interactionStore.selectComponent(probeId, e.evt.shiftKey);
+}
+
+function handleProbeMoveEnd(probeId: string, e: KonvaEventObject<DragEvent>) {
+  const newPosition = { x: e.target.x(), y: e.target.y() };
+  circuitStore.updateProbePosition(probeId, newPosition);
 }
 
 // Lifecycle hooks
@@ -614,6 +589,7 @@ watch(
           @wire-mouseenter="handleWireMouseEnter"
           @wire-mouseleave="handleWireMouseLeave"
           @wire-mouseup="handleWireMouseUp"
+          @wire-probe="handleWireProbe"
         />
 
         <!-- Nodes -->
@@ -640,13 +616,6 @@ watch(
           @terminal-click="handleTerminalClick"
         />
 
-        <!-- DC Voltage Labels -->
-        <v-text
-          v-for="component in nodes"
-          :key="`voltage-${component.id}`"
-          :config="getVoltageLabelConfig(component)"
-        />
-
         <!-- Wire creation preview -->
         <v-line
           v-if="
@@ -666,6 +635,15 @@ watch(
             dash: [5, 5],
             listening: false,
           }"
+        />
+
+        <!-- Probes -->
+        <voltage-probe
+          v-for="probe in probes"
+          :key="probe.id"
+          :probe="probe"
+          @select="handleProbeSelect"
+          @dragend="handleProbeMoveEnd"
         />
 
         <!-- Selection Rectangle -->

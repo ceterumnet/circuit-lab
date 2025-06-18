@@ -71,6 +71,7 @@ interface Props {
 
 interface Emits {
   (e: 'select', event: KonvaEventObject<MouseEvent>): void
+  (e: 'probe', event: KonvaEventObject<MouseEvent>): void
   (e: 'delete'): void
   (e: 'wire-mouseenter', event: KonvaEventObject<MouseEvent>): void
   (e: 'wire-mouseleave', event: KonvaEventObject<MouseEvent>): void
@@ -273,7 +274,11 @@ const wirePathData = computed(() => {
 })
 
 function handleClick(e: KonvaEventObject<MouseEvent>) {
-  emit('select', e)
+  if (interactionStore.isProbing) {
+    emit('probe', e);
+  } else {
+    emit('select', e)
+  }
 }
 
 function handleDoubleClick() {

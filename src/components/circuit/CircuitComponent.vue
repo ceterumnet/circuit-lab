@@ -51,6 +51,7 @@
       :start-position="wireStartPosition"
       :end-position="wireEndPosition"
       @select="handleSelect"
+      @probe="handleWireProbe"
       @delete="handleWireDelete"
       @wire-mouseenter="handleWireMouseEnter"
       @wire-mouseleave="handleWireMouseLeave"
@@ -81,6 +82,7 @@ interface Emits {
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'wire-probe', componentId: string, event: KonvaEventObject<MouseEvent>): void
   (e: 'wire-delete', wireId: string): void
   (e: 'wire-mouseenter', componentId: string, event: KonvaEventObject<MouseEvent>): void
   (e: 'wire-mouseleave', componentId: string, event: KonvaEventObject<MouseEvent>): void
@@ -158,6 +160,10 @@ function handleTerminalClick(terminalId: string, componentId: string, position: 
     `[CircuitComponent] handleTerminalClick received from ${componentId}. Emitting up to CircuitCanvas.`,
   )
   emit('terminal-click', terminalId, componentId, position)
+}
+
+function handleWireProbe(event: KonvaEventObject<MouseEvent>) {
+  emit('wire-probe', props.component.id, event)
 }
 
 function handleWireDelete() {

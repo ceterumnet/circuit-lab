@@ -97,6 +97,16 @@ export interface Circuit {
   id: string
   name: string
   components: CircuitComponent[]
+  wires: Wire[]
+  probes: Probe[]
   nodes: { [nodeId: string]: SimulationNode }
   lastSimulation?: SimulationResult
+}
+
+export interface Probe {
+  id: string
+  type: 'voltage'
+  targetId: string // ID of the wire or node being probed
+  position: Position
+  value?: number // Last measured value
 }

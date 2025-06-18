@@ -7,7 +7,7 @@ import { getComponentDefinition } from '@/registry/components';
  * It's a map where keys are node IDs and values are their calculated voltages.
  */
 export interface DC_Result {
-  voltages: Record<string, number>;
+  voltages: Record<number, number>;
   currents: Record<string, number>;
   termToNodeIndex: Map<string, number>;
 }
@@ -111,7 +111,7 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
 
   // Filter components for MNA
   const voltageSources = components.filter(c => c.type === 'voltage_source') as (CircuitComponent & { type: 'voltage_source' })[];
-   
+
   const resistors = components.filter(c => c.type === 'resistor') as (CircuitComponent & { type: 'resistor' })[];
 
   console.log('Electrical Nodes:', electricalNodes);
@@ -183,12 +183,12 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
   }
 
   // Step 4: Format and return results
-  const voltageResults: Record<string, number> = {};
-  for (const [nodeIdx, nodeName] of nodeMap.entries()) {
+  const voltageResults: Record<number, number> = {};
+  for (const [nodeIdx] of nodeMap.entries()) {
     if (nodeIdx !== groundNodeIndex) {
-      voltageResults[nodeName] = solution.get([nodeIdx, 0]);
+      voltageResults[nodeIdx] = solution.get([nodeIdx, 0]);
     } else {
-      voltageResults[nodeName] = 0; // Ground is always 0
+      voltageResults[nodeIdx] = 0; // Ground is always 0
     }
   }
 

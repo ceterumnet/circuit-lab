@@ -7,6 +7,7 @@ import type {
   SimulationResult,
   Wire,
   CircuitNode,
+  Probe,
 } from '@/types/components'
 import type { DC_Result } from '@/services/simulation'
 import { generateComponentId, createComponent } from '@/services/componentFactory'
@@ -20,6 +21,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     id: 'default',
     name: 'New Circuit',
     components: [],
+    wires: [],
+    probes: [],
     nodes: {},
   })
 
@@ -28,16 +31,23 @@ export const useCircuitStore = defineStore('circuit', () => {
   const dcSolution = ref<DC_Result | null>(null)
   const lastDcSolution = ref<DC_Result | null>(null)
 
-  const interactionStore = useInteractionStore()
-
   // Getters
-  const singleSelectedComponent = computed(() => {
+  const singleSelectedItem = computed(() => {
+    const interactionStore = useInteractionStore()
     const ids = interactionStore.selectedComponentIds
     if (ids.length !== 1) return null
-    return currentCircuit.value.components.find((c) => c.id === ids[0]) || null
+
+    const component = currentCircuit.value.components.find((c) => c.id === ids[0])
+    if (component) return component
+
+    const probe = currentCircuit.value.probes.find((p) => p.id === ids[0])
+    if (probe) return probe
+
+    return null
   })
 
   const componentCount = computed(() => currentCircuit.value.components.length)
+  const probeCount = computed(() => currentCircuit.value.probes.length)
 
   // Actions
   function addComponent(component: CircuitComponent) {
@@ -71,6 +81,7 @@ export const useCircuitStore = defineStore('circuit', () => {
       }
     }
 
+    const interactionStore = useInteractionStore()
     if (interactionStore.selectedComponentIds.includes(componentId)) {
       interactionStore.removeFromSelection(componentId)
     }
@@ -92,8 +103,11 @@ export const useCircuitStore = defineStore('circuit', () => {
       id: 'default',
       name: 'New Circuit',
       components: [],
+      wires: [],
+      probes: [],
       nodes: {},
     }
+    const interactionStore = useInteractionStore()
     interactionStore.selectComponent(null)
     simulationResults.value = null
     dcSolution.value = null
@@ -115,6 +129,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   watch(
     () => currentCircuit.value,
     () => {
+      const interactionStore = useInteractionStore()
       if (interactionStore.isDraggingComponent) {
         return
       }
@@ -165,6 +180,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function deleteSelectedComponent() {
+    const interactionStore = useInteractionStore()
     // Create a copy of the array to iterate over, as removeComponent will modify the original array
     const idsToDelete = [...interactionStore.selectedComponentIds]
     idsToDelete.forEach((id) => {
@@ -255,6 +271,36 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
+  function addProbe(targetId: string, position: Position) {
+    const newProbe: Probe = {
+      id: generateComponentId(currentCircuit.value, 'probe'),
+      type: 'voltage',
+      targetId,
+      position
+    };
+    currentCircuit.value.probes.push(newProbe);
+    const interactionStore = useInteractionStore()
+    interactionStore.setProbeMode(false); // Exit probe mode after placing one
+  }
+
+  function removeProbe(probeId: string) {
+    const index = currentCircuit.value.probes.findIndex((p) => p.id === probeId);
+    if (index > -1) {
+      currentCircuit.value.probes.splice(index, 1);
+    }
+    const interactionStore = useInteractionStore()
+    if (interactionStore.selectedComponentIds.includes(probeId)) {
+      interactionStore.removeFromSelection(probeId);
+    }
+  }
+
+  function updateProbePosition(probeId: string, position: Position) {
+    const probe = currentCircuit.value.probes.find((p) => p.id === probeId);
+    if (probe) {
+      probe.position = position;
+    }
+  }
+
   return {
     // State
     currentCircuit,
@@ -264,8 +310,9 @@ export const useCircuitStore = defineStore('circuit', () => {
     lastDcSolution,
 
     // Getters
-    singleSelectedComponent,
+    singleSelectedItem,
     componentCount,
+    probeCount,
 
     // Actions
     addComponent,
@@ -281,5 +328,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     runDCSimulation,
     splitWireAndConnect,
     createNodeAndConnectWire,
+    addProbe,
+    removeProbe,
+    updateProbePosition,
   }
 })

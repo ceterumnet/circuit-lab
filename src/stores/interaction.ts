@@ -31,10 +31,20 @@ export const useInteractionStore = defineStore('interaction', () => {
   })
 
   const isDraggingComponent = ref(false)
+  const isProbing = ref(false)
 
   // Actions
   function setDraggingComponent(isDragging: boolean) {
     isDraggingComponent.value = isDragging
+  }
+
+  function setProbeMode(isActive: boolean) {
+    isProbing.value = isActive
+    if (isActive) {
+      setComponentToPlace(null)
+      cancelWireCreation()
+      clearSelection()
+    }
   }
 
   function setCanvasTransform(scale: number, position: Position) {
@@ -176,8 +186,10 @@ export const useInteractionStore = defineStore('interaction', () => {
     wireCreationState,
     canvasTransform,
     isDraggingComponent,
+    isProbing,
     // Actions
     setDraggingComponent,
+    setProbeMode,
     setCanvasTransform,
     setHoveredTerminal,
     setHoveredWire,

@@ -635,21 +635,6 @@ src/
 **Phase 1.75**: 📋 **PLANNED** - Node and Routing Refactor
 
 - **Goal**: Transition from an explicit, visible node system to an implicit, schematic-standard system for a cleaner UI and more intuitive workflow.
-- **Phase A: Implement Implicit Junctions**
-
-  - **Step 1: Deprecate and Remove the Existing `Node` Component**
-
-    - [ ] **UI Cleanup:** Remove the "Node" component from the `ComponentPalette.vue` so it cannot be manually placed.
-    - [ ] **Interaction Change:** When dragging a wire and releasing it over empty canvas space, the wire creation process will be cancelled instead of creating a `Node`.
-    - [ ] **Code Removal:**
-      - [ ] Delete `src/components/circuit/components/NodeComponent.vue`.
-      - [ ] Remove `finishWireCreationToPosition` and `finishWireCreationToNode` functions from the `interaction` store.
-      - [ ] Remove related handlers from `CircuitCanvas.vue`.
-
-  - **Step 2: Implement Wire-to-Wire Connections (T-Junctions)**
-    - [ ] **Interaction:** Update `WireComponent.vue` so that existing wires highlight on hover during a wire-drag operation, indicating they are valid connection targets.
-    - [ ] **Data Model:** When a new wire is connected to an existing wire, the target wire will be split into two separate wire entities, and all three wires will be connected at the new junction point.
-    - [ ] **Visuals:** Add logic to `CircuitCanvas.vue` to automatically detect any point where three or more wires meet and render a circular "junction dot" at that location.
 
 - **Phase B: Selective Annotation (Probe Tool)**
   - [ ] By default, do not display any voltages or currents on the canvas.
