@@ -29,7 +29,7 @@ const gridLinesX = computed(() => {
   const { width } = stageConfig.value
 
   const startX = Math.floor(-position.x / scale / gridSize) * gridSize
-  const endX = startX + Math.ceil(width / scale / gridSize) * gridSize
+  const endX = startX + (Math.ceil(width / scale / gridSize) + 1) * gridSize
 
   for (let i = startX; i <= endX; i += gridSize) {
     lines.push(i)
@@ -43,7 +43,7 @@ const gridLinesY = computed(() => {
   const { height } = stageConfig.value
 
   const startY = Math.floor(-position.y / scale / gridSize) * gridSize
-  const endY = startY + Math.ceil(height / scale / gridSize) * gridSize
+  const endY = startY + (Math.ceil(height / scale / gridSize) + 1) * gridSize
 
   for (let i = startY; i <= endY; i += gridSize) {
     lines.push(i)
@@ -57,13 +57,13 @@ const interactionStore = useInteractionStore()
 
 // Computed properties for rendering order
 const wires = computed(() =>
-  circuitStore.currentCircuit.components.filter(c => c.type === 'wire')
+  circuitStore.currentCircuit.components.filter((c) => c.type === 'wire'),
 )
 const nodes = computed(() =>
-  circuitStore.currentCircuit.components.filter(c => c.type === 'node')
+  circuitStore.currentCircuit.components.filter((c) => c.type === 'node'),
 )
 const otherComponents = computed(() =>
-  circuitStore.currentCircuit.components.filter(c => c.type !== 'wire' && c.type !== 'node')
+  circuitStore.currentCircuit.components.filter((c) => c.type !== 'wire' && c.type !== 'node'),
 )
 
 // Computed property for placement cursor
@@ -73,6 +73,7 @@ const placementCursor = computed(() => {
 
 // Refs
 const stageRef = ref()
+const containerRef = ref<HTMLElement | null>(null)
 const resizeObserver = ref<ResizeObserver | null>(null)
 
 // Mouse interaction state
@@ -180,7 +181,12 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
     if (isClick) {
       // Background click logic (place component or finish wire)
       if (interactionStore.wireCreationState.isActive) {
-        interactionStore.cancelWireCreation()
+        const worldPos = screenToWorld(stage.getPointerPosition()!)
+        const snappedPos = {
+          x: Math.round(worldPos.x / gridSize) * gridSize,
+          y: Math.round(worldPos.y / gridSize) * gridSize,
+        }
+        interactionStore.finishWireCreationToPosition(snappedPos)
       } else if (interactionStore.componentToPlace) {
         const worldPos = screenToWorld(stage.getPointerPosition()!)
         const snappedPos = {
@@ -209,7 +215,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
       const x2 = Math.max(box.x1, box.x2)
       const y2 = Math.max(box.y1, box.y2)
 
-      circuitStore.currentCircuit.components.forEach(component => {
+      circuitStore.currentCircuit.components.forEach((component) => {
         if (component.type === 'wire') return // Wires can't be marquee selected for now
 
         const { x, y } = component.position
@@ -256,8 +262,8 @@ function handleComponentMoveStart(componentId: string, e: KonvaEventObject<Mouse
 
   // Store initial positions of all selected components
   dragStartPositions.value.clear()
-  interactionStore.selectedComponentIds.forEach(id => {
-    const component = circuitStore.currentCircuit.components.find(c => c.id === id)
+  interactionStore.selectedComponentIds.forEach((id) => {
+    const component = circuitStore.currentCircuit.components.find((c) => c.id === id)
     if (component && component.type !== 'wire') {
       dragStartPositions.value.set(id, { ...component.position })
     }
@@ -271,7 +277,7 @@ function handleComponentMove(componentId: string, position: { x: number; y: numb
   const dx = position.x - startPos.x
   const dy = position.y - startPos.y
 
-  interactionStore.selectedComponentIds.forEach(id => {
+  interactionStore.selectedComponentIds.forEach((id) => {
     // if (id === componentId) return // Skip the component that's already being dragged
 
     const otherStartPos = dragStartPositions.value.get(id)
@@ -292,7 +298,7 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
   const dx = position.x - startPos.x
   const dy = position.y - startPos.y
 
-  interactionStore.selectedComponentIds.forEach(id => {
+  interactionStore.selectedComponentIds.forEach((id) => {
     const otherStartPos = dragStartPositions.value.get(id)
     if (otherStartPos) {
       const newPos = {
@@ -311,10 +317,10 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
 function handleTerminalMouseDown(terminalId: string, componentId: string) {
   if (interactionStore.wireCreationState.isActive) {
     // If a wire is being created, this mousedown finishes it.
-    interactionStore.finishWireCreation(terminalId, componentId);
+    interactionStore.finishWireCreation(terminalId, componentId)
   } else {
     // Otherwise, this mousedown starts a new wire.
-    interactionStore.startWireCreation(terminalId, componentId);
+    interactionStore.startWireCreation(terminalId, componentId)
   }
 }
 
@@ -324,45 +330,28 @@ function handleContextMenu() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  const targetNodeName = (e.target as HTMLElement)?.nodeName;
-  if (targetNodeName === 'INPUT' || targetNodeName === 'TEXTAREA') {
-    return; // Do not process keyboard shortcuts if focus is on an input field
-  }
-
-  // Cancel wire creation on Escape or Delete
-  if (
-    (e.key === 'Escape' || e.key === 'Delete' || e.key === 'Backspace') &&
-    interactionStore.wireCreationState.isActive
-  ) {
-    interactionStore.cancelWireCreation();
-    return; // Prevent other keydown actions
-  }
-
-  // Delete selected components
-  if ((e.key === 'Delete' || e.key === 'Backspace') && interactionStore.selectedComponentIds.length > 0) {
-    circuitStore.deleteSelectedComponent()
-  } else if (e.code === 'Space') {
-    e.preventDefault()
-    if (!isPanning.value) {
-      isPanning.value = true
-      stageConfig.value.draggable = true
-      const container = document.querySelector('.circuit-canvas-container')
-      if (container) (container as HTMLElement).style.cursor = 'grab'
+  if (e.key === 'Escape') {
+    if (interactionStore.wireCreationState.isActive) {
+      interactionStore.cancelWireCreation()
+    } else if (interactionStore.componentToPlace) {
+      interactionStore.setComponentToPlace(null)
+    } else {
+      interactionStore.clearSelection()
     }
   }
-}
 
-function handleKeyUp(e: KeyboardEvent) {
-  if (e.code === 'Space') {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    circuitStore.deleteSelectedComponent()
+  }
+
+  // Pan on spacebar
+  if (e.code === 'Space' && !e.repeat) {
     e.preventDefault()
-    if (isPanning.value) {
-      isPanning.value = false
-      stageConfig.value.draggable = false
-      const container = document.querySelector('.circuit-canvas-container')
-      if (container) {
-        container.classList.remove('grabbing')
-        ;(container as HTMLElement).style.cursor = placementCursor.value
-      }
+    isPanning.value = true
+    stageConfig.value.draggable = true
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      stage.container().style.cursor = 'grab'
     }
   }
 }
@@ -377,31 +366,31 @@ function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
 }
 
 function getVoltageLabelConfig(nodeComponent: CircuitComponentType) {
-  if (!circuitStore.dcSolution) return { visible: false };
-  const { voltages, termToNodeIndex } = circuitStore.dcSolution;
+  if (!circuitStore.dcSolution) return { visible: false }
+  const { voltages, termToNodeIndex } = circuitStore.dcSolution
 
-  const nodeDef = getComponentDefinition('node');
-  if (!nodeDef) return { visible: false };
+  const nodeDef = getComponentDefinition('node')
+  if (!nodeDef) return { visible: false }
 
   // Find the unique terminal ID for this node component
-  const terminalId = `${nodeComponent.id}:${nodeDef.terminals[0].id}`;
+  const terminalId = `${nodeComponent.id}:${nodeDef.terminals[0].id}`
 
   // Find the electrical node index this terminal belongs to
-  const electricalNodeIndex = termToNodeIndex.get(terminalId);
-  if (electricalNodeIndex === undefined) return { visible: false };
+  const electricalNodeIndex = termToNodeIndex.get(terminalId)
+  if (electricalNodeIndex === undefined) return { visible: false }
 
   // Find the node name (representative ID) for this electrical node
-  let representativeNodeId = '';
-  for(const [key, val] of termToNodeIndex.entries()){
-    if(val === electricalNodeIndex){
-      representativeNodeId = key;
-      break;
+  let representativeNodeId = ''
+  for (const [key, val] of termToNodeIndex.entries()) {
+    if (val === electricalNodeIndex) {
+      representativeNodeId = key
+      break
     }
   }
 
-  const voltage = voltages[representativeNodeId];
+  const voltage = voltages[representativeNodeId]
 
-  if (voltage === undefined) return { visible: false };
+  if (voltage === undefined) return { visible: false }
 
   return {
     x: nodeComponent.position.x + 8,
@@ -411,7 +400,7 @@ function getVoltageLabelConfig(nodeComponent: CircuitComponentType) {
     fontFamily: 'Arial',
     fill: 'blue',
     visible: true,
-  };
+  }
 }
 
 function handleWireMouseEnter(wireId: string) {
@@ -432,45 +421,61 @@ function handleWireMouseUp(wireId: string, event: KonvaEventObject<MouseEvent>) 
   }
 }
 
-onMounted(() => {
-  const container = document.querySelector('.circuit-canvas-container')
-  if (container) {
-    const updateSize = () => {
-      stageConfig.value.width = container.clientWidth
-      stageConfig.value.height = container.clientHeight
+function handleKeyUp(e: KeyboardEvent) {
+  if (e.code === 'Space') {
+    e.preventDefault()
+    isPanning.value = false
+    stageConfig.value.draggable = false
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      stage.container().style.cursor = 'default'
     }
-
-    resizeObserver.value = new ResizeObserver(updateSize)
-    resizeObserver.value.observe(container)
-
-    updateSize() // Initial size set
   }
-  document.addEventListener('keydown', handleKeyDown)
-  document.addEventListener('keyup', handleKeyUp)
+}
+
+function handleStageDblClick() {
+  if (interactionStore.wireCreationState.isActive) {
+    interactionStore.cancelWireCreation()
+  }
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  if (!containerRef.value) return
+
+  resizeObserver.value = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    stageConfig.value.width = entry.contentRect.width
+    stageConfig.value.height = entry.contentRect.height
+  })
+  resizeObserver.value.observe(containerRef.value)
+
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
 })
 
 onUnmounted(() => {
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
   }
-  document.removeEventListener('keydown', handleKeyDown)
-  document.removeEventListener('keyup', handleKeyUp)
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
 })
 
 watch(
   () => interactionStore.selectedComponentIds,
   (newIds, oldIds) => {
-    const idsToDeselect = oldIds.filter(id => !newIds.includes(id))
-    const idsToSelect = newIds.filter(id => !oldIds.includes(id))
+    const idsToDeselect = oldIds.filter((id) => !newIds.includes(id))
+    const idsToSelect = newIds.filter((id) => !oldIds.includes(id))
 
-    idsToDeselect.forEach(id => {
+    idsToDeselect.forEach((id) => {
       circuitStore.updateComponent(id, { selected: false })
     })
-    idsToSelect.forEach(id => {
+    idsToSelect.forEach((id) => {
       circuitStore.updateComponent(id, { selected: true })
     })
   },
-  { deep: true }
+  { deep: true },
 )
 
 watch(
@@ -481,17 +486,12 @@ watch(
     stageConfig.value.x = newTransform.position.x
     stageConfig.value.y = newTransform.position.y
   },
-  { deep: true }
+  { deep: true },
 )
 </script>
 
 <template>
-  <div
-    class="circuit-canvas-container"
-    :class="{ grabbing: isPanning }"
-    :style="{ cursor: placementCursor }"
-    @contextmenu.prevent
-  >
+  <div ref="containerRef" class="circuit-canvas-container" :style="{ cursor: placementCursor }">
     <v-stage
       ref="stageRef"
       :config="stageConfig"
@@ -501,6 +501,7 @@ watch(
       @contextmenu="handleContextMenu"
       @wheel="handleStageWheel"
       @dragmove="handleStageDragMove"
+      @dblclick="handleStageDblClick"
     >
       <v-layer>
         <!-- Grid background -->
@@ -509,10 +510,8 @@ watch(
             name: 'grid-background',
             x: gridLinesX[0] - gridSize,
             y: gridLinesY[0] - gridSize,
-            width:
-              gridLinesX[gridLinesX.length - 1] - gridLinesX[0] + gridSize * 2,
-            height:
-              gridLinesY[gridLinesY.length - 1] - gridLinesY[0] + gridSize * 2,
+            width: gridLinesX[gridLinesX.length - 1] - gridLinesX[0] + gridSize * 2,
+            height: gridLinesY[gridLinesY.length - 1] - gridLinesY[0] + gridSize * 2,
             fill: '#fafafa',
           }"
         />

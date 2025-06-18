@@ -25,8 +25,8 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   const isSimulating = ref(false)
   const simulationResults = ref<SimulationResult | null>(null)
-  const dcSolution = ref<DC_Result | null>(null);
-  const lastDcSolution = ref<DC_Result | null>(null);
+  const dcSolution = ref<DC_Result | null>(null)
+  const lastDcSolution = ref<DC_Result | null>(null)
 
   const interactionStore = useInteractionStore()
 
@@ -45,15 +45,17 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function removeComponent(componentId: string) {
-    const componentToRemove = currentCircuit.value.components.find(c => c.id === componentId);
-    if (!componentToRemove) return;
+    const componentToRemove = currentCircuit.value.components.find((c) => c.id === componentId)
+    if (!componentToRemove) return
 
     // Find wires connected to the component being removed
-    const wiresToRemove = currentCircuit.value.components.filter(c => {
-      if (c.type !== 'wire') return false;
-      const props = c.properties;
-      return props?.startComponentId === componentId || props?.endComponentId === componentId;
-    }).map(w => w.id);
+    const wiresToRemove = currentCircuit.value.components
+      .filter((c) => {
+        if (c.type !== 'wire') return false
+        const props = c.properties
+        return props?.startComponentId === componentId || props?.endComponentId === componentId
+      })
+      .map((w) => w.id)
 
     // Remove the component
     const componentIndex = currentCircuit.value.components.findIndex((c) => c.id === componentId)
@@ -63,9 +65,9 @@ export const useCircuitStore = defineStore('circuit', () => {
 
     // Remove the connected wires
     for (const wireId of wiresToRemove) {
-      const wireIndex = currentCircuit.value.components.findIndex(c => c.id === wireId);
+      const wireIndex = currentCircuit.value.components.findIndex((c) => c.id === wireId)
       if (wireIndex !== -1) {
-        currentCircuit.value.components.splice(wireIndex, 1);
+        currentCircuit.value.components.splice(wireIndex, 1)
       }
     }
 
@@ -74,10 +76,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
-  function updateComponent(
-    componentId: string,
-    updates: Partial<Wire | CircuitNode>,
-  ) {
+  function updateComponent(componentId: string, updates: Partial<Wire | CircuitNode>) {
     const component = currentCircuit.value.components.find((c) => c.id === componentId)
     if (component) {
       Object.assign(component, updates)
@@ -97,19 +96,19 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
     interactionStore.selectComponent(null)
     simulationResults.value = null
-    dcSolution.value = null;
-    lastDcSolution.value = null;
+    dcSolution.value = null
+    lastDcSolution.value = null
   }
 
   async function runDCSimulation() {
     try {
-      const solution = await solveDC(currentCircuit.value);
-      dcSolution.value = solution;
+      const solution = await solveDC(currentCircuit.value)
+      dcSolution.value = solution
       lastDcSolution.value = dcSolution.value
     } catch (error) {
-      console.error('DC analysis failed:', error);
+      console.error('DC analysis failed:', error)
       // Restore the last valid solution if the current one fails
-      dcSolution.value = lastDcSolution.value;
+      dcSolution.value = lastDcSolution.value
     }
   }
 
@@ -118,7 +117,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     () => {
       runDCSimulation()
     },
-    { deep: true }
+    { deep: true },
   )
 
   function startSimulation() {
@@ -136,7 +135,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function setDcSolution(solution: DC_Result | null) {
-    dcSolution.value = solution;
+    dcSolution.value = solution
   }
 
   function createWire(
@@ -163,7 +162,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function deleteSelectedComponent() {
-    interactionStore.selectedComponentIds.forEach(id => {
+    interactionStore.selectedComponentIds.forEach((id) => {
       removeComponent(id)
     })
     interactionStore.clearSelection()
@@ -171,19 +170,19 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   function deleteWire(wireId: string) {
     const index = currentCircuit.value.components.findIndex(
-      (c) => c.type === 'wire' && c.id === wireId
-    );
+      (c) => c.type === 'wire' && c.id === wireId,
+    )
     if (index !== -1) {
-      currentCircuit.value.components.splice(index, 1);
+      currentCircuit.value.components.splice(index, 1)
     }
   }
 
   function splitWireAndConnect(
     wireId: string,
     position: Position,
-    newWireStartTerminal: { terminalId: string; componentId: string; position: Position }
+    newWireStartTerminal: { terminalId: string; componentId: string; position: Position },
   ) {
-    const originalWire = currentCircuit.value.components.find(c => c.id === wireId)
+    const originalWire = currentCircuit.value.components.find((c) => c.id === wireId)
     if (!originalWire || originalWire.type !== 'wire' || !originalWire.properties) return
 
     // 1. Save original wire's endpoints
@@ -196,9 +195,9 @@ export const useCircuitStore = defineStore('circuit', () => {
     deleteWire(wireId)
 
     // 3. Create a new node at the split position
-    const newNode = createComponent(currentCircuit.value, 'node', position) as CircuitNode;
+    const newNode = createComponent(currentCircuit.value, 'node', position) as CircuitNode
     if (!newNode) return
-    addComponent(newNode);
+    addComponent(newNode)
 
     const nodeDef = getComponentDefinition('node')
     if (!nodeDef) return
@@ -209,11 +208,46 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
 
     // 4. Create two new wires from original endpoints to the new node
-    createWire({ componentId: startComponentId, terminalId: startTerminalId, position: { x: 0, y: 0 } }, nodeTerminal)
-    createWire({ componentId: endComponentId, terminalId: endTerminalId, position: { x: 0, y: 0 } }, nodeTerminal)
+    createWire(
+      { componentId: startComponentId, terminalId: startTerminalId, position: { x: 0, y: 0 } },
+      nodeTerminal,
+    )
+    createWire(
+      { componentId: endComponentId, terminalId: endTerminalId, position: { x: 0, y: 0 } },
+      nodeTerminal,
+    )
 
     // 5. Connect the new wire to the new node
     createWire(newWireStartTerminal, nodeTerminal)
+  }
+
+  function createNodeAndConnectWire(
+    startTerminal: { terminalId: string; componentId: string; position: Position },
+    position: Position,
+  ) {
+    // 1. Create a new node at the specified position
+    const newNode = createComponent(currentCircuit.value, 'node', position) as CircuitNode
+    if (!newNode) return null
+    addComponent(newNode)
+
+    // 2. Get the new node's terminal information
+    const nodeDef = getComponentDefinition('node')
+    if (!nodeDef) return null
+
+    const nodeTerminal = {
+      terminalId: nodeDef.terminals[0].id,
+      componentId: newNode.id,
+      position: newNode.position,
+    }
+
+    // 3. Create the wire connecting the start terminal to the new node
+    createWire(startTerminal, nodeTerminal)
+
+    // 4. Return the new node's info for chained wiring
+    return {
+      nodeId: newNode.id,
+      terminalId: nodeTerminal.terminalId,
+    }
   }
 
   return {
@@ -241,5 +275,6 @@ export const useCircuitStore = defineStore('circuit', () => {
     deleteWire,
     runDCSimulation,
     splitWireAndConnect,
+    createNodeAndConnectWire,
   }
 })
