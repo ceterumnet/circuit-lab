@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
@@ -20,7 +20,8 @@ const stageConfig = ref({
   y: 0,
 })
 
-const gridSize = 30
+const gridSize = 5
+const majorGridSize = 30
 
 // Grid lines for visual reference
 const gridLinesX = computed(() => {
@@ -28,10 +29,10 @@ const gridLinesX = computed(() => {
   const { scale, position } = interactionStore.canvasTransform
   const { width } = stageConfig.value
 
-  const startX = Math.floor(-position.x / scale / gridSize) * gridSize
-  const endX = startX + (Math.ceil(width / scale / gridSize) + 1) * gridSize
+  const startX = Math.floor(-position.x / scale / majorGridSize) * majorGridSize
+  const endX = startX + (Math.ceil(width / scale / majorGridSize) + 1) * majorGridSize
 
-  for (let i = startX; i <= endX; i += gridSize) {
+  for (let i = startX; i <= endX; i += majorGridSize) {
     lines.push(i)
   }
   return lines
@@ -42,10 +43,10 @@ const gridLinesY = computed(() => {
   const { scale, position } = interactionStore.canvasTransform
   const { height } = stageConfig.value
 
-  const startY = Math.floor(-position.y / scale / gridSize) * gridSize
-  const endY = startY + (Math.ceil(height / scale / gridSize) + 1) * gridSize
+  const startY = Math.floor(-position.y / scale / majorGridSize) * majorGridSize
+  const endY = startY + (Math.ceil(height / scale / majorGridSize) + 1) * majorGridSize
 
-  for (let i = startY; i <= endY; i += gridSize) {
+  for (let i = startY; i <= endY; i += majorGridSize) {
     lines.push(i)
   }
   return lines
@@ -226,11 +227,12 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   }
 
   // Dragging logic
-  if (interactionStore.isDraggingComponent) {
-    interactionStore.setDraggingComponent(false)
-    dragTarget.value = null
-    dragStartPositions.value.clear()
-  }
+  // This logic is now handled exclusively by handleComponentMoveEnd to avoid race conditions
+  // if (interactionStore.isDraggingComponent) {
+  //   interactionStore.setDraggingComponent(false)
+  //   dragTarget.value = null
+  //   dragStartPositions.value.clear()
+  // }
 }
 
 function handleComponentSelect(componentId: string, e: KonvaEventObject<MouseEvent>) {
@@ -258,18 +260,30 @@ function handleComponentMoveStart(componentId: string, e: KonvaEventObject<Mouse
   if (!stage) return
   dragStartPointerPosition.value = screenToWorld(stage.getPointerPosition()!)
 
-  // If the dragged component is not selected, select only it.
-  if (!interactionStore.selectedComponentIds.includes(componentId)) {
-    interactionStore.selectComponent(componentId, e.evt.shiftKey)
+  const isCurrentlySelected = interactionStore.selectedComponentIds.includes(componentId)
+
+  // If the dragged component is not part of the current selection,
+  // it becomes the only selected item.
+  if (!isCurrentlySelected) {
+    interactionStore.selectComponent(componentId, false)
   }
 
-  // Store initial positions of all selected components
-  dragStartPositions.value.clear()
-  interactionStore.selectedComponentIds.forEach((id) => {
-    const component = circuitStore.currentCircuit.components.find((c) => c.id === id)
-    if (component && component.type !== 'wire') {
-      dragStartPositions.value.set(id, { ...component.position })
-    }
+  // Use nextTick to ensure the selection state is updated before we read it
+  nextTick(() => {
+    const idsToDrag = interactionStore.selectedComponentIds
+
+    // Store initial positions of all selected components
+    dragStartPositions.value.clear()
+    idsToDrag.forEach((id) => {
+      const component = circuitStore.currentCircuit.components.find((c) => c.id === id)
+      if (component && component.type !== 'wire') {
+        dragStartPositions.value.set(id, { ...component.position })
+      }
+    })
+    console.log(
+      '[CircuitCanvas] dragStartPositions populated in nextTick:',
+      JSON.stringify(Array.from(dragStartPositions.value.entries())),
+    )
   })
 }
 
@@ -281,8 +295,6 @@ function handleComponentMove(componentId: string, position: { x: number; y: numb
   const dy = position.y - startPos.y
 
   interactionStore.selectedComponentIds.forEach((id) => {
-    // if (id === componentId) return // Skip the component that's already being dragged
-
     const otherStartPos = dragStartPositions.value.get(id)
     if (otherStartPos) {
       const newPos = {
@@ -295,28 +307,63 @@ function handleComponentMove(componentId: string, position: { x: number; y: numb
 }
 
 function handleComponentMoveEnd(componentId: string, position: { x: number; y: number }) {
+  console.log(`[CircuitCanvas] handleComponentMoveEnd for ${componentId} received:`, position)
+
+  // Log the state AT THE MOMENT THE FUNCTION IS CALLED
+  console.log(
+    '[CircuitCanvas] Current selected IDs:',
+    JSON.stringify(interactionStore.selectedComponentIds),
+  )
+  console.log(
+    '[CircuitCanvas] Current dragStartPositions:',
+    JSON.stringify(Array.from(dragStartPositions.value.entries())),
+  )
+
   const startPos = dragStartPositions.value.get(componentId)
-  if (!startPos) return
+  if (!startPos) {
+    console.error(
+      `[CircuitCanvas] Could not find start position for ${componentId}. Snapping will fail.`,
+    )
+    return
+  }
 
   const dx = position.x - startPos.x
   const dy = position.y - startPos.y
 
-  interactionStore.selectedComponentIds.forEach((id) => {
-    const otherStartPos = dragStartPositions.value.get(id)
-    if (otherStartPos) {
-      const newPos = {
-        x: otherStartPos.x + dx,
-        y: otherStartPos.y + dy,
-      }
-      const snappedPos = {
-        x: Math.round(newPos.x / gridSize) * gridSize,
-        y: Math.round(newPos.y / gridSize) * gridSize,
-      }
-      circuitStore.moveComponent(id, snappedPos)
+  if (interactionStore.selectedComponentIds.length === 0) {
+    console.warn(
+      '[CircuitCanvas] selectedComponentIds is empty. Snapping only the dragged component.',
+    )
+    // Fallback for when selection is lost, snap only the dragged component
+    const snappedPos = {
+      x: Math.round(position.x / gridSize) * gridSize,
+      y: Math.round(position.y / gridSize) * gridSize,
     }
-  })
+    console.log(`[CircuitCanvas] Fallback Snapped position for ${componentId}:`, snappedPos)
+    circuitStore.moveComponent(componentId, snappedPos)
+  } else {
+    interactionStore.selectedComponentIds.forEach((id) => {
+      const otherStartPos = dragStartPositions.value.get(id)
+      if (otherStartPos) {
+        const newPos = {
+          x: otherStartPos.x + dx,
+          y: otherStartPos.y + dy,
+        }
+        const snappedPos = {
+          x: Math.round(newPos.x / gridSize) * gridSize,
+          y: Math.round(newPos.y / gridSize) * gridSize,
+        }
+        console.log(`[CircuitCanvas] Snapped position for ${id}:`, snappedPos)
+        circuitStore.moveComponent(id, snappedPos)
+      } else {
+        console.error(`[CircuitCanvas] Could not find start position for selected component ${id}.`)
+      }
+    })
+  }
 
   interactionStore.setDraggingComponent(false)
+  dragStartPositions.value.clear()
+  console.log('[CircuitCanvas] isDraggingComponent set to false')
 }
 
 function handleContextMenu() {
@@ -518,10 +565,10 @@ watch(
         <v-rect
           :config="{
             name: 'grid-background',
-            x: gridLinesX[0] - gridSize,
-            y: gridLinesY[0] - gridSize,
-            width: gridLinesX[gridLinesX.length - 1] - gridLinesX[0] + gridSize * 2,
-            height: gridLinesY[gridLinesY.length - 1] - gridLinesY[0] + gridSize * 2,
+            x: gridLinesX[0] - majorGridSize,
+            y: gridLinesY[0] - majorGridSize,
+            width: gridLinesX[gridLinesX.length - 1] - gridLinesX[0] + majorGridSize * 2,
+            height: gridLinesY[gridLinesY.length - 1] - gridLinesY[0] + majorGridSize * 2,
             fill: '#fafafa',
           }"
         />
@@ -531,7 +578,12 @@ watch(
           v-for="x in gridLinesX"
           :key="`grid-x-${x}`"
           :config="{
-            points: [x, gridLinesY[0] - gridSize, x, gridLinesY[gridLinesY.length - 1] + gridSize],
+            points: [
+              x,
+              gridLinesY[0] - majorGridSize,
+              x,
+              gridLinesY[gridLinesY.length - 1] + majorGridSize,
+            ],
             stroke: '#e0e0e0',
             strokeWidth: 1,
           }"
@@ -540,7 +592,12 @@ watch(
           v-for="y in gridLinesY"
           :key="`grid-y-${y}`"
           :config="{
-            points: [gridLinesX[0] - gridSize, y, gridLinesX[gridLinesX.length - 1] + gridSize, y],
+            points: [
+              gridLinesX[0] - majorGridSize,
+              y,
+              gridLinesX[gridLinesX.length - 1] + majorGridSize,
+              y,
+            ],
             stroke: '#e0e0e0',
             strokeWidth: 1,
           }"

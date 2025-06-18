@@ -111,7 +111,7 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
 
   // Filter components for MNA
   const voltageSources = components.filter(c => c.type === 'voltage_source') as (CircuitComponent & { type: 'voltage_source' })[];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const resistors = components.filter(c => c.type === 'resistor') as (CircuitComponent & { type: 'resistor' })[];
 
   console.log('Electrical Nodes:', electricalNodes);

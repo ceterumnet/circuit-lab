@@ -149,6 +149,7 @@ function handleDragMove(position: Position) {
 
 function handleDragEnd(position: Position) {
   // Final position update with grid snapping
+  console.log('[CircuitComponent] handleDragEnd received:', position)
   emit('move-end', props.component.id, position)
 }
 

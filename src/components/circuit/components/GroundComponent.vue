@@ -134,7 +134,7 @@ function handleDragStart(e: KonvaEventObject<MouseEvent>) {
 
 function handleDragMove(e: { target: { x(): number; y(): number } }) {
   const newPosition = {
-    x: e.target.x(), // Don't snap during drag for smooth movement
+    x: e.target.x(),
     y: e.target.y(),
   }
   emit('dragmove', newPosition)
@@ -142,8 +142,8 @@ function handleDragMove(e: { target: { x(): number; y(): number } }) {
 
 function handleDragEnd(e: { target: { x(): number; y(): number } }) {
   const newPosition = {
-    x: Math.round(e.target.x() / 30) * 30, // Snap to grid on end
-    y: Math.round(e.target.y() / 30) * 30,
+    x: e.target.x(),
+    y: e.target.y(),
   }
   emit('dragend', newPosition)
 }

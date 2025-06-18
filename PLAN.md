@@ -675,23 +675,15 @@ src/
 
 ### Current System Issues Identified
 
-#### 1. **Terminal Alignment & Grid Problems**
+#### 1. **Terminal Alignment & Grid Problems** ✅ RESOLVED
 
-The fundamental issue: when components rotate 90°, their terminals end up at off-grid positions that fight with the grid system.
+**Problem**: When components rotate 90°, their terminals (at ±30px) would end up at off-grid positions on the old 20px grid, causing visual misalignment.
 
-**Problem Analysis**:
+**Solution**: The grid system has been re-architected.
 
-- Resistor at position (0,0) has terminals at (-30,0) and (30,0)
-- When rotated 90°, terminals become (0,-30) and (0,30)
-- Grid is 20px, so -30 and 30 don't align with grid lines
-- This creates visual misalignment and connection difficulties
-
-**Grid/Terminal Mismatch**:
-
-```
-Current: 20px grid + 30px terminal spacing = misalignment when rotated
-Result: Terminals never align properly with grid intersections
-```
+- **Snapping Grid**: A fine-grained **5px** grid is now used for all component snapping. This ensures that component terminals will always align perfectly, regardless of rotation, as all standard component dimensions are divisible by 5.
+- **Visual Grid**: To maintain a clean interface, visual grid lines are now only drawn every **30px**.
+- **Result**: This provides the precision of a small grid with the clean look of a larger one, permanently solving the alignment issue and providing a robust foundation for future complex components.
 
 #### 2. **Overly Complex Terminal System**
 

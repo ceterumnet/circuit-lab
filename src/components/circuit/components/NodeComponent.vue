@@ -70,17 +70,14 @@ const isHighlighted = computed(() => {
 })
 
 function handleClick(e: KonvaEventObject<MouseEvent>) {
-  console.log('[NodeComponent] handleClick on group fired')
   emit('select', e)
 }
 
 function handleDragStart(e: KonvaEventObject<DragEvent>) {
-  console.log('[NodeComponent] handleDragStart on group fired')
   emit('dragstart', e)
 }
 
 function handleDragMove(e: { target: { x(): number; y(): number } }) {
-  console.log('[NodeComponent] handleDragMove on group fired')
   const newPosition = {
     x: e.target.x(),
     y: e.target.y(),
@@ -89,23 +86,18 @@ function handleDragMove(e: { target: { x(): number; y(): number } }) {
 }
 
 function handleDragEnd(e: { target: { x(): number; y(): number } }) {
-  console.log('[NodeComponent] handleDragEnd on group fired')
   const newPosition = {
-    x: Math.round(e.target.x() / 30) * 30,
-    y: Math.round(e.target.y() / 30) * 30,
+    x: e.target.x(),
+    y: e.target.y(),
   }
   emit('dragend', newPosition)
 }
 
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
-  console.log(
-    `[NodeComponent] handleTerminalClick received from terminal. Emitting up to CircuitComponent.`,
-  )
   emit('terminal-click', terminalId, componentId, position)
 }
 
 function handleMouseEnter(event: KonvaEventObject<MouseEvent>) {
-  console.log('[NodeComponent] handleMouseEnter on group fired')
   const stage = event.target.getStage()
   if (stage) {
     stage.container().style.cursor = 'pointer'
@@ -113,7 +105,6 @@ function handleMouseEnter(event: KonvaEventObject<MouseEvent>) {
 }
 
 function handleMouseLeave(event: KonvaEventObject<MouseEvent>) {
-  console.log('[NodeComponent] handleMouseLeave on group fired')
   const stage = event.target.getStage()
   if (stage) {
     stage.container().style.cursor = 'default'
