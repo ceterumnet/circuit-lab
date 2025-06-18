@@ -165,7 +165,9 @@ export const useCircuitStore = defineStore('circuit', () => {
   }
 
   function deleteSelectedComponent() {
-    interactionStore.selectedComponentIds.forEach((id) => {
+    // Create a copy of the array to iterate over, as removeComponent will modify the original array
+    const idsToDelete = [...interactionStore.selectedComponentIds]
+    idsToDelete.forEach((id) => {
       removeComponent(id)
     })
     interactionStore.clearSelection()
