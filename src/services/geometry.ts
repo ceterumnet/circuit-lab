@@ -12,14 +12,17 @@ export function rotatePoint(point: Position, angleInDegrees: number): Position {
   }
 }
 
-export function getTerminalWorldPosition(component: CircuitComponent, terminalId: string): Position {
+export function getTerminalWorldPosition(
+  component: CircuitComponent,
+  terminalId: string,
+): Position {
   const definition = getComponentDefinition(component.type)
   if (!definition) {
     console.error(`No definition for component type ${component.type}`)
     return component.position
   }
 
-  const terminalDef = definition.terminals.find(t => t.id === terminalId)
+  const terminalDef = definition.terminals.find((t) => t.id === terminalId)
   if (!terminalDef) {
     console.error(`Terminal ${terminalId} not found on component ${component.id}`)
     return component.position
@@ -28,9 +31,17 @@ export function getTerminalWorldPosition(component: CircuitComponent, terminalId
   // Apply rotation transformation to local offset
   const rotatedOffset = rotatePoint(terminalDef.position, component.rotation)
 
+  const componentX = component.position?.x ?? 0
+  const componentY = component.position?.y ?? 0
+
+  if (isNaN(componentX) || isNaN(componentY) || isNaN(rotatedOffset.x) || isNaN(rotatedOffset.y)) {
+    console.warn('NaN detected in position calculation for component:', component.id)
+    return { x: 0, y: 0 }
+  }
+
   return {
-    x: component.position.x + rotatedOffset.x,
-    y: component.position.y + rotatedOffset.y,
+    x: componentX + rotatedOffset.x,
+    y: componentY + rotatedOffset.y,
   }
 }
 
@@ -50,8 +61,7 @@ export function findTerminalAtPosition(
 
       // Check if position is within 15 pixels of the terminal
       const distance = Math.sqrt(
-        Math.pow(position.x - terminalWorldPos.x, 2) +
-          Math.pow(position.y - terminalWorldPos.y, 2),
+        Math.pow(position.x - terminalWorldPos.x, 2) + Math.pow(position.y - terminalWorldPos.y, 2),
       )
 
       if (distance <= 15) {

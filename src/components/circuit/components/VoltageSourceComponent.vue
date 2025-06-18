@@ -42,14 +42,14 @@
       :terminal-id="componentDefinition.terminals[0].id"
       :position="componentDefinition.terminals[0].position"
       :component-id="component.id"
-      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-click="handleTerminalClick"
     />
     <circuit-terminal
       v-if="componentDefinition"
       :terminal-id="componentDefinition.terminals[1].id"
       :position="componentDefinition.terminals[1].position"
       :component-id="component.id"
-      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-click="handleTerminalClick"
     />
 
     <!-- Connection lines -->
@@ -133,7 +133,7 @@ interface Emits {
   (e: 'dragstart', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
-  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
 }
 
 const props = defineProps<Props>()
@@ -145,7 +145,7 @@ const componentDefinition = computed(() => getComponentDefinition(props.componen
 const voltageLabel = computed(() => {
   if (!props.component.properties) return ''
   const voltage = props.component.properties.voltage || 0
-  const definition = componentDefinition.value?.properties.find(p => p.key === 'voltage')
+  const definition = componentDefinition.value?.properties.find((p) => p.key === 'voltage')
   const unit = definition?.unit || 'V'
 
   if (typeof voltage === 'number' && voltage >= 1000) {
@@ -157,7 +157,9 @@ const voltageLabel = computed(() => {
   return `${voltage}${unit}`
 })
 
-const isSelected = computed(() => interactionStore.selectedComponentIds.includes(props.component.id))
+const isSelected = computed(() =>
+  interactionStore.selectedComponentIds.includes(props.component.id),
+)
 
 const isHighlighted = computed(() => {
   const wireState = interactionStore.wireCreationState
@@ -194,8 +196,8 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
   emit('dragend', newPosition)
 }
 
-function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-mousedown', terminalId, componentId, position)
+function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-click', terminalId, componentId, position)
 }
 
 function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {

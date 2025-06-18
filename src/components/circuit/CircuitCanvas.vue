@@ -77,7 +77,6 @@ const containerRef = ref<HTMLElement | null>(null)
 const resizeObserver = ref<ResizeObserver | null>(null)
 
 // Mouse interaction state
-const isDragging = ref(false)
 const dragTarget = ref<string | null>(null)
 const isPanning = ref(false)
 const dragStartPointerPosition = ref({ x: 0, y: 0 })
@@ -227,14 +226,18 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   }
 
   // Dragging logic
-  if (isDragging.value) {
-    isDragging.value = false
+  if (interactionStore.isDraggingComponent) {
+    interactionStore.setDraggingComponent(false)
     dragTarget.value = null
     dragStartPositions.value.clear()
   }
 }
 
 function handleComponentSelect(componentId: string, e: KonvaEventObject<MouseEvent>) {
+  // If a wire is being created, a click on a component body should do nothing.
+  if (interactionStore.wireCreationState.isActive) {
+    return
+  }
   interactionStore.selectComponent(componentId, e.evt.shiftKey)
 }
 
@@ -248,7 +251,7 @@ function handleComponentMoveStart(componentId: string, e: KonvaEventObject<Mouse
     interactionStore.cancelWireCreation()
   }
 
-  isDragging.value = true
+  interactionStore.setDraggingComponent(true)
   dragTarget.value = componentId
 
   const stage = e.target.getStage()
@@ -312,16 +315,8 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
       circuitStore.moveComponent(id, snappedPos)
     }
   })
-}
 
-function handleTerminalMouseDown(terminalId: string, componentId: string) {
-  if (interactionStore.wireCreationState.isActive) {
-    // If a wire is being created, this mousedown finishes it.
-    interactionStore.finishWireCreation(terminalId, componentId)
-  } else {
-    // Otherwise, this mousedown starts a new wire.
-    interactionStore.startWireCreation(terminalId, componentId)
-  }
+  interactionStore.setDraggingComponent(false)
 }
 
 function handleContextMenu() {
@@ -418,6 +413,18 @@ function handleWireMouseUp(wireId: string, event: KonvaEventObject<MouseEvent>) 
     const pos = screenToWorld(event.evt)
     circuitStore.splitWireAndConnect(wireId, pos, interactionStore.wireCreationState.startTerminal!)
     interactionStore.cancelWireCreation()
+  }
+}
+
+function handleTerminalClick(terminalId: string, componentId: string) {
+  console.log(`[CircuitCanvas] handleTerminalClick received for component: ${componentId}`)
+  const wireState = interactionStore.wireCreationState
+
+  if (wireState.isActive) {
+    interactionStore.finishWireCreation(terminalId, componentId)
+  } else {
+    // If not wiring, a click on a terminal ALWAYS starts a wire.
+    interactionStore.startWireCreation(terminalId, componentId)
   }
 }
 
@@ -543,7 +550,7 @@ watch(
           :component="component"
           @select="handleComponentSelect"
           @move-start="handleComponentMoveStart"
-          @terminal-mousedown="handleTerminalMouseDown"
+          @terminal-click="handleTerminalClick"
           @wire-mouseenter="handleWireMouseEnter"
           @wire-mouseleave="handleWireMouseLeave"
           @wire-mouseup="handleWireMouseUp"
@@ -558,7 +565,7 @@ watch(
           @move-start="handleComponentMoveStart"
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
-          @terminal-mousedown="handleTerminalMouseDown"
+          @terminal-click="handleTerminalClick"
         />
 
         <!-- Other components (rendered on top of wires) -->
@@ -570,7 +577,7 @@ watch(
           @move-start="handleComponentMoveStart"
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
-          @terminal-mousedown="handleTerminalMouseDown"
+          @terminal-click="handleTerminalClick"
         />
 
         <!-- DC Voltage Labels -->

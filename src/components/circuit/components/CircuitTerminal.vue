@@ -9,7 +9,7 @@
       strokeWidth: isSelected || isValidDropTarget ? 2 : 1,
       draggable: false,
     }"
-    @mousedown="handleMouseDown"
+    @click="handleClick"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   />
@@ -29,7 +29,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-hover', terminalId: string, componentId: string, isHovered: boolean): void
 }
 
@@ -37,9 +37,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const interactionStore = useInteractionStore()
 
-const isSelected = computed(
-  () => interactionStore.selectedComponentId === props.componentId
-)
+const isSelected = computed(() => interactionStore.selectedComponentIds.includes(props.componentId))
 
 const isValidDropTarget = computed(() => {
   const wireState = interactionStore.wireCreationState
@@ -60,21 +58,28 @@ const position = computed(() => {
   return props.position
 })
 
-function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
-  // Prevent component selection (Konva event)
+function handleClick(e: KonvaEventObject<MouseEvent>) {
+  console.log(
+    `[CircuitTerminal] handleClick fired for component: ${props.componentId}, terminal: ${props.terminalId}`,
+  )
+  // Prevent component selection by stopping the event from bubbling to the parent group.
   e.cancelBubble = true
-  emit('terminal-mousedown', props.terminalId, props.componentId, props.position)
+  emit('terminal-click', props.terminalId, props.componentId, props.position)
 }
 
 function handleMouseEnter() {
+  console.log(
+    `[CircuitTerminal] handleMouseEnter fired for ${props.componentId} -> ${props.terminalId}`,
+  )
   isHovered.value = true
   emit('terminal-hover', props.terminalId, props.componentId, true)
 }
 
 function handleMouseLeave() {
+  console.log(
+    `[CircuitTerminal] handleMouseLeave fired for ${props.componentId} -> ${props.terminalId}`,
+  )
   isHovered.value = false
   emit('terminal-hover', props.terminalId, props.componentId, false)
 }
-
-// Drag functionality removed - terminals are now click-only for solid architecture
 </script>

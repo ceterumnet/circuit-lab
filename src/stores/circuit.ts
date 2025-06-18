@@ -115,6 +115,9 @@ export const useCircuitStore = defineStore('circuit', () => {
   watch(
     () => currentCircuit.value,
     () => {
+      if (interactionStore.isDraggingComponent) {
+        return
+      }
       runDCSimulation()
     },
     { deep: true },

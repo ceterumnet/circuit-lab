@@ -1,75 +1,67 @@
 <template>
   <v-group>
     <!-- Resistor component -->
-    <v-group v-if="component.type === 'resistor'">
-      <resistor-component
-        :component="component"
-        @select="handleSelect"
-        @dragstart="handleDragStart"
-        @dragmove="handleDragMove"
-        @dragend="handleDragEnd"
-        @terminal-mousedown="handleTerminalMouseDown"
-      />
-    </v-group>
+    <resistor-component
+      v-if="component.type === 'resistor'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+    />
 
     <!-- Voltage source component -->
-    <v-group v-else-if="component.type === 'voltage_source'">
-      <voltage-source-component
-        :component="component"
-        @select="handleSelect"
-        @dragstart="handleDragStart"
-        @dragmove="handleDragMove"
-        @dragend="handleDragEnd"
-        @terminal-mousedown="handleTerminalMouseDown"
-      />
-    </v-group>
+    <voltage-source-component
+      v-else-if="component.type === 'voltage_source'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+    />
 
     <!-- Ground component -->
-    <v-group v-else-if="component.type === 'ground'">
-      <ground-component
-        :component="component"
-        @select="handleSelect"
-        @dragstart="handleDragStart"
-        @dragmove="handleDragMove"
-        @dragend="handleDragEnd"
-        @terminal-mousedown="handleTerminalMouseDown"
-      />
-    </v-group>
+    <ground-component
+      v-else-if="component.type === 'ground'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+    />
 
     <!-- Node component -->
-    <v-group v-else-if="component.type === 'node'">
-      <node-component
-        :component="component"
-        @select="handleSelect"
-        @dragstart="handleDragStart"
-        @dragmove="handleDragMove"
-        @dragend="handleDragEnd"
-        @terminal-mousedown="handleTerminalMouseDown"
-      />
-    </v-group>
+    <node-component
+      v-else-if="component.type === 'node'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+    />
 
     <!-- Wire component -->
-    <v-group v-else-if="component.type === 'wire'">
-      <wire-component
-        :component="component"
-        :start-position="wireStartPosition"
-        :end-position="wireEndPosition"
-        @select="handleSelect"
-        @delete="handleWireDelete"
-        @wire-mouseenter="handleWireMouseEnter"
-        @wire-mouseleave="handleWireMouseLeave"
-        @wire-mouseup="handleWireMouseUp"
-      />
-    </v-group>
+    <wire-component
+      v-else-if="component.type === 'wire'"
+      :component="component"
+      :start-position="wireStartPosition"
+      :end-position="wireEndPosition"
+      @select="handleSelect"
+      @delete="handleWireDelete"
+      @wire-mouseenter="handleWireMouseEnter"
+      @wire-mouseleave="handleWireMouseLeave"
+      @wire-mouseup="handleWireMouseUp"
+    />
   </v-group>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type {
-  CircuitComponent,
-  Position,
-} from '@/types/components'
+import type { CircuitComponent, Position } from '@/types/components'
 import ResistorComponent from '@/components/circuit/components/ResistorComponent.vue'
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
@@ -88,7 +80,7 @@ interface Emits {
   (e: 'move-start', componentId: string, event: KonvaEventObject<MouseEvent>): void
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
-  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'wire-delete', wireId: string): void
   (e: 'wire-mouseenter', componentId: string, event: KonvaEventObject<MouseEvent>): void
   (e: 'wire-mouseleave', componentId: string, event: KonvaEventObject<MouseEvent>): void
@@ -111,7 +103,7 @@ const wireStartPosition = computed(() => {
   const startComponentId = wireProps.startComponentId as string | undefined
 
   if (startTerminalId && startComponentId) {
-    const startComponent = components.find(c => c.id === startComponentId)
+    const startComponent = components.find((c) => c.id === startComponentId)
     if (startComponent) {
       return getTerminalWorldPosition(startComponent, startTerminalId)
     }
@@ -132,7 +124,7 @@ const wireEndPosition = computed(() => {
   const endComponentId = wireProps.endComponentId as string | undefined
 
   if (endTerminalId && endComponentId) {
-    const endComponent = components.find(c => c.id === endComponentId)
+    const endComponent = components.find((c) => c.id === endComponentId)
     if (endComponent) {
       return getTerminalWorldPosition(endComponent, endTerminalId)
     }
@@ -160,8 +152,11 @@ function handleDragEnd(position: Position) {
   emit('move-end', props.component.id, position)
 }
 
-function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
-  emit('terminal-mousedown', terminalId, componentId, position)
+function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
+  console.log(
+    `[CircuitComponent] handleTerminalClick received from ${componentId}. Emitting up to CircuitCanvas.`,
+  )
+  emit('terminal-click', terminalId, componentId, position)
 }
 
 function handleWireDelete() {

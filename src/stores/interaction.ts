@@ -30,7 +30,13 @@ export const useInteractionStore = defineStore('interaction', () => {
     position: { x: 0, y: 0 },
   })
 
+  const isDraggingComponent = ref(false)
+
   // Actions
+  function setDraggingComponent(isDragging: boolean) {
+    isDraggingComponent.value = isDragging
+  }
+
   function setCanvasTransform(scale: number, position: Position) {
     canvasTransform.value = { scale, position }
   }
@@ -169,7 +175,9 @@ export const useInteractionStore = defineStore('interaction', () => {
     hoveredWireId,
     wireCreationState,
     canvasTransform,
+    isDraggingComponent,
     // Actions
+    setDraggingComponent,
     setCanvasTransform,
     setHoveredTerminal,
     setHoveredWire,
