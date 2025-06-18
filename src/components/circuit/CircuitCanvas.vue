@@ -409,8 +409,11 @@ function handleWireMouseLeave() {
 }
 
 function handleWireMouseUp(wireId: string, event: KonvaEventObject<MouseEvent>) {
+  const stage = event.target.getStage()
+  if (!stage) return
+
   if (interactionStore.wireCreationState.isActive) {
-    const pos = screenToWorld(event.evt)
+    const pos = screenToWorld(stage.getPointerPosition()!)
     circuitStore.splitWireAndConnect(wireId, pos, interactionStore.wireCreationState.startTerminal!)
     interactionStore.cancelWireCreation()
   }
