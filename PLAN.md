@@ -131,6 +131,27 @@ Building a web-based circuit simulation application focused on educational purpo
 - [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
 - [ ] Probes can be dragged and deleted.
 
+### Phase 1.8 - Smart Wiring & Routing
+
+**Goal**: Implement a more flexible and intuitive wiring system that supports creating complex routes and buses, not just direct component-to-component connections. This combines the "implicit node" philosophy with the flexibility of free-form wire placement.
+
+**Phase A: Re-enable Floating Wires**
+- [ ] **Interaction Change:** When creating a wire and clicking on an empty canvas space, the system will create an implicit node at that position and terminate the wire. This reverses the "cancel on empty space" behavior from Phase 1.75.
+- [ ] **Data Model:**
+    - [ ] If the wire starts from a component terminal, it will connect the terminal to the new implicit node.
+    - [ ] If the wire starts from an empty space (future feature), it will create a start node and an end node.
+- [ ] **Code Reinstatement:** Re-implement and adapt the `finishWireCreationToPosition` logic in the `interaction` store.
+
+**Phase B: Implement Multi-Segment Wiring (Click-and-Drag Chaining)**
+- [ ] **Interaction:** After placing a node by clicking on empty space, the application will immediately begin creating a new wire segment originating from that new node.
+- [ ] **Workflow:**
+    - [ ] Click a terminal or empty space to start.
+    - [ ] Move cursor, a preview line follows.
+    - [ ] Click on empty space to place a "corner" node; this ends the current segment and starts a new one.
+    - [ ] Click on a component terminal or an existing wire to finish the segment and the entire wiring action.
+    - [ ] Press `Escape` or double-click to end the wiring action at the last placed point without starting a new segment.
+- [ ] **Store Logic:** Enhance `finishWireCreationToPosition` to return the ID of the newly created node so that `CircuitCanvas` can immediately call `startWireCreation` using the new node as the origin.
+
 ### Phase 2 - Passive Components
 
 **Goal**: AC analysis and energy storage elements

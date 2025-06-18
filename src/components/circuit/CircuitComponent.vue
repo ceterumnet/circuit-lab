@@ -36,33 +36,14 @@
       />
     </v-group>
 
-    <!-- Node component (rendered directly) -->
-    <v-group
-      v-else-if="component.type === 'node'"
-      :config="{
-        x: component.position.x,
-        y: component.position.y,
-        draggable: true
-      }"
-      @dragstart="handleDragStart"
-      @dragmove="(e) => handleDragMove(e.target.position())"
-      @dragend="(e) => handleDragEnd(e.target.position())"
-      @click="handleSelect"
-    >
-      <v-circle
-        :config="{
-          radius: 5,
-          fill: component.selected ? 'blue' : 'black',
-          stroke: component.selected ? 'blue' : 'black',
-          strokeWidth: 2
-        }"
-      />
-      <!-- The node's single, central terminal -->
-      <circuit-terminal
-        v-if="component.terminals && component.terminals.length > 0"
-        :component-id="component.id"
-        :terminal-id="component.terminals[0].id"
-        :position="{ x: 0, y: 0 }"
+    <!-- Node component -->
+    <v-group v-else-if="component.type === 'node'">
+      <node-component
+        :component="component"
+        @select="handleSelect"
+        @dragstart="handleDragStart"
+        @dragmove="handleDragMove"
+        @dragend="handleDragEnd"
         @terminal-mousedown="handleTerminalMouseDown"
       />
     </v-group>
@@ -93,7 +74,7 @@ import ResistorComponent from '@/components/circuit/components/ResistorComponent
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
-import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
+import NodeComponent from '@/components/circuit/components/NodeComponent.vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { getTerminalWorldPosition } from '@/services/geometry'
 import type { KonvaEventObject } from 'konva/lib/Node'
