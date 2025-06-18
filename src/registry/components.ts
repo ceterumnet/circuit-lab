@@ -53,7 +53,7 @@ const nodeDefinition: ComponentDefinition = {
     { id: 'terminal', position: { x: 0, y: 0 }, type: 'io' }
   ],
   properties: [],
-  icon: '⚫'
+  // No icon means it won't be rendered in the palette
 }
 
 const wireDefinition: ComponentDefinition = {

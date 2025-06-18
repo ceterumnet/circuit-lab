@@ -180,8 +180,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
     if (isClick) {
       // Background click logic (place component or finish wire)
       if (interactionStore.wireCreationState.isActive) {
-        const pos = screenToWorld(stage.getPointerPosition()!)
-        interactionStore.finishWireCreationToPosition(pos)
+        interactionStore.cancelWireCreation()
       } else if (interactionStore.componentToPlace) {
         const worldPos = screenToWorld(stage.getPointerPosition()!)
         const snappedPos = {
@@ -319,13 +318,6 @@ function handleTerminalMouseDown(terminalId: string, componentId: string) {
   }
 }
 
-function handleNodeConnect(nodeId: string) {
-  // Handle connections to nodes (for existing wires connecting to nodes)
-  if (interactionStore.wireCreationState.isActive) {
-    interactionStore.finishWireCreationToNode(nodeId)
-  }
-}
-
 function handleContextMenu() {
   // Cancel current action on right click
   interactionStore.cancelWireCreation()
@@ -420,6 +412,24 @@ function getVoltageLabelConfig(nodeComponent: CircuitComponentType) {
     fill: 'blue',
     visible: true,
   };
+}
+
+function handleWireMouseEnter(wireId: string) {
+  if (interactionStore.wireCreationState.isActive) {
+    interactionStore.setHoveredWire(wireId)
+  }
+}
+
+function handleWireMouseLeave() {
+  interactionStore.setHoveredWire(null)
+}
+
+function handleWireMouseUp(wireId: string, event: KonvaEventObject<MouseEvent>) {
+  if (interactionStore.wireCreationState.isActive) {
+    const pos = screenToWorld(event.evt)
+    circuitStore.splitWireAndConnect(wireId, pos, interactionStore.wireCreationState.startTerminal!)
+    interactionStore.cancelWireCreation()
+  }
 }
 
 onMounted(() => {
@@ -535,7 +545,9 @@ watch(
           @select="handleComponentSelect"
           @move-start="handleComponentMoveStart"
           @terminal-mousedown="handleTerminalMouseDown"
-          @node-connect="handleNodeConnect"
+          @wire-mouseenter="handleWireMouseEnter"
+          @wire-mouseleave="handleWireMouseLeave"
+          @wire-mouseup="handleWireMouseUp"
         />
 
         <!-- Nodes -->
@@ -548,7 +560,6 @@ watch(
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
           @terminal-mousedown="handleTerminalMouseDown"
-          @node-connect="handleNodeConnect"
         />
 
         <!-- Other components (rendered on top of wires) -->
@@ -561,7 +572,6 @@ watch(
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
           @terminal-mousedown="handleTerminalMouseDown"
-          @node-connect="handleNodeConnect"
         />
 
         <!-- DC Voltage Labels -->

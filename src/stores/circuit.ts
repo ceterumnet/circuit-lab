@@ -9,9 +9,10 @@ import type {
   CircuitNode,
 } from '@/types/components'
 import type { DC_Result } from '@/services/simulation'
-import { generateComponentId } from '@/services/componentFactory'
+import { generateComponentId, createComponent } from '@/services/componentFactory'
 import { useInteractionStore } from './interaction'
 import { solveDC } from '@/services/simulation'
+import { getComponentDefinition } from '@/registry/components'
 
 export const useCircuitStore = defineStore('circuit', () => {
   // State
@@ -177,6 +178,44 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
+  function splitWireAndConnect(
+    wireId: string,
+    position: Position,
+    newWireStartTerminal: { terminalId: string; componentId: string; position: Position }
+  ) {
+    const originalWire = currentCircuit.value.components.find(c => c.id === wireId)
+    if (!originalWire || originalWire.type !== 'wire' || !originalWire.properties) return
+
+    // 1. Save original wire's endpoints
+    const startComponentId = originalWire.properties.startComponentId as string
+    const startTerminalId = originalWire.properties.startTerminal as string
+    const endComponentId = originalWire.properties.endComponentId as string
+    const endTerminalId = originalWire.properties.endTerminal as string
+
+    // 2. Delete the original wire
+    deleteWire(wireId)
+
+    // 3. Create a new node at the split position
+    const newNode = createComponent(currentCircuit.value, 'node', position) as CircuitNode;
+    if (!newNode) return
+    addComponent(newNode);
+
+    const nodeDef = getComponentDefinition('node')
+    if (!nodeDef) return
+    const nodeTerminal = {
+      terminalId: nodeDef.terminals[0].id,
+      componentId: newNode.id,
+      position: newNode.position,
+    }
+
+    // 4. Create two new wires from original endpoints to the new node
+    createWire({ componentId: startComponentId, terminalId: startTerminalId, position: { x: 0, y: 0 } }, nodeTerminal)
+    createWire({ componentId: endComponentId, terminalId: endTerminalId, position: { x: 0, y: 0 } }, nodeTerminal)
+
+    // 5. Connect the new wire to the new node
+    createWire(newWireStartTerminal, nodeTerminal)
+  }
+
   return {
     // State
     currentCircuit,
@@ -201,5 +240,6 @@ export const useCircuitStore = defineStore('circuit', () => {
     deleteSelectedComponent,
     deleteWire,
     runDCSimulation,
+    splitWireAndConnect,
   }
 })

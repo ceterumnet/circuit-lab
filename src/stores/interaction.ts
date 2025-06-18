@@ -1,16 +1,15 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import type { Position, CircuitNode } from '@/types/components';
+import type { Position } from '@/types/components';
 import { useCircuitStore } from './circuit';
 import { getTerminalWorldPosition } from '@/services/geometry';
-import * as componentFactory from '@/services/componentFactory';
-import { getComponentDefinition } from '@/registry/components'
 
 export const useInteractionStore = defineStore('interaction', () => {
   // State
   const selectedComponentIds = ref<string[]>([]);
   const componentToPlace = ref<string | null>(null);
   const hoveredTerminal = ref<{ componentId: string; terminalId: string } | null>(null);
+  const hoveredWireId = ref<string | null>(null)
 
   const wireCreationState = ref<{
     isActive: boolean;
@@ -38,6 +37,10 @@ export const useInteractionStore = defineStore('interaction', () => {
 
   function setHoveredTerminal(info: { componentId: string; terminalId: string } | null) {
     hoveredTerminal.value = info;
+  }
+
+  function setHoveredWire(wireId: string | null) {
+    hoveredWireId.value = wireId
   }
 
   function setComponentToPlace(type: string | null) {
@@ -137,55 +140,18 @@ export const useInteractionStore = defineStore('interaction', () => {
     cancelWireCreation();
   }
 
-  function finishWireCreationToNode(nodeId: string) {
-    if (!wireCreationState.value.startTerminal) return
-
-    const circuitStore = useCircuitStore();
-    const node = circuitStore.currentCircuit.components.find((c) => c.id === nodeId) as CircuitNode
-    const nodeDef = getComponentDefinition('node');
-    if (!node || !nodeDef) return
-
-    circuitStore.createWire(wireCreationState.value.startTerminal, {
-      terminalId: nodeDef.terminals[0].id,
-      componentId: nodeId,
-      position: node.position,
-    })
-
-    cancelWireCreation()
-  }
-
-  function finishWireCreationToPosition(position: Position) {
-    if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
-      cancelWireCreation()
-      return
-    }
-
-    const circuitStore = useCircuitStore()
-    const newNode = componentFactory.createComponent(circuitStore.currentCircuit, 'node', position) as CircuitNode;
-    const nodeDef = getComponentDefinition('node');
-
-    if (newNode && nodeDef) {
-      circuitStore.addComponent(newNode);
-      circuitStore.createWire(wireCreationState.value.startTerminal, {
-        terminalId: nodeDef.terminals[0].id,
-        componentId: newNode.id,
-        position: newNode.position,
-      });
-    }
-
-    cancelWireCreation();
-  }
-
   return {
     // State
     selectedComponentIds,
     componentToPlace,
     hoveredTerminal,
+    hoveredWireId,
     wireCreationState,
     canvasTransform,
     // Actions
     setCanvasTransform,
     setHoveredTerminal,
+    setHoveredWire,
     setComponentToPlace,
     selectComponent,
     addToSelection,
@@ -195,7 +161,5 @@ export const useInteractionStore = defineStore('interaction', () => {
     startWireCreation,
     updateWirePreview,
     finishWireCreation,
-    finishWireCreationToNode,
-    finishWireCreationToPosition,
   };
 });

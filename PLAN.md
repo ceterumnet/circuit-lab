@@ -106,19 +106,30 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] **Multi-Select (Marquee):** Click and drag on the canvas background to draw a selection box (marquee) and select multiple components.
 - [x] **Group Movement:** Dragging any component in a selection group moves all selected components together.
 
-### Phase 1.75 - Node and Routing Refactor (Future)
+### Phase 1.75 - Node and Routing Refactor
 
 **Goal**: Transition from an explicit, visible node system to an implicit, schematic-standard system for a cleaner UI and more intuitive workflow. This will be a significant architectural change.
 
-- [ ] **Implicit Junctions**:
-    - [ ] Deprecate the visible `Node` component.
-    - [ ] Allow wires to terminate directly on other wires to create T-junctions.
-    - [ ] Automatically render a junction dot where three or more wire segments meet.
-- [ ] **Selective Annotation (Probe Tool)**:
-    - [ ] By default, do not display any voltages or currents on the canvas.
-    - [ ] Create a new "Probe" tool.
-    - [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
-    - [ ] Probes can be dragged and deleted.
+**Phase A: Implement Implicit Junctions**
+
+*   **Step 1: Deprecate and Remove the Existing `Node` Component**
+    - [ ] **UI Cleanup:** Remove the "Node" component from the `ComponentPalette.vue` so it cannot be manually placed.
+    - [ ] **Interaction Change:** When dragging a wire and releasing it over empty canvas space, the wire creation process will be cancelled instead of creating a `Node`.
+    - [ ] **Code Removal:**
+        - [ ] Delete `src/components/circuit/components/NodeComponent.vue`.
+        - [ ] Remove `finishWireCreationToPosition` and `finishWireCreationToNode` functions from the `interaction` store.
+        - [ ] Remove related handlers from `CircuitCanvas.vue`.
+
+*   **Step 2: Implement Wire-to-Wire Connections (T-Junctions)**
+    - [ ] **Interaction:** Update `WireComponent.vue` so that existing wires highlight on hover during a wire-drag operation, indicating they are valid connection targets.
+    - [ ] **Data Model:** When a new wire is connected to an existing wire, the target wire will be split into two separate wire entities, and all three wires will be connected at the new junction point.
+    - [ ] **Visuals:** Add logic to `CircuitCanvas.vue` to automatically detect any point where three or more wires meet and render a circular "junction dot" at that location.
+
+**Phase B: Selective Annotation (Probe Tool)**
+- [ ] By default, do not display any voltages or currents on the canvas.
+- [ ] Create a new "Probe" tool.
+- [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
+- [ ] Probes can be dragged and deleted.
 
 ### Phase 2 - Passive Components
 
@@ -605,14 +616,24 @@ src/
 - The architecture for a professional CAD-style modal toolbar is designed but **not implemented**.
 - This remains a future option if the modeless approach proves insufficient for growing complexity.
 
-**Phase 1.75**: 📋 **PLANNED** - Node and Routing Refactor (Future)
+**Phase 1.75**: 📋 **PLANNED** - Node and Routing Refactor
 
 - **Goal**: Transition from an explicit, visible node system to an implicit, schematic-standard system for a cleaner UI and more intuitive workflow.
-- [ ] **Implicit Junctions**:
-    - [ ] Deprecate the visible `Node` component.
-    - [ ] Allow wires to terminate directly on other wires to create T-junctions.
-    - [ ] Automatically render a junction dot where three or more wire segments meet.
-- [ ] **Selective Annotation (Probe Tool)**:
+- **Phase A: Implement Implicit Junctions**
+    - **Step 1: Deprecate and Remove the Existing `Node` Component**
+        - [ ] **UI Cleanup:** Remove the "Node" component from the `ComponentPalette.vue` so it cannot be manually placed.
+        - [ ] **Interaction Change:** When dragging a wire and releasing it over empty canvas space, the wire creation process will be cancelled instead of creating a `Node`.
+        - [ ] **Code Removal:**
+            - [ ] Delete `src/components/circuit/components/NodeComponent.vue`.
+            - [ ] Remove `finishWireCreationToPosition` and `finishWireCreationToNode` functions from the `interaction` store.
+            - [ ] Remove related handlers from `CircuitCanvas.vue`.
+
+    - **Step 2: Implement Wire-to-Wire Connections (T-Junctions)**
+        - [ ] **Interaction:** Update `WireComponent.vue` so that existing wires highlight on hover during a wire-drag operation, indicating they are valid connection targets.
+        - [ ] **Data Model:** When a new wire is connected to an existing wire, the target wire will be split into two separate wire entities, and all three wires will be connected at the new junction point.
+        - [ ] **Visuals:** Add logic to `CircuitCanvas.vue` to automatically detect any point where three or more wires meet and render a circular "junction dot" at that location.
+
+- **Phase B: Selective Annotation (Probe Tool)**
     - [ ] By default, do not display any voltages or currents on the canvas.
     - [ ] Create a new "Probe" tool.
     - [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.

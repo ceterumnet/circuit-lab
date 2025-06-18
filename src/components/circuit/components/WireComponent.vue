@@ -13,14 +13,15 @@
       @dblclick="handleDoubleClick"
       @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
+      @mouseup="handleMouseUp"
     />
 
     <!-- The visible wire path, which includes hops -->
     <v-path
       :config="{
         data: wirePathData,
-        stroke: component.selected ? '#ff4d4d' : '#333',
-        strokeWidth: component.selected ? 3 : 2,
+        stroke: isHovered ? '#00e500' : (component.selected ? '#ff4d4d' : '#333'),
+        strokeWidth: isHovered ? 4 : (component.selected ? 3 : 2),
         lineCap: 'round',
         lineJoin: 'round',
         listening: false,
@@ -59,6 +60,7 @@ import { computed } from 'vue'
 import type { CircuitComponent, Position } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useCircuitStore } from '@/stores/circuit'
+import { useInteractionStore } from '@/stores/interaction'
 import { calculateWireIntersections } from '@/services/intersections'
 
 interface Props {
@@ -70,12 +72,20 @@ interface Props {
 interface Emits {
   (e: 'select', event: KonvaEventObject<MouseEvent>): void
   (e: 'delete'): void
+  (e: 'wire-mouseenter', event: KonvaEventObject<MouseEvent>): void
+  (e: 'wire-mouseleave', event: KonvaEventObject<MouseEvent>): void
+  (e: 'wire-mouseup', event: KonvaEventObject<MouseEvent>): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const circuitStore = useCircuitStore()
+const interactionStore = useInteractionStore()
+
+const isHovered = computed(() => {
+  return interactionStore.wireCreationState.isActive && interactionStore.hoveredWireId === props.component.id
+})
 
 const wireCurrent = computed(() => {
   if (!circuitStore.dcSolution || !circuitStore.dcSolution.currents) {
@@ -275,6 +285,7 @@ function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
   if (stage) {
     stage.container().style.cursor = 'pointer'
   }
+  emit('wire-mouseenter', e)
 }
 
 function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
@@ -282,5 +293,10 @@ function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
   if (stage) {
     stage.container().style.cursor = 'default'
   }
+  emit('wire-mouseleave', e)
+}
+
+function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
+  emit('wire-mouseup', e)
 }
 </script>

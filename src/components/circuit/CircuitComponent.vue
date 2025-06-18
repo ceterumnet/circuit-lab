@@ -36,16 +36,34 @@
       />
     </v-group>
 
-    <!-- Node component -->
-    <v-group v-else-if="component.type === 'node'">
-      <node-component
-        :component="component"
-        @select="handleSelect"
-        @dragstart="handleDragStart"
-        @dragmove="handleDragMove"
-        @dragend="handleDragEnd"
+    <!-- Node component (rendered directly) -->
+    <v-group
+      v-else-if="component.type === 'node'"
+      :config="{
+        x: component.position.x,
+        y: component.position.y,
+        draggable: true
+      }"
+      @dragstart="handleDragStart"
+      @dragmove="(e) => handleDragMove(e.target.position())"
+      @dragend="(e) => handleDragEnd(e.target.position())"
+      @click="handleSelect"
+    >
+      <v-circle
+        :config="{
+          radius: 5,
+          fill: component.selected ? 'blue' : 'black',
+          stroke: component.selected ? 'blue' : 'black',
+          strokeWidth: 2
+        }"
+      />
+      <!-- The node's single, central terminal -->
+      <circuit-terminal
+        v-if="component.terminals && component.terminals.length > 0"
+        :component-id="component.id"
+        :terminal-id="component.terminals[0].id"
+        :position="{ x: 0, y: 0 }"
         @terminal-mousedown="handleTerminalMouseDown"
-        @node-connect="handleNodeConnect"
       />
     </v-group>
 
@@ -57,6 +75,9 @@
         :end-position="wireEndPosition"
         @select="handleSelect"
         @delete="handleWireDelete"
+        @wire-mouseenter="handleWireMouseEnter"
+        @wire-mouseleave="handleWireMouseLeave"
+        @wire-mouseup="handleWireMouseUp"
       />
     </v-group>
   </v-group>
@@ -72,7 +93,7 @@ import ResistorComponent from '@/components/circuit/components/ResistorComponent
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
-import NodeComponent from '@/components/circuit/components/NodeComponent.vue'
+import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { getTerminalWorldPosition } from '@/services/geometry'
 import type { KonvaEventObject } from 'konva/lib/Node'
@@ -87,8 +108,10 @@ interface Emits {
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
   (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
-  (e: 'node-connect', nodeId: string): void
   (e: 'wire-delete', wireId: string): void
+  (e: 'wire-mouseenter', componentId: string, event: KonvaEventObject<MouseEvent>): void
+  (e: 'wire-mouseleave', componentId: string, event: KonvaEventObject<MouseEvent>): void
+  (e: 'wire-mouseup', componentId: string, event: KonvaEventObject<MouseEvent>): void
 }
 
 const props = defineProps<Props>()
@@ -160,11 +183,19 @@ function handleTerminalMouseDown(terminalId: string, componentId: string, positi
   emit('terminal-mousedown', terminalId, componentId, position)
 }
 
-function handleNodeConnect(nodeId: string) {
-  emit('node-connect', nodeId)
-}
-
 function handleWireDelete() {
   emit('wire-delete', props.component.id)
+}
+
+function handleWireMouseEnter(event: KonvaEventObject<MouseEvent>) {
+  emit('wire-mouseenter', props.component.id, event)
+}
+
+function handleWireMouseLeave(event: KonvaEventObject<MouseEvent>) {
+  emit('wire-mouseleave', props.component.id, event)
+}
+
+function handleWireMouseUp(event: KonvaEventObject<MouseEvent>) {
+  emit('wire-mouseup', props.component.id, event)
 }
 </script>
