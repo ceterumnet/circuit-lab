@@ -30,6 +30,8 @@ export const useCircuitStore = defineStore('circuit', () => {
   const simulationResults = ref<SimulationResult | null>(null)
   const dcSolution = ref<DC_Result | null>(null)
   const lastDcSolution = ref<DC_Result | null>(null)
+  const simulationErrors = ref<string[]>([])
+  const hasValidSimulation = ref(false)
 
   // Getters
   const singleSelectedItem = computed(() => {
@@ -112,44 +114,120 @@ export const useCircuitStore = defineStore('circuit', () => {
     simulationResults.value = null
     dcSolution.value = null
     lastDcSolution.value = null
+    simulationErrors.value = []
+    hasValidSimulation.value = false
+  }
+
+  function validateCircuit() {
+    const errors: string[] = []
+    const components = currentCircuit.value.components
+
+    // Check for ground connection
+    const hasGround = components.some((c) => c.type === 'ground')
+    const hasVoltageSource = components.some((c) => c.type === 'voltage_source')
+
+    if (!hasGround && !hasVoltageSource) {
+      errors.push('Circuit must have either a ground component or a voltage source for reference.')
+    }
+
+    // Check for floating components (components with no connections)
+    const wires = components.filter((c) => c.type === 'wire')
+    const connectedComponentIds = new Set<string>()
+
+    wires.forEach((wire) => {
+      if (wire.properties?.startComponentId) {
+        connectedComponentIds.add(wire.properties.startComponentId as string)
+      }
+      if (wire.properties?.endComponentId) {
+        connectedComponentIds.add(wire.properties.endComponentId as string)
+      }
+    })
+
+    const floatingComponents = components.filter(
+      (c) => c.type !== 'wire' && c.type !== 'node' && !connectedComponentIds.has(c.id),
+    )
+
+    if (floatingComponents.length > 0) {
+      errors.push(`${floatingComponents.length} component(s) are not connected to any wires.`)
+    }
+
+    // Check for components with missing required properties
+    components.forEach((component) => {
+      if (component.type === 'resistor') {
+        const resistance = component.properties?.resistance as number | undefined
+        if (!resistance || resistance <= 0) {
+          errors.push(`Resistor ${component.label || component.id} has invalid resistance value.`)
+        }
+      }
+      if (component.type === 'voltage_source') {
+        const voltage = component.properties?.voltage as number | undefined
+        if (!voltage || voltage === 0) {
+          errors.push(
+            `Voltage source ${component.label || component.id} has invalid voltage value.`,
+          )
+        }
+      }
+    })
+
+    // Check for short circuits (voltage sources with zero resistance paths)
+    // This is a simplified check - a more comprehensive version would analyze the circuit topology
+    const voltageSourcesCount = components.filter((c) => c.type === 'voltage_source').length
+    if (voltageSourcesCount > 1) {
+      errors.push('Multiple voltage sources detected. This may cause convergence issues.')
+    }
+
+    simulationErrors.value = errors
+    return errors
   }
 
   async function runDCSimulation() {
+    // Clear previous simulation state
+    isSimulating.value = true
+    simulationErrors.value = []
+    hasValidSimulation.value = false
+
     try {
+      // Validate circuit before simulation
+      const errors = validateCircuit()
+
+      if (errors.length > 0) {
+        console.warn('Circuit validation failed:', errors)
+        isSimulating.value = false
+        return false
+      }
+
+      // Run the simulation
       const solution = await solveDC(currentCircuit.value)
-      dcSolution.value = solution
-      lastDcSolution.value = dcSolution.value
+
+      if (solution) {
+        dcSolution.value = solution
+        lastDcSolution.value = dcSolution.value
+        hasValidSimulation.value = true
+        console.log('DC simulation completed successfully')
+      } else {
+        simulationErrors.value = [
+          'Simulation failed to converge. Check for circuit topology issues.',
+        ]
+        dcSolution.value = null
+        console.error('DC simulation failed to converge')
+      }
     } catch (error) {
       console.error('DC analysis failed:', error)
-      // Restore the last valid solution if the current one fails
-      dcSolution.value = lastDcSolution.value
+      simulationErrors.value = [
+        `Simulation error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      ]
+      dcSolution.value = null
     }
+
+    isSimulating.value = false
+    return hasValidSimulation.value
   }
 
-  watch(
-    () => currentCircuit.value,
-    () => {
-      const interactionStore = useInteractionStore()
-      if (interactionStore.isDraggingComponent) {
-        return
-      }
-      runDCSimulation()
-    },
-    { deep: true },
-  )
+  // Removed automatic simulation watcher - simulation is now explicit
 
-  function startSimulation() {
-    isSimulating.value = true
-    // TODO: Implement actual simulation logic
-    setTimeout(() => {
-      isSimulating.value = false
-      // Mock simulation result for now
-      simulationResults.value = {
-        nodes: [],
-        currents: {},
-        timestamp: Date.now(),
-      }
-    }, 1000)
+  // Main simulation function - now used as the explicit simulation trigger
+  async function startSimulation() {
+    return await runDCSimulation()
   }
 
   function setDcSolution(solution: DC_Result | null) {
@@ -326,6 +404,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     simulationResults,
     dcSolution,
     lastDcSolution,
+    simulationErrors,
+    hasValidSimulation,
 
     // Getters
     singleSelectedItem,
@@ -339,6 +419,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     moveComponent,
     clearCircuit,
     startSimulation,
+    validateCircuit,
     setDcSolution,
     createWire,
     deleteSelectedComponent,

@@ -8,9 +8,30 @@
         <div class="canvas-header">
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
-            <div class="live-simulation-indicator">
-              <div class="simulation-dot"></div>
-              <span>Live Simulation</span>
+            <button
+              class="simulate-button"
+              :class="{
+                simulating: circuitStore.isSimulating,
+                'has-errors': circuitStore.simulationErrors.length > 0,
+                'has-results': circuitStore.hasValidSimulation,
+              }"
+              :disabled="circuitStore.isSimulating"
+              @click="runSimulation"
+            >
+              <Loader2 v-if="circuitStore.isSimulating" class="icon spinning" />
+              <CheckCircle v-else-if="circuitStore.hasValidSimulation" class="icon" />
+              <Play v-else class="icon" />
+              <span v-if="circuitStore.isSimulating">Simulating...</span>
+              <span v-else-if="circuitStore.hasValidSimulation">Re-simulate</span>
+              <span v-else>Simulate</span>
+            </button>
+            <div v-if="circuitStore.simulationErrors.length > 0" class="simulation-errors">
+              <AlertTriangle class="error-icon" />
+              <div class="error-tooltip">
+                <ul>
+                  <li v-for="error in circuitStore.simulationErrors" :key="error">{{ error }}</li>
+                </ul>
+              </div>
             </div>
             <span class="component-count">Components: {{ circuitStore.componentCount }}</span>
             <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
@@ -51,6 +72,7 @@ import { computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import { getComponentDefinition } from '@/registry/components'
+import { Play, CheckCircle, Loader2, AlertTriangle } from 'lucide-vue-next'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
@@ -74,6 +96,10 @@ function itemIsProbe(item: CircuitComponent | Probe | null): item is Probe {
 function getComponentName(componentType: string): string {
   const definition = getComponentDefinition(componentType)
   return definition?.name || componentType
+}
+
+async function runSimulation() {
+  await circuitStore.startSimulation()
 }
 </script>
 
@@ -126,21 +152,109 @@ function getComponentName(componentType: string): string {
   gap: 1rem;
 }
 
-.live-simulation-indicator {
+.simulate-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  color: #28a745;
-  font-weight: 500;
+  font-weight: 600;
+  border: 2px solid #007bff;
+  border-radius: 6px;
+  background: white;
+  color: #007bff;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.simulation-dot {
-  width: 8px;
-  height: 8px;
-  background-color: #28a745;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
+.simulate-button .icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.simulate-button .spinning {
+  animation: spin 1s linear infinite;
+}
+
+.simulate-button:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+}
+
+.simulate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.simulate-button.simulating {
+  border-color: #ffc107;
+  color: #ffc107;
+  animation: pulse 1.5s infinite;
+}
+
+.simulate-button.has-errors {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.simulate-button.has-results {
+  border-color: #28a745;
+  color: #28a745;
+}
+
+.simulation-errors {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.error-icon {
+  width: 20px;
+  height: 20px;
+  color: #dc3545;
+  cursor: pointer;
+}
+
+.error-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  background: #fff;
+  border: 2px solid #dc3545;
+  border-radius: 6px;
+  padding: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 250px;
+  z-index: 1000;
+  display: none;
+}
+
+.simulation-errors:hover .error-tooltip {
+  display: block;
+}
+
+.error-tooltip ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.875rem;
+  color: #dc3545;
+  line-height: 1.4;
+}
+
+.error-tooltip li {
+  margin-bottom: 0.25rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {

@@ -91,6 +91,15 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] **Wire Current Calculation**: Fixed wire current measurements using KCL-based approach instead of voltage differences
 - [x] **All Current Measurement Issues Resolved**: Wire currents now correctly show branch currents, voltage measurements accurate
 
+### Phase 1.87: ✅ COMPLETED - Explicit Simulation with Error Validation
+
+- [x] **Transitioned from Live to Explicit Simulation**: Removed automatic simulation watcher, now requires user-triggered simulation
+- [x] **Comprehensive Circuit Validation**: Pre-simulation checks for ground connections, floating components, invalid properties
+- [x] **Professional Error Reporting**: Clear error messages with hover tooltips showing specific validation issues
+- [x] **Lucide Icon Integration**: Updated simulation button with proper Play/CheckCircle/Loader2 icons and error AlertTriangle
+- [x] **Educational Error Feedback**: Detailed validation helps users understand circuit design requirements
+- [x] **Simulation State Management**: Clear success/error/loading states with visual feedback
+
 ### Phase 1.9: UX improvements
 
 - [x] Add rotation handle to components when selected so they can be directly rotated
