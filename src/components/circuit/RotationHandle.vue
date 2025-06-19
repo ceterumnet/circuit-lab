@@ -163,16 +163,16 @@ const emit = defineEmits<Emits>()
 // Handle positioning - place it at a fixed distance from the component
 const handleDistance = 50
 const snapGuideLength = 40
-const handlePosition = computed(() => {
-  // If dragging, use the drag position, otherwise use the default position
-  if (isDragging.value && dragPosition.value) {
-    return dragPosition.value
-  }
+// Handle offset angle relative to component (always 45° to the top-right)
+const handleOffsetAngle = -Math.PI / 4 // -45° in radians
 
-  // Position the handle above and to the right of the component
+const handlePosition = computed(() => {
+  // Calculate handle position based on component rotation + handle offset
+  const totalAngle = (props.component.rotation * Math.PI) / 180 + handleOffsetAngle
+
   return {
-    x: props.component.position.x + handleDistance * Math.cos(-Math.PI / 4),
-    y: props.component.position.y + handleDistance * Math.sin(-Math.PI / 4),
+    x: props.component.position.x + handleDistance * Math.cos(totalAngle),
+    y: props.component.position.y + handleDistance * Math.sin(totalAngle),
   }
 })
 
@@ -182,11 +182,11 @@ const snapPreviewPosition = computed(() => {
 
   const currentRotation = props.component.rotation
   const snappedAngle = Math.round(currentRotation / 90) * 90
-  const angleInRadians = (snappedAngle * Math.PI) / 180
+  const totalAngle = (snappedAngle * Math.PI) / 180 + handleOffsetAngle
 
   return {
-    x: props.component.position.x + handleDistance * Math.cos(angleInRadians),
-    y: props.component.position.y + handleDistance * Math.sin(angleInRadians),
+    x: props.component.position.x + handleDistance * Math.cos(totalAngle),
+    y: props.component.position.y + handleDistance * Math.sin(totalAngle),
   }
 })
 
@@ -201,7 +201,8 @@ const isDragging = ref(false)
 const dragPosition = ref<Position | null>(null)
 const initialRotation = ref(0)
 const dragStartPosition = ref<Position | null>(null)
-const initialAngle = ref(0)
+const initialGrabAngle = ref(0) // Angle from component to where user grabbed
+const initialHandleAngle = ref(0) // Angle of handle relative to component rotation
 const hasStartedRotating = ref(false)
 
 function handleDragStart(e: KonvaEventObject<DragEvent>) {
@@ -217,10 +218,13 @@ function handleDragStart(e: KonvaEventObject<DragEvent>) {
       dragStartPosition.value = pointer
       dragPosition.value = pointer
 
-      // Calculate the initial angle from component center to handle position
+      // Calculate where the user grabbed relative to component center
       const dx = pointer.x - props.component.position.x
       const dy = pointer.y - props.component.position.y
-      initialAngle.value = Math.atan2(dy, dx) * (180 / Math.PI)
+      initialGrabAngle.value = Math.atan2(dy, dx) * (180 / Math.PI)
+
+      // The handle has a fixed offset angle relative to the component rotation
+      initialHandleAngle.value = (handleOffsetAngle * 180) / Math.PI // Convert to degrees
     }
   }
 }
@@ -234,7 +238,7 @@ function handleDragMove(e: KonvaEventObject<DragEvent>) {
   const pointer = stage.getPointerPosition()
   if (!pointer || !dragStartPosition.value) return
 
-  // Store the current drag position for line rendering
+  // Store the current drag position for line rendering (raw mouse position)
   dragPosition.value = pointer
 
   // Only start rotating after a minimum drag distance to avoid jumps
@@ -253,20 +257,20 @@ function handleDragMove(e: KonvaEventObject<DragEvent>) {
   // Calculate current angle from component center to current mouse position
   const dx = pointer.x - props.component.position.x
   const dy = pointer.y - props.component.position.y
-  const currentAngle = Math.atan2(dy, dx) * (180 / Math.PI)
+  const currentMouseAngle = Math.atan2(dy, dx) * (180 / Math.PI)
 
-  // Calculate the change in angle from the initial grab position
-  let angleDelta = currentAngle - initialAngle.value
+  // Calculate how much the mouse has moved angularly from the initial grab
+  let mouseAngleDelta = currentMouseAngle - initialGrabAngle.value
 
   // Handle angle wraparound (e.g., from 350° to 10°)
-  if (angleDelta > 180) {
-    angleDelta -= 360
-  } else if (angleDelta < -180) {
-    angleDelta += 360
+  if (mouseAngleDelta > 180) {
+    mouseAngleDelta -= 360
+  } else if (mouseAngleDelta < -180) {
+    mouseAngleDelta += 360
   }
 
-  // Apply the angle change to the initial rotation
-  const newRotation = initialRotation.value + angleDelta
+  // The component should rotate by the same amount the mouse moved around the circle
+  const newRotation = initialRotation.value + mouseAngleDelta
 
   // Normalize to 0-360 range
   const normalizedAngle = ((newRotation % 360) + 360) % 360
@@ -293,7 +297,8 @@ function handleDragEnd() {
   isDragging.value = false
   dragPosition.value = null
   dragStartPosition.value = null
-  initialAngle.value = 0
+  initialGrabAngle.value = 0
+  initialHandleAngle.value = 0
   hasStartedRotating.value = false
 }
 
