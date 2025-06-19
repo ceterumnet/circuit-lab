@@ -171,12 +171,18 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
     return // Don't process other mouse move logic during marquee
   }
 
-  // Handle wire preview during creation
+  // Handle wire preview during creation (both click-based and drag-based)
   if (interactionStore.wireCreationState.isActive) {
     const pos = stage.getPointerPosition()
     if (pos) {
       const worldPos = screenToWorld(pos)
-      interactionStore.updateWirePreview(worldPos)
+
+      // Use different update functions based on whether we're dragging or clicking
+      if (interactionStore.wireCreationState.isDragging) {
+        interactionStore.updateWireDrag(worldPos)
+      } else {
+        interactionStore.updateWirePreview(worldPos)
+      }
     }
   }
 }
@@ -184,6 +190,18 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
 function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
+
+  // NEW: Handle wire drag completion on empty space
+  if (interactionStore.wireCreationState.isDragging) {
+    const worldPos = screenToWorld(stage.getPointerPosition()!)
+    const snappedPos = {
+      x: Math.round(worldPos.x / gridSize) * gridSize,
+      y: Math.round(worldPos.y / gridSize) * gridSize,
+    }
+    // Complete wire drag to position (creates node)
+    interactionStore.finishWireDrag()
+    return
+  }
 
   // Marquee selection logic
   if (selectionBox.value.visible) {
@@ -248,14 +266,6 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
       })
     }
   }
-
-  // Dragging logic
-  // This logic is now handled exclusively by handleComponentMoveEnd to avoid race conditions
-  // if (interactionStore.isDraggingComponent) {
-  //   interactionStore.setDraggingComponent(false)
-  //   dragTarget.value = null
-  //   dragStartPositions.value.clear()
-  // }
 }
 
 function handleComponentSelect(componentId: string, e: KonvaEventObject<MouseEvent>) {
@@ -467,6 +477,12 @@ function handleWireMouseUp(wireId: string, e: KonvaEventObject<MouseEvent>) {
 function handleTerminalClick(terminalId: string, componentId: string) {
   console.log(`[CircuitCanvas] handleTerminalClick received for component: ${componentId}`)
 
+  // NEW: Prevent click events immediately after completing a wire drag
+  if (interactionStore.justCompletedWireDrag) {
+    console.log(`[CircuitCanvas] Ignoring click - just completed wire drag`)
+    return
+  }
+
   // NEW: Only handle wiring when Ctrl key is held
   if (!interactionStore.isCtrlKeyHeld) {
     // Without Ctrl key, terminal clicks should select the component instead
@@ -483,6 +499,36 @@ function handleTerminalClick(terminalId: string, componentId: string) {
     // Start wire creation only when Ctrl is held
     interactionStore.startWireCreation(terminalId, componentId)
   }
+}
+
+// NEW: Handle terminal mousedown for drag-based wire creation
+function handleTerminalMouseDown(terminalId: string, componentId: string) {
+  console.log(`[CircuitCanvas] handleTerminalMouseDown received for component: ${componentId}`)
+
+  // Only start wire drag when Ctrl key is held
+  if (!interactionStore.isCtrlKeyHeld) {
+    // Without Ctrl, let normal component selection/dragging happen
+    return
+  }
+
+  // With Ctrl key held, start wire drag
+  interactionStore.startWireDrag(terminalId, componentId)
+
+  // Prevent component dragging while wire dragging
+  interactionStore.setDraggingComponent(false)
+}
+
+// NEW: Handle terminal mouseup for completing drag-based wire creation
+function handleTerminalMouseUp(terminalId: string, componentId: string) {
+  console.log(`[CircuitCanvas] handleTerminalMouseUp received for component: ${componentId}`)
+
+  // Only handle if we're actively dragging a wire
+  if (!interactionStore.wireCreationState.isDragging) {
+    return
+  }
+
+  // Complete the wire drag to this terminal
+  interactionStore.finishWireDrag(terminalId, componentId)
 }
 
 function handleKeyUp(e: KeyboardEvent) {
@@ -672,6 +718,8 @@ watch(
           @select="handleComponentSelect"
           @move-start="handleComponentMoveStart"
           @terminal-click="handleTerminalClick"
+          @terminal-mousedown="handleTerminalMouseDown"
+          @terminal-mouseup="handleTerminalMouseUp"
           @wire-mouseenter="handleWireMouseEnter"
           @wire-mouseleave="handleWireMouseLeave"
           @wire-mouseup="handleWireMouseUp"
@@ -688,6 +736,8 @@ watch(
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
           @terminal-click="handleTerminalClick"
+          @terminal-mousedown="handleTerminalMouseDown"
+          @terminal-mouseup="handleTerminalMouseUp"
         />
 
         <!-- Other components (rendered on top of wires) -->
@@ -700,6 +750,8 @@ watch(
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
           @terminal-click="handleTerminalClick"
+          @terminal-mousedown="handleTerminalMouseDown"
+          @terminal-mouseup="handleTerminalMouseUp"
           @wire-probe="handleProbePlacement"
         />
 

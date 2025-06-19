@@ -9,6 +9,8 @@
       @dragmove="handleDragMove"
       @dragend="handleDragEnd"
       @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
     />
 
     <!-- Voltage source component -->
@@ -20,6 +22,8 @@
       @dragmove="handleDragMove"
       @dragend="handleDragEnd"
       @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
     />
 
     <!-- Ground component -->
@@ -31,6 +35,8 @@
       @dragmove="handleDragMove"
       @dragend="handleDragEnd"
       @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
     />
 
     <!-- Node component -->
@@ -42,6 +48,8 @@
       @dragmove="handleDragMove"
       @dragend="handleDragEnd"
       @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
     />
 
     <!-- Wire component -->
@@ -82,6 +90,8 @@ interface Emits {
   (e: 'move', componentId: string, position: Position): void
   (e: 'move-end', componentId: string, position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mouseup', terminalId: string, componentId: string, position: Position): void
   (e: 'wire-probe', componentId: string, event: KonvaEventObject<MouseEvent>): void
   (e: 'wire-delete', wireId: string): void
   (e: 'wire-mouseenter', componentId: string, event: KonvaEventObject<MouseEvent>): void
@@ -140,13 +150,13 @@ const wireEndPosition = computed(() => {
 function handleClick(e: KonvaEventObject<MouseEvent>) {
   // If we are in a probing mode and click a wire, place a probe.
   if (interactionStore.probingType && props.component.type === 'wire') {
-    e.cancelBubble = true;
-    emit('wire-probe', props.component.id, e);
-    return;
+    e.cancelBubble = true
+    emit('wire-probe', props.component.id, e)
+    return
   }
 
   // Otherwise, handle component selection.
-  emit('select', props.component.id, e);
+  emit('select', props.component.id, e)
 }
 
 function handleSelect(event: KonvaEventObject<MouseEvent>) {
@@ -174,6 +184,22 @@ function handleTerminalClick(terminalId: string, componentId: string, position: 
     `[CircuitComponent] handleTerminalClick received from ${componentId}. Emitting up to CircuitCanvas.`,
   )
   emit('terminal-click', terminalId, componentId, position)
+}
+
+// NEW: Handle terminal mousedown events for drag-based wire creation
+function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
+  console.log(
+    `[CircuitComponent] handleTerminalMouseDown received from ${componentId}. Emitting up to CircuitCanvas.`,
+  )
+  emit('terminal-mousedown', terminalId, componentId, position)
+}
+
+// NEW: Handle terminal mouseup events for drag-based wire creation
+function handleTerminalMouseUp(terminalId: string, componentId: string, position: Position) {
+  console.log(
+    `[CircuitComponent] handleTerminalMouseUp received from ${componentId}. Emitting up to CircuitCanvas.`,
+  )
+  emit('terminal-mouseup', terminalId, componentId, position)
 }
 
 function handleWireDelete() {

@@ -15,8 +15,12 @@ export const useInteractionStore = defineStore('interaction', () => {
   // NEW: Ctrl key state for modifier-based wiring
   const isCtrlKeyHeld = ref(false)
 
+  // NEW: Flag to prevent click events immediately after wire drag completion
+  const justCompletedWireDrag = ref(false)
+
   const wireCreationState = ref<{
     isActive: boolean
+    isDragging: boolean
     startTerminal: {
       terminalId: string
       componentId: string
@@ -25,6 +29,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     previewPosition: Position | null
   }>({
     isActive: false,
+    isDragging: false,
     startTerminal: null,
     previewPosition: null,
   })
@@ -110,6 +115,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   function cancelWireCreation() {
     wireCreationState.value = {
       isActive: false,
+      isDragging: false,
       startTerminal: null,
       previewPosition: null,
     }
@@ -124,6 +130,7 @@ export const useInteractionStore = defineStore('interaction', () => {
 
       wireCreationState.value = {
         isActive: true,
+        isDragging: false,
         startTerminal: { terminalId, componentId, position: worldPosition },
         previewPosition: worldPosition,
       }
@@ -185,6 +192,55 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
+  // NEW: Functions for drag-based wire creation
+  function startWireDrag(terminalId: string, componentId: string) {
+    const circuitStore = useCircuitStore()
+    const component = circuitStore.currentCircuit.components.find((c) => c.id === componentId)
+    if (component) {
+      const worldPosition = getTerminalWorldPosition(component, terminalId)
+
+      wireCreationState.value = {
+        isActive: true,
+        isDragging: true, // This is now a drag operation
+        startTerminal: { terminalId, componentId, position: worldPosition },
+        previewPosition: worldPosition,
+      }
+    }
+  }
+
+  function updateWireDrag(position: Position) {
+    if (wireCreationState.value.isActive && wireCreationState.value.isDragging) {
+      wireCreationState.value.previewPosition = position
+    }
+  }
+
+  function finishWireDrag(terminalId?: string, componentId?: string) {
+    if (!wireCreationState.value.isActive || !wireCreationState.value.isDragging) {
+      cancelWireCreation()
+      return
+    }
+
+    // Set flag to prevent immediate click events
+    justCompletedWireDrag.value = true
+
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      justCompletedWireDrag.value = false
+    }, 100)
+
+    // If we have a target terminal, connect to it
+    if (terminalId && componentId) {
+      finishWireCreation(terminalId, componentId)
+    } else {
+      // Otherwise, create a node at the current preview position
+      if (wireCreationState.value.previewPosition) {
+        finishWireCreationToPosition(wireCreationState.value.previewPosition)
+      } else {
+        cancelWireCreation()
+      }
+    }
+  }
+
   return {
     // State
     selectedComponentIds,
@@ -196,6 +252,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     canvasTransform,
     isDraggingComponent,
     isCtrlKeyHeld,
+    justCompletedWireDrag,
     // Actions
     setDraggingComponent,
     setCtrlKeyHeld,
@@ -213,5 +270,8 @@ export const useInteractionStore = defineStore('interaction', () => {
     updateWirePreview,
     finishWireCreation,
     finishWireCreationToPosition,
+    startWireDrag,
+    updateWireDrag,
+    finishWireDrag,
   }
 })

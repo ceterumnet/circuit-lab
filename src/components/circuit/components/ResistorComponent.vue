@@ -41,6 +41,8 @@
       :position="componentDefinition.terminals[0].position"
       :component-id="component.id"
       @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
     />
     <circuit-terminal
       v-if="componentDefinition"
@@ -48,6 +50,8 @@
       :position="componentDefinition.terminals[1].position"
       :component-id="component.id"
       @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
     />
 
     <!-- Component label -->
@@ -93,6 +97,8 @@ interface Emits {
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mouseup', terminalId: string, componentId: string, position: Position): void
 }
 
 const props = defineProps<Props>()
@@ -183,6 +189,15 @@ function handleDragEnd(e: { target: { x(): number; y(): number } }) {
 
 function handleTerminalClick(terminalId: string, componentId: string, position: Position) {
   emit('terminal-click', terminalId, componentId, position)
+}
+
+// NEW: Handle terminal mouse events for drag-based wire creation
+function handleTerminalMouseDown(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-mousedown', terminalId, componentId, position)
+}
+
+function handleTerminalMouseUp(terminalId: string, componentId: string, position: Position) {
+  emit('terminal-mouseup', terminalId, componentId, position)
 }
 
 function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {

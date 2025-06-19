@@ -10,6 +10,8 @@
       draggable: false,
     }"
     @click="handleClick"
+    @mousedown="handleMouseDown"
+    @mouseup="handleMouseUp"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   />
@@ -31,6 +33,8 @@ interface Props {
 interface Emits {
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
   (e: 'terminal-hover', terminalId: string, componentId: string, isHovered: boolean): void
+  (e: 'terminal-mousedown', terminalId: string, componentId: string, position: Position): void
+  (e: 'terminal-mouseup', terminalId: string, componentId: string, position: Position): void
 }
 
 const props = defineProps<Props>()
@@ -95,6 +99,24 @@ function handleClick(e: KonvaEventObject<MouseEvent>) {
   // Prevent component selection by stopping the event from bubbling to the parent group.
   e.cancelBubble = true
   emit('terminal-click', props.terminalId, props.componentId, props.position)
+}
+
+// NEW: Handle mousedown for drag-based wire creation
+function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
+  console.log(
+    `[CircuitTerminal] handleMouseDown fired for component: ${props.componentId}, terminal: ${props.terminalId}`,
+  )
+  e.cancelBubble = true
+  emit('terminal-mousedown', props.terminalId, props.componentId, props.position)
+}
+
+// NEW: Handle mouseup for completing drag-based wire creation
+function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
+  console.log(
+    `[CircuitTerminal] handleMouseUp fired for component: ${props.componentId}, terminal: ${props.terminalId}`,
+  )
+  e.cancelBubble = true
+  emit('terminal-mouseup', props.terminalId, props.componentId, props.position)
 }
 
 function handleMouseEnter() {
