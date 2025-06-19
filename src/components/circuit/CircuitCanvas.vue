@@ -67,7 +67,7 @@ const nodes = computed(() =>
 const otherComponents = computed(() =>
   circuitStore.currentCircuit.components.filter((c) => c.type !== 'wire' && c.type !== 'node'),
 )
-const probes = computed(() => circuitStore.currentCircuit.probes);
+const probes = computed(() => circuitStore.currentCircuit.probes)
 
 // Computed property for placement cursor
 const placementCursor = computed(() => {
@@ -409,16 +409,33 @@ function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
   }
 }
 
-function handleWireMouseEnter(_componentId: string, _event: KonvaEventObject<MouseEvent>) {
-  // TODO: Implement this
+function handleWireMouseEnter(componentId: string, _event: KonvaEventObject<MouseEvent>) {
+  if (interactionStore.wireCreationState.isActive) {
+    interactionStore.setHoveredWire(componentId)
+  }
 }
 
 function handleWireMouseLeave(_componentId: string, _event: KonvaEventObject<MouseEvent>) {
-  // TODO: Implement this
+  interactionStore.setHoveredWire(null)
 }
 
-function handleWireMouseUp(_componentId: string, _event: KonvaEventObject<MouseEvent>) {
-  // TODO: Implement this
+function handleWireMouseUp(wireId: string, e: KonvaEventObject<MouseEvent>) {
+  if (!interactionStore.wireCreationState.isActive) return
+
+  const stage = e.target.getStage()
+  if (!stage) return
+
+  const startTerminal = interactionStore.wireCreationState.startTerminal
+  if (!startTerminal) return
+
+  const worldPos = screenToWorld(stage.getPointerPosition()!)
+  const snappedPos = {
+    x: Math.round(worldPos.x / gridSize) * gridSize,
+    y: Math.round(worldPos.y / gridSize) * gridSize,
+  }
+
+  circuitStore.splitWireAndConnect(wireId, snappedPos, startTerminal)
+  interactionStore.cancelWireCreation()
 }
 
 function handleTerminalClick(terminalId: string, componentId: string) {
@@ -452,27 +469,27 @@ function handleStageDblClick() {
 }
 
 function handleProbePlacement(targetId: string, e: KonvaEventObject<MouseEvent>) {
-  const probeType = interactionStore.probingType;
-  if (!probeType) return;
+  const probeType = interactionStore.probingType
+  if (!probeType) return
 
-  const stage = e.target.getStage();
-  if (!stage) return;
+  const stage = e.target.getStage()
+  if (!stage) return
 
-  const pointerPosition = stage.getPointerPosition();
-  if (!pointerPosition) return;
+  const pointerPosition = stage.getPointerPosition()
+  if (!pointerPosition) return
 
-  const position = screenToWorld(pointerPosition);
+  const position = screenToWorld(pointerPosition)
 
-  circuitStore.addProbe(targetId, position, probeType);
+  circuitStore.addProbe(targetId, position, probeType)
 }
 
 function handleProbeSelect(probeId: string, e: KonvaEventObject<MouseEvent>) {
-  interactionStore.selectComponent(probeId, e.evt.shiftKey);
+  interactionStore.selectComponent(probeId, e.evt.shiftKey)
 }
 
 function handleProbeMoveEnd(probeId: string, e: KonvaEventObject<DragEvent>) {
-  const newPosition = { x: e.target.x(), y: e.target.y() };
-  circuitStore.updateProbePosition(probeId, newPosition);
+  const newPosition = { x: e.target.x(), y: e.target.y() }
+  circuitStore.updateProbePosition(probeId, newPosition)
 }
 
 // Lifecycle hooks

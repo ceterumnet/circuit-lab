@@ -20,8 +20,8 @@
     <v-path
       :config="{
         data: wirePathData,
-        stroke: isHovered ? '#00e500' : (component.selected ? '#ff4d4d' : '#333'),
-        strokeWidth: isHovered ? 4 : (component.selected ? 3 : 2),
+        stroke: isHovered ? '#007bff' : component.selected ? '#ff4d4d' : '#333',
+        strokeWidth: isHovered ? 4 : component.selected ? 3 : 2,
         lineCap: 'round',
         lineJoin: 'round',
         listening: false,
@@ -60,7 +60,10 @@ const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
 
 const isHovered = computed(() => {
-  return interactionStore.wireCreationState.isActive && interactionStore.hoveredWireId === props.component.id
+  return (
+    interactionStore.wireCreationState.isActive &&
+    interactionStore.hoveredWireId === props.component.id
+  )
 })
 
 const allIntersections = computed(() => {
@@ -69,10 +72,12 @@ const allIntersections = computed(() => {
 
 const intersections = computed(() => {
   const allHops = allIntersections.value.get(props.component.id) || []
-  return allHops.filter(hop => {
+  return allHops.filter((hop) => {
     for (const [wireId, hops] of allIntersections.value.entries()) {
       if (wireId === props.component.id) continue
-      const hasSameHop = hops.some(h => Math.abs(h.x - hop.x) < 1e-6 && Math.abs(h.y - hop.y) < 1e-6)
+      const hasSameHop = hops.some(
+        (h) => Math.abs(h.x - hop.x) < 1e-6 && Math.abs(h.y - hop.y) < 1e-6,
+      )
       if (hasSameHop) {
         return props.component.id < wireId
       }
@@ -125,7 +130,7 @@ const wirePathData = computed(() => {
   let path = `M ${start.x} ${start.y}`
 
   for (const hopCenter of sortedHops) {
-    const distFromStart = Math.sqrt((hopCenter.x - start.x)**2 + (hopCenter.y - start.y)**2)
+    const distFromStart = Math.sqrt((hopCenter.x - start.x) ** 2 + (hopCenter.y - start.y) ** 2)
     const distFromEnd = length - distFromStart
 
     // Don't draw a hop if it's too close to an endpoint
@@ -155,8 +160,8 @@ const wirePathData = computed(() => {
 })
 
 function handleClick(e: KonvaEventObject<MouseEvent>) {
-  if (interactionStore.isProbing) {
-    emit('probe', e);
+  if (interactionStore.probingType) {
+    emit('probe', e)
   } else {
     emit('select', e)
   }
