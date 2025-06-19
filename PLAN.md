@@ -93,6 +93,7 @@ Building a web-based circuit simulation application focused on educational purpo
 
 ### Phase 1.9: UX improvements
 
+- [x] Add rotation handle to components when selected so they can be directly rotated
 - [ ] Implement Copy and Paste for single and multiple selected components. We will have to deal with things like labels and IDs.
 - [ ] Undo / Redo
 - [ ] It is a pain every time I need to create a bunch of components to do regression and validation. We either need:

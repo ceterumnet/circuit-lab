@@ -4,6 +4,7 @@ import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import ProbeComponent from '@/components/circuit/probes/ProbeComponent.vue'
+import RotationHandle from '@/components/circuit/RotationHandle.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
 import { screenToWorld } from '@/services/coordinates'
@@ -68,6 +69,19 @@ const otherComponents = computed(() =>
   circuitStore.currentCircuit.components.filter((c) => c.type !== 'wire' && c.type !== 'node'),
 )
 const probes = computed(() => circuitStore.currentCircuit.probes)
+
+// Computed property for single selected component (for rotation handle)
+const singleSelectedComponent = computed(() => {
+  const selected = interactionStore.selectedComponentIds
+  if (selected.length === 1) {
+    const component = circuitStore.currentCircuit.components.find((c) => c.id === selected[0])
+    // Only show rotation handle for non-wire components
+    if (component && component.type !== 'wire') {
+      return component
+    }
+  }
+  return null
+})
 
 // Computed property for placement cursor
 const placementCursor = computed(() => {
@@ -705,6 +719,10 @@ function handleGlobalMouseUp(e: MouseEvent) {
   }
 }
 
+function handleComponentRotate(componentId: string, rotation: number) {
+  circuitStore.updateComponent(componentId, { rotation })
+}
+
 // Lifecycle hooks
 onMounted(() => {
   if (!containerRef.value) return
@@ -920,6 +938,13 @@ watch(
           :probe="probe"
           @select="handleProbeSelect"
           @dragend="handleProbeMoveEnd"
+        />
+
+        <!-- Rotation Handle (shown when single component is selected) -->
+        <rotation-handle
+          v-if="singleSelectedComponent"
+          :component="singleSelectedComponent"
+          @rotate="handleComponentRotate"
         />
 
         <!-- Selection Rectangle -->
