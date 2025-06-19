@@ -96,6 +96,9 @@ const globalKeyHandlers = ref<{
 // Mouse interaction state
 const dragTarget = ref<string | null>(null)
 const isPanning = ref(false)
+const isMiddleMousePanning = ref(false)
+const panStartPosition = ref({ x: 0, y: 0 })
+const panStartTransform = ref({ x: 0, y: 0, scale: 1 })
 const dragStartPointerPosition = ref({ x: 0, y: 0 })
 const dragStartPositions = ref<Map<string, { x: number; y: number }>>(new Map())
 const selectionBox = ref({
@@ -133,13 +136,30 @@ function handleStageWheel(e: KonvaEventObject<WheelEvent>) {
 }
 
 function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
-  // Prevent component placement/deselection when finishing a pan or middle clicking
-  if (isPanning.value || e.evt.button === 1) {
+  const stage = e.target.getStage()
+  if (!stage) return
+
+  // Handle middle click to start panning
+  if (e.evt.button === 1) {
+    e.evt.preventDefault()
+    isMiddleMousePanning.value = true
+    const pointer = stage.getPointerPosition()
+    if (pointer) {
+      panStartPosition.value = { x: pointer.x, y: pointer.y }
+      panStartTransform.value = {
+        x: interactionStore.canvasTransform.position.x,
+        y: interactionStore.canvasTransform.position.y,
+        scale: interactionStore.canvasTransform.scale,
+      }
+    }
+    stage.container().style.cursor = 'grabbing'
     return
   }
 
-  const stage = e.target.getStage()
-  if (!stage) return
+  // Prevent component placement/deselection when finishing a pan
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
 
   // Check if we clicked on the background
   const isBackground = e.target === stage || e.target.name() === 'grid-background'
@@ -162,6 +182,23 @@ function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
 function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
+
+  // Handle middle mouse panning
+  if (isMiddleMousePanning.value) {
+    const pointer = stage.getPointerPosition()
+    if (pointer) {
+      const dx = pointer.x - panStartPosition.value.x
+      const dy = pointer.y - panStartPosition.value.y
+
+      const newPosition = {
+        x: panStartTransform.value.x + dx,
+        y: panStartTransform.value.y + dy,
+      }
+
+      interactionStore.setCanvasTransform(panStartTransform.value.scale, newPosition)
+    }
+    return
+  }
 
   // Update selection box
   if (selectionBox.value.visible) {
@@ -190,6 +227,14 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
 function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
+
+  // Handle middle click release to stop panning
+  if (e.evt.button === 1 && isMiddleMousePanning.value) {
+    e.evt.preventDefault()
+    isMiddleMousePanning.value = false
+    stage.container().style.cursor = 'default'
+    return
+  }
 
   // NEW: Handle wire drag completion on empty space
   if (interactionStore.wireCreationState.isDragging) {
@@ -402,6 +447,15 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
 function handleContextMenu() {
   // Cancel current action on right click
   interactionStore.cancelWireCreation()
+
+  // Stop middle mouse panning if active
+  if (isMiddleMousePanning.value) {
+    isMiddleMousePanning.value = false
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      stage.container().style.cursor = 'default'
+    }
+  }
 }
 
 function handleKeyDown(e: KeyboardEvent) {
@@ -440,6 +494,7 @@ function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
   if (isPanning.value) {
     const stage = e.target.getStage()
     if (stage) {
+      stage.container().style.cursor = 'grabbing'
       interactionStore.setCanvasTransform(stage.scaleX(), stage.position())
     }
   }
