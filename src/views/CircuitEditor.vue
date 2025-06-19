@@ -8,13 +8,13 @@
         <div class="canvas-header">
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
-            <button class="simulate-button" @click="runSimulation">▶️ Simulate</button>
-            <span class="component-count"> Components: {{ circuitStore.componentCount }} </span>
+            <div class="live-simulation-indicator">
+              <div class="simulation-dot"></div>
+              <span>Live Simulation</span>
+            </div>
+            <span class="component-count">Components: {{ circuitStore.componentCount }}</span>
             <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
               🔌 Click to complete wire
-            </span>
-            <span v-if="circuitStore.isSimulating" class="simulation-status">
-              🔄 Simulating...
             </span>
           </div>
         </div>
@@ -30,10 +30,7 @@
           v-if="itemIsComponent(singleSelectedItem)"
           :component="singleSelectedItem"
         />
-        <probe-properties
-          v-else-if="itemIsProbe(singleSelectedItem)"
-          :probe="singleSelectedItem"
-        />
+        <probe-properties v-else-if="itemIsProbe(singleSelectedItem)" :probe="singleSelectedItem" />
         <div v-else-if="interactionStore.selectedComponentIds.length > 1" class="no-selection">
           <p>{{ interactionStore.selectedComponentIds.length }} items selected</p>
           <p>Editing multiple items at once is not yet supported.</p>
@@ -55,7 +52,6 @@ import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
 import ProbeProperties from '@/components/circuit/probes/ProbeProperties.vue'
-import { solveDC } from '@/services/simulation'
 import type { CircuitComponent, Probe } from '@/types/components'
 
 const circuitStore = useCircuitStore()
@@ -69,12 +65,6 @@ function itemIsComponent(item: CircuitComponent | Probe | null): item is Circuit
 
 function itemIsProbe(item: CircuitComponent | Probe | null): item is Probe {
   return !!(item && 'targetId' in item)
-}
-
-async function runSimulation() {
-  const results = await solveDC(circuitStore.currentCircuit)
-  circuitStore.setDcSolution(results)
-  console.log('Simulation Results:', results)
 }
 </script>
 
@@ -127,31 +117,38 @@ async function runSimulation() {
   gap: 1rem;
 }
 
-.simulate-button {
-  padding: 0.5rem 1rem;
+.live-simulation-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.875rem;
+  color: #28a745;
   font-weight: 500;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
 }
 
-.simulate-button:hover {
-  background-color: #218838;
+.simulation-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #28a745;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .component-count {
   font-size: 0.875rem;
   color: #6c757d;
-}
-
-.simulation-status {
-  font-size: 0.875rem;
-  color: #28a745;
-  font-weight: 500;
 }
 
 .wiring-mode {

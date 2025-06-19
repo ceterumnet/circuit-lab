@@ -1,6 +1,6 @@
 import { ComponentRegistry, type ComponentDefinition } from '@/types/components'
 
-// Register basic components
+// Register basic components with professional schematic symbols
 const resistorDefinition: ComponentDefinition = {
   type: 'resistor',
   name: 'Resistor',
@@ -8,12 +8,12 @@ const resistorDefinition: ComponentDefinition = {
   complexity: 'simple',
   terminals: [
     { id: 'terminal1', position: { x: -30, y: 0 }, type: 'io' },
-    { id: 'terminal2', position: { x: 30, y: 0 }, type: 'io' }
+    { id: 'terminal2', position: { x: 30, y: 0 }, type: 'io' },
   ],
   properties: [
-    { key: 'resistance', type: 'number', label: 'Resistance', unit: 'Ω', default: 1000 }
+    { key: 'resistance', type: 'number', label: 'Resistance', unit: 'Ω', default: 1000 },
   ],
-  icon: '⚡'
+  icon: 'ResistorSymbol', // Professional zigzag resistor symbol
 }
 
 const voltageSourceDefinition: ComponentDefinition = {
@@ -23,25 +23,20 @@ const voltageSourceDefinition: ComponentDefinition = {
   complexity: 'simple',
   terminals: [
     { id: 'positive', position: { x: 0, y: -30 }, type: 'power', label: '+' },
-    { id: 'negative', position: { x: 0, y: 30 }, type: 'ground', label: '-' }
+    { id: 'negative', position: { x: 0, y: 30 }, type: 'power', label: '-' },
   ],
-  properties: [
-    { key: 'voltage', type: 'number', label: 'Voltage', unit: 'V', default: 5 },
-    { key: 'sourceType', type: 'select', label: 'Type', default: 'dc', options: ['dc', 'ac', 'pulse'] }
-  ],
-  icon: '🔋'
+  properties: [{ key: 'voltage', type: 'number', label: 'Voltage', unit: 'V', default: 5 }],
+  icon: 'VoltageSourceSymbol', // Professional circle with polarity markings
 }
 
 const groundDefinition: ComponentDefinition = {
   type: 'ground',
   name: 'Ground',
-  category: 'power',
+  category: 'connection',
   complexity: 'simple',
-  terminals: [
-    { id: 'terminal', position: { x: 0, y: -15 }, type: 'ground' }
-  ],
+  terminals: [{ id: 'terminal', position: { x: 0, y: -15 }, type: 'power' }],
   properties: [],
-  icon: '🔌'
+  icon: 'GroundSymbol', // Standard ground symbol with decreasing lines
 }
 
 const nodeDefinition: ComponentDefinition = {
@@ -49,11 +44,9 @@ const nodeDefinition: ComponentDefinition = {
   name: 'Node',
   category: 'connection',
   complexity: 'simple',
-  terminals: [
-    { id: 'terminal', position: { x: 0, y: 0 }, type: 'io' }
-  ],
-  properties: [],
-  // No icon means it won't be rendered in the palette
+  terminals: [{ id: 'terminal', position: { x: 0, y: 0 }, type: 'io' }],
+  properties: [{ key: 'label', type: 'string', label: 'Label', default: '' }],
+  icon: 'NodeSymbol', // Simple filled circle for wire junctions
 }
 
 const wireDefinition: ComponentDefinition = {
@@ -61,9 +54,12 @@ const wireDefinition: ComponentDefinition = {
   name: 'Wire',
   category: 'connection',
   complexity: 'simple',
-  terminals: [], // Wires don't have fixed terminals
-  properties: [],
-  icon: '➖'
+  terminals: [
+    { id: 'start', position: { x: -20, y: 0 }, type: 'io' },
+    { id: 'end', position: { x: 20, y: 0 }, type: 'io' },
+  ],
+  properties: [{ key: 'resistance', type: 'number', label: 'Resistance', unit: 'Ω', default: 0 }],
+  icon: 'WireSymbol', // Line with connection points to show wire connectivity
 }
 
 // Register all components
@@ -79,7 +75,7 @@ export {
   voltageSourceDefinition,
   groundDefinition,
   nodeDefinition,
-  wireDefinition
+  wireDefinition,
 }
 
 // Utility functions
@@ -92,5 +88,7 @@ export function getAllComponents(): ComponentDefinition[] {
 }
 
 export function getComponentsByCategory(category: string): ComponentDefinition[] {
-  return getAllComponents().filter(comp => comp.category === category)
+  return Array.from(ComponentRegistry.values()).filter(
+    (component) => component.category === category,
+  )
 }
