@@ -136,30 +136,13 @@ function handleStageWheel(e: KonvaEventObject<WheelEvent>) {
 }
 
 function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
-  const stage = e.target.getStage()
-  if (!stage) return
-
-  // Handle middle click to start panning
-  if (e.evt.button === 1) {
-    e.evt.preventDefault()
-    isMiddleMousePanning.value = true
-    const pointer = stage.getPointerPosition()
-    if (pointer) {
-      panStartPosition.value = { x: pointer.x, y: pointer.y }
-      panStartTransform.value = {
-        x: interactionStore.canvasTransform.position.x,
-        y: interactionStore.canvasTransform.position.y,
-        scale: interactionStore.canvasTransform.scale,
-      }
-    }
-    stage.container().style.cursor = 'grabbing'
-    return
-  }
-
   // Prevent component placement/deselection when finishing a pan
   if (isPanning.value || isMiddleMousePanning.value) {
     return
   }
+
+  const stage = e.target.getStage()
+  if (!stage) return
 
   // Check if we clicked on the background
   const isBackground = e.target === stage || e.target.name() === 'grid-background'
@@ -182,23 +165,6 @@ function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
 function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
-
-  // Handle middle mouse panning
-  if (isMiddleMousePanning.value) {
-    const pointer = stage.getPointerPosition()
-    if (pointer) {
-      const dx = pointer.x - panStartPosition.value.x
-      const dy = pointer.y - panStartPosition.value.y
-
-      const newPosition = {
-        x: panStartTransform.value.x + dx,
-        y: panStartTransform.value.y + dy,
-      }
-
-      interactionStore.setCanvasTransform(panStartTransform.value.scale, newPosition)
-    }
-    return
-  }
 
   // Update selection box
   if (selectionBox.value.visible) {
@@ -227,14 +193,6 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
 function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
-
-  // Handle middle click release to stop panning
-  if (e.evt.button === 1 && isMiddleMousePanning.value) {
-    e.evt.preventDefault()
-    isMiddleMousePanning.value = false
-    stage.container().style.cursor = 'default'
-    return
-  }
 
   // NEW: Handle wire drag completion on empty space
   if (interactionStore.wireCreationState.isDragging) {
@@ -318,10 +276,21 @@ function handleComponentSelect(componentId: string, e: KonvaEventObject<MouseEve
   if (interactionStore.wireCreationState.isActive) {
     return
   }
+
+  // Don't select components while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
+
   interactionStore.selectComponent(componentId, e.evt.shiftKey)
 }
 
 function handleComponentMoveStart(componentId: string, e: KonvaEventObject<MouseEvent>) {
+  // Don't start component movement while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
+
   // If a drag starts on a component that just initiated a wire draw,
   // cancel the wire draw. The user's intent is to move the component.
   if (
@@ -366,6 +335,11 @@ function handleComponentMoveStart(componentId: string, e: KonvaEventObject<Mouse
 }
 
 function handleComponentMove(componentId: string, position: { x: number; y: number }) {
+  // Don't move components while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
+
   const startPos = dragStartPositions.value.get(componentId)
   if (!startPos) return
 
@@ -386,6 +360,11 @@ function handleComponentMove(componentId: string, position: { x: number; y: numb
 
 function handleComponentMoveEnd(componentId: string, position: { x: number; y: number }) {
   console.log(`[CircuitCanvas] handleComponentMoveEnd for ${componentId} received:`, position)
+
+  // Don't end component movement while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
 
   // Log the state AT THE MOMENT THE FUNCTION IS CALLED
   console.log(
@@ -532,6 +511,11 @@ function handleWireMouseUp(wireId: string, e: KonvaEventObject<MouseEvent>) {
 function handleTerminalClick(terminalId: string, componentId: string) {
   console.log(`[CircuitCanvas] handleTerminalClick received for component: ${componentId}`)
 
+  // Don't handle terminal interactions while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
+
   // NEW: Prevent click events immediately after completing a wire drag
   if (interactionStore.justCompletedWireDrag) {
     console.log(`[CircuitCanvas] Ignoring click - just completed wire drag`)
@@ -560,6 +544,11 @@ function handleTerminalClick(terminalId: string, componentId: string) {
 function handleTerminalMouseDown(terminalId: string, componentId: string) {
   console.log(`[CircuitCanvas] handleTerminalMouseDown received for component: ${componentId}`)
 
+  // Don't handle terminal interactions while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
+
   // Only start wire drag when Ctrl key is held
   if (!interactionStore.isCtrlKeyHeld) {
     // Without Ctrl, let normal component selection/dragging happen
@@ -576,6 +565,11 @@ function handleTerminalMouseDown(terminalId: string, componentId: string) {
 // NEW: Handle terminal mouseup for completing drag-based wire creation
 function handleTerminalMouseUp(terminalId: string, componentId: string) {
   console.log(`[CircuitCanvas] handleTerminalMouseUp received for component: ${componentId}`)
+
+  // Don't handle terminal interactions while panning
+  if (isPanning.value || isMiddleMousePanning.value) {
+    return
+  }
 
   // Only handle if we're actively dragging a wire
   if (!interactionStore.wireCreationState.isDragging) {
@@ -633,6 +627,69 @@ function handleProbeMoveEnd(probeId: string, e: KonvaEventObject<DragEvent>) {
   circuitStore.updateProbePosition(probeId, newPosition)
 }
 
+// Global mouse handler to capture middle mouse before components can intercept
+function handleGlobalMouseDown(e: MouseEvent) {
+  if (e.button === 1) {
+    // Middle mouse button
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      const rect = stage.container().getBoundingClientRect()
+      const pointer = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      }
+
+      isMiddleMousePanning.value = true
+      panStartPosition.value = pointer
+      panStartTransform.value = {
+        x: interactionStore.canvasTransform.position.x,
+        y: interactionStore.canvasTransform.position.y,
+        scale: interactionStore.canvasTransform.scale,
+      }
+      stage.container().style.cursor = 'grabbing'
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+}
+
+function handleGlobalMouseMove(e: MouseEvent) {
+  if (isMiddleMousePanning.value) {
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      const rect = stage.container().getBoundingClientRect()
+      const pointer = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      }
+
+      const dx = pointer.x - panStartPosition.value.x
+      const dy = pointer.y - panStartPosition.value.y
+
+      const newPosition = {
+        x: panStartTransform.value.x + dx,
+        y: panStartTransform.value.y + dy,
+      }
+
+      interactionStore.setCanvasTransform(panStartTransform.value.scale, newPosition)
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+}
+
+function handleGlobalMouseUp(e: MouseEvent) {
+  if (e.button === 1 && isMiddleMousePanning.value) {
+    isMiddleMousePanning.value = false
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      stage.container().style.cursor = 'default'
+    }
+    e.preventDefault()
+    e.stopPropagation()
+  }
+}
+
 // Lifecycle hooks
 onMounted(() => {
   if (!containerRef.value) return
@@ -643,6 +700,11 @@ onMounted(() => {
     stageConfig.value.height = entry.contentRect.height
   })
   resizeObserver.value.observe(containerRef.value)
+
+  // Global mouse handlers to capture middle mouse before components
+  window.addEventListener('mousedown', handleGlobalMouseDown, true)
+  window.addEventListener('mousemove', handleGlobalMouseMove, true)
+  window.addEventListener('mouseup', handleGlobalMouseUp, true)
 
   // Local keyboard handlers for canvas-specific actions
   window.addEventListener('keydown', handleKeyDown)
@@ -669,6 +731,12 @@ onUnmounted(() => {
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
   }
+
+  // Clean up global mouse handlers
+  window.removeEventListener('mousedown', handleGlobalMouseDown, true)
+  window.removeEventListener('mousemove', handleGlobalMouseMove, true)
+  window.removeEventListener('mouseup', handleGlobalMouseUp, true)
+
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('keyup', handleKeyUp)
 
