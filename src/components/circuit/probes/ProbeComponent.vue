@@ -1,40 +1,73 @@
 <template>
-  <v-group
-    ref="groupRef"
-    :config="groupConfig"
-    @dragend="handleDragEnd"
-    @click="handleClick"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
-  >
-    <v-circle
-      :config="{
-        radius: 6,
-        fill: probe.type === 'voltage' ? 'deeppink' : 'lightseagreen',
-        stroke: 'white',
-        strokeWidth: 2,
-      }"
-    />
-    <v-text
-      :config="{
-        text: probeValue,
+  <v-group>
+    <!-- Probe Lead Line -->
+    <v-line :config="{
+      points: [probe.position.x, probe.position.y, leadEndPoint.x, leadEndPoint.y],
+      stroke: '#adb5bd',
+      strokeWidth: 1,
+      dash: [3, 3],
+      listening: false,
+    }" />
+
+    <!-- Draggable probe group -->
+    <v-group
+      ref="groupRef"
+      :config="groupConfig"
+      @dragend="handleDragEnd"
+      @click="handleClick"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
+    >
+      <!-- Probe Icon -->
+      <v-circle
+        :config="{
+          radius: 6,
+          fill: probe.type === 'voltage' ? 'deeppink' : 'lightseagreen',
+          stroke: 'white',
+          strokeWidth: 2,
+        }"
+      />
+
+      <!-- Readout Display -->
+      <v-rect :config="{
         x: 10,
-        y: -10,
-        fontSize: 14,
-        fill: probe.type === 'voltage' ? 'deeppink' : 'lightseagreen',
-        fontFamily: 'monospace',
-        listening: false,
-      }"
-    />
+        y: -12,
+        width: 70,
+        height: 20,
+        fill: '#f8f9fa',
+        cornerRadius: 3,
+        stroke: '#dee2e6',
+        strokeWidth: 1,
+        shadowColor: 'black',
+        shadowBlur: 3,
+        shadowOpacity: 0.1,
+        shadowOffsetY: 1,
+      }" />
+      <v-text
+        :config="{
+          text: probeValue,
+          x: 15,
+          y: -8,
+          fontSize: 12,
+          fill: '#212529',
+          fontFamily: 'monospace',
+          fontStyle: 'bold',
+          listening: false,
+          width: 60,
+          align: 'right'
+        }"
+      />
+    </v-group>
   </v-group>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useCircuitStore } from '@/stores/circuit';
-import type { Probe } from '@/types/components';
+import type { Probe, Position } from '@/types/components';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { getComponentDefinition } from '@/registry/components';
+import { getTerminalWorldPosition } from '@/services/geometry';
 
 interface Props {
   probe: Probe;
@@ -62,6 +95,38 @@ watch(() => props.probe.position, (newPosition) => {
     });
   }
 }, { deep: true });
+
+const leadEndPoint = computed(() => {
+  const wire = circuitStore.currentCircuit.components.find(c => c.id === props.probe.targetId);
+  if (wire?.type !== 'wire' || !wire.properties) return props.probe.position;
+
+  const wireProps = wire.properties;
+  const components = circuitStore.currentCircuit.components;
+  const startComp = components.find(c => c.id === wireProps.startComponentId);
+  const endComp = components.find(c => c.id === wireProps.endComponentId);
+
+  if (!startComp || !endComp) return props.probe.position;
+
+  const p1 = getTerminalWorldPosition(startComp, wireProps.startTerminal as string);
+  const p2 = getTerminalWorldPosition(endComp, wireProps.endTerminal as string);
+
+  const probePos = props.probe.position;
+
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+
+  if (dx === 0 && dy === 0) return p1;
+
+  const t = ((probePos.x - p1.x) * dx + (probePos.y - p1.y) * dy) / (dx * dx + dy * dy);
+
+  if (t < 0) return p1;
+  if (t > 1) return p2;
+
+  return {
+    x: p1.x + t * dx,
+    y: p1.y + t * dy
+  };
+});
 
 const probeValue = computed(() => {
   const dcSolution = circuitStore.dcSolution;
