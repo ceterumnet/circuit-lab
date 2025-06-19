@@ -71,6 +71,11 @@ const probes = computed(() => circuitStore.currentCircuit.probes)
 
 // Computed property for placement cursor
 const placementCursor = computed(() => {
+  // NEW: Show crosshair when Ctrl is held (wiring mode)
+  if (interactionStore.isCtrlKeyHeld) {
+    return 'crosshair'
+  }
+
   return interactionStore.componentToPlace ? 'crosshair' : 'default'
 })
 
@@ -78,6 +83,15 @@ const placementCursor = computed(() => {
 const stageRef = ref()
 const containerRef = ref<HTMLElement | null>(null)
 const resizeObserver = ref<ResizeObserver | null>(null)
+
+// NEW: Store references to global event handlers for cleanup
+const globalKeyHandlers = ref<{
+  keydown: ((e: KeyboardEvent) => void) | null
+  keyup: ((e: KeyboardEvent) => void) | null
+}>({
+  keydown: null,
+  keyup: null,
+})
 
 // Mouse interaction state
 const dragTarget = ref<string | null>(null)
@@ -381,6 +395,11 @@ function handleContextMenu() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
+  // NEW: Track Ctrl key state for modifier-based wiring
+  if (e.ctrlKey || e.metaKey) {
+    interactionStore.setCtrlKeyHeld(true)
+  }
+
   if (e.key === 'Escape') {
     if (interactionStore.wireCreationState.isActive) {
       interactionStore.cancelWireCreation()
@@ -447,17 +466,31 @@ function handleWireMouseUp(wireId: string, e: KonvaEventObject<MouseEvent>) {
 
 function handleTerminalClick(terminalId: string, componentId: string) {
   console.log(`[CircuitCanvas] handleTerminalClick received for component: ${componentId}`)
+
+  // NEW: Only handle wiring when Ctrl key is held
+  if (!interactionStore.isCtrlKeyHeld) {
+    // Without Ctrl key, terminal clicks should select the component instead
+    interactionStore.selectComponent(componentId, false)
+    return
+  }
+
+  // With Ctrl key held, handle wire creation
   const wireState = interactionStore.wireCreationState
 
   if (wireState.isActive) {
     interactionStore.finishWireCreation(terminalId, componentId)
   } else {
-    // If not wiring, a click on a terminal ALWAYS starts a wire.
+    // Start wire creation only when Ctrl is held
     interactionStore.startWireCreation(terminalId, componentId)
   }
 }
 
 function handleKeyUp(e: KeyboardEvent) {
+  // NEW: Track Ctrl key state for modifier-based wiring
+  if (!e.ctrlKey && !e.metaKey) {
+    interactionStore.setCtrlKeyHeld(false)
+  }
+
   if (e.code === 'Space') {
     e.preventDefault()
     isPanning.value = false
@@ -510,8 +543,25 @@ onMounted(() => {
   })
   resizeObserver.value.observe(containerRef.value)
 
+  // Local keyboard handlers for canvas-specific actions
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
+
+  // NEW: Global Ctrl key tracking for reliable modifier detection
+  globalKeyHandlers.value.keydown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      interactionStore.setCtrlKeyHeld(true)
+    }
+  }
+
+  globalKeyHandlers.value.keyup = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      interactionStore.setCtrlKeyHeld(false)
+    }
+  }
+
+  window.addEventListener('keydown', globalKeyHandlers.value.keydown, true)
+  window.addEventListener('keyup', globalKeyHandlers.value.keyup, true)
 })
 
 onUnmounted(() => {
@@ -520,6 +570,14 @@ onUnmounted(() => {
   }
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('keyup', handleKeyUp)
+
+  // NEW: Clean up global listeners
+  if (globalKeyHandlers.value.keydown) {
+    window.removeEventListener('keydown', globalKeyHandlers.value.keydown, true)
+  }
+  if (globalKeyHandlers.value.keyup) {
+    window.removeEventListener('keyup', globalKeyHandlers.value.keyup, true)
+  }
 })
 
 watch(

@@ -662,23 +662,24 @@ src/
 
 #### **New Interaction Model**
 
-*   **Default Behavior (No Modifier Key)**:
-    *   Clicking any component, including its terminals, will select that component.
-    *   Clicking and dragging any component will move it.
-    *   This makes component selection, especially for small nodes, simple and intuitive.
+- **Default Behavior (No Modifier Key)**:
 
-*   **Wiring Mode (`Ctrl` Key Held Down)**:
-    *   The mouse cursor will change to a `crosshair` to indicate wiring mode is active.
-    *   Component terminals will become visually larger and highlighted, making them easy click targets.
-    *   Clicking on a highlighted terminal will begin a wire creation process.
-    *   The concept of "close enough" is implemented by enlarging the terminal's hit area when the modifier is pressed.
+  - Clicking any component, including its terminals, will select that component.
+  - Clicking and dragging any component will move it.
+  - This makes component selection, especially for small nodes, simple and intuitive.
+
+- **Wiring Mode (`Ctrl` Key Held Down)**:
+  - The mouse cursor will change to a `crosshair` to indicate wiring mode is active.
+  - Component terminals will become visually larger and highlighted, making them easy click targets.
+  - Clicking on a highlighted terminal will begin a wire creation process.
+  - The concept of "close enough" is implemented by enlarging the terminal's hit area when the modifier is pressed.
 
 #### **Benefits of this Model**
 
-*   ✅ **Unambiguous User Intent**: The `Ctrl` key acts as a clear declaration of the user's intent to create a wire, eliminating all confusion.
-*   ✅ **Simplified Selection**: Selecting small components is now trivial, as any click without the modifier key is a selection click.
-*   ✅ **Superior UX**: The larger, reactive terminal targets make the wiring process faster and more forgiving.
-*   ✅ **Architectural Purity**: This model perfectly adheres to the "Single Draggable Principle" without any workarounds. Dragging a component is a distinct action from the `Ctrl+Click` required for wiring.
+- ✅ **Unambiguous User Intent**: The `Ctrl` key acts as a clear declaration of the user's intent to create a wire, eliminating all confusion.
+- ✅ **Simplified Selection**: Selecting small components is now trivial, as any click without the modifier key is a selection click.
+- ✅ **Superior UX**: The larger, reactive terminal targets make the wiring process faster and more forgiving.
+- ✅ **Architectural Purity**: This model perfectly adheres to the "Single Draggable Principle" without any workarounds. Dragging a component is a distinct action from the `Ctrl+Click` required for wiring.
 
 ---
 
@@ -694,30 +695,7 @@ src/
 - **Visual Grid**: To maintain a clean interface, visual grid lines are now only drawn every **30px**.
 - **Result**: This provides the precision of a small grid with the clean look of a larger one, permanently solving the alignment issue and providing a robust foundation for future complex components.
 
-#### 2. **Overly Complex Terminal System**
-
-The current `CircuitTerminal.vue` components handle too many responsibilities:
-
-- Visual feedback (hover states, selection highlighting)
-- Wire creation start/end points
-- Connection validation logic
-- Interaction state management
-- Position calculations with rotation
-
-**Code Complexity Indicators**:
-
-- `CircuitTerminal.vue`: 71 lines for simple connection points
-- Terminal logic scattered across multiple files
-- Complex hover/selection state management
-- Rotation-aware positioning calculations
-
 #### 3. **UX Flow Issues**
-
-- Click-to-connect wire creation is non-intuitive for users
-- No clear visual indication of available connection points
-- Grid snapping conflicts with terminal positioning
-- Wire creation mode not obviously discoverable
-- Rotation increments (90°) don't work harmoniously with grid system
 
 ### Critical Scalability Issue - Complex Components
 
@@ -1070,18 +1048,6 @@ ComponentRegistry.set('74hc04', {
 - Visual feedback showing "wire mode active"
 - For ICs: show pin labels and allow pin-specific selection
 
-**3. Pan/Zoom Mode**
-
-- Mouse drag = pan canvas
-- Mouse wheel = zoom
-- No component interactions
-
-**4. Rotate Mode**
-
-- Click component → rotate 90° (or show rotation handle)
-- Visual indicator of rotation center
-- Wires automatically follow rotated components
-
 **5. Delete Mode**
 
 - Click component → delete (with confirmation)
@@ -1092,32 +1058,6 @@ ComponentRegistry.set('74hc04', {
 - Select component type from toolbar
 - Click canvas → place component
 - Auto-exit to Select mode after placement
-
-#### Benefits of Modal System
-
-**✅ Simplified Component Architecture**:
-
-- Components only handle rendering and basic selection
-- No complex terminal interaction logic needed
-- Remove 200+ lines of terminal complexity
-
-**✅ Intuitive UX**:
-
-- Clear visual indication of current mode
-- Predictable behavior (mode determines interaction)
-- Discoverable functionality (toolbar shows available actions)
-
-**✅ Scalable to Complex Components**:
-
-- Wire mode can adapt behavior per component type
-- IC connections handled at mode level, not component level
-- Future modes easy to add (measurement, simulation, etc.)
-
-**✅ Professional Feel**:
-
-- Matches CAD tool conventions
-- Keyboard shortcuts for mode switching
-- Status bar showing current mode
 
 #### Implementation Strategy - Revised
 
@@ -1138,7 +1078,6 @@ ComponentRegistry.set('74hc04', {
 
 **Phase 3: Advanced Mode Features** (1-2 days)
 
-- Keyboard shortcuts (W=Wire, M=Move, etc.)
 - Mode-specific cursors and visual feedback
 - Undo/redo system that works with modes
 
@@ -1148,48 +1087,7 @@ ComponentRegistry.set('74hc04', {
 - Pin-specific selection for complex components
 - Connection validation and error handling
 
-#### Modal Store Architecture
-
-```typescript
-export enum InteractionMode {
-  SELECT_MOVE = 'select_move',
-  WIRE = 'wire',
-  PAN_ZOOM = 'pan_zoom',
-  ROTATE = 'rotate',
-  DELETE = 'delete',
-  PLACE_RESISTOR = 'place_resistor',
-  PLACE_VOLTAGE = 'place_voltage',
-  // ... other placement modes
-}
-
-// In circuit store
-const currentMode = ref(InteractionMode.SELECT_MOVE)
-const modeData = ref<any>(null) // Mode-specific state
-```
-
-#### Canvas Event Handling
-
-```typescript
-function handleCanvasClick(event) {
-  switch (currentMode.value) {
-    case InteractionMode.SELECT_MOVE:
-      return handleSelectMove(event)
-    case InteractionMode.WIRE:
-      return handleWireMode(event)
-    case InteractionMode.ROTATE:
-      return handleRotateMode(event)
-    // ... etc
-  }
-}
-```
-
 ### Recommended Next Steps - UPDATED
-
-**Immediate (This Sprint)**:
-
-1.  **Refactor Component Factory**: Modify `createComponent` to be data-driven from the `ComponentRegistry`. This is critical for future scalability.
-2.  **Solidify Interaction Model**: Plan for and implement pan, zoom, and multi-select capabilities within the existing modeless framework.
-3.  **Address UX Issues**: Tackle the grid/terminal alignment problem to improve usability.
 
 **Next Sprint**:
 

@@ -12,6 +12,9 @@ export const useInteractionStore = defineStore('interaction', () => {
   const hoveredTerminal = ref<{ componentId: string; terminalId: string } | null>(null)
   const hoveredWireId = ref<string | null>(null)
 
+  // NEW: Ctrl key state for modifier-based wiring
+  const isCtrlKeyHeld = ref(false)
+
   const wireCreationState = ref<{
     isActive: boolean
     startTerminal: {
@@ -36,6 +39,11 @@ export const useInteractionStore = defineStore('interaction', () => {
   // Actions
   function setDraggingComponent(isDragging: boolean) {
     isDraggingComponent.value = isDragging
+  }
+
+  // NEW: Function to set Ctrl key state
+  function setCtrlKeyHeld(isHeld: boolean) {
+    isCtrlKeyHeld.value = isHeld
   }
 
   function setProbeType(type: 'voltage' | 'current' | null) {
@@ -187,8 +195,10 @@ export const useInteractionStore = defineStore('interaction', () => {
     wireCreationState,
     canvasTransform,
     isDraggingComponent,
+    isCtrlKeyHeld,
     // Actions
     setDraggingComponent,
+    setCtrlKeyHeld,
     setProbeType,
     setCanvasTransform,
     setHoveredTerminal,

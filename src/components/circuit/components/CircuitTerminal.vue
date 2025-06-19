@@ -3,10 +3,10 @@
     :config="{
       x: position.x,
       y: position.y,
-      radius: isHovered || isValidDropTarget ? 6 : 3,
-      fill: isValidDropTarget ? '#ffc107' : isHovered ? '#007bff' : '#666',
-      stroke: isSelected ? '#ff0000' : isValidDropTarget ? '#fd7e14' : '#333',
-      strokeWidth: isSelected || isValidDropTarget ? 2 : 1,
+      radius: terminalRadius,
+      fill: terminalFill,
+      stroke: terminalStroke,
+      strokeWidth: terminalStrokeWidth,
       draggable: false,
     }"
     @click="handleClick"
@@ -53,6 +53,36 @@ const isValidDropTarget = computed(() => {
 })
 
 const isHovered = ref(false)
+
+// NEW: Enhanced terminal appearance based on Ctrl key state
+const terminalRadius = computed(() => {
+  if (isValidDropTarget.value) return 8
+  if (interactionStore.isCtrlKeyHeld && isHovered.value) return 8
+  if (interactionStore.isCtrlKeyHeld) return 5
+  if (isHovered.value) return 6
+  return 3
+})
+
+const terminalFill = computed(() => {
+  if (isValidDropTarget.value) return '#ffc107'
+  if (interactionStore.isCtrlKeyHeld && isHovered.value) return '#28a745'
+  if (interactionStore.isCtrlKeyHeld) return '#007bff'
+  if (isHovered.value) return '#007bff'
+  return '#666'
+})
+
+const terminalStroke = computed(() => {
+  if (isSelected.value) return '#ff0000'
+  if (isValidDropTarget.value) return '#fd7e14'
+  if (interactionStore.isCtrlKeyHeld) return '#0056b3'
+  return '#333'
+})
+
+const terminalStrokeWidth = computed(() => {
+  if (isSelected.value || isValidDropTarget.value) return 2
+  if (interactionStore.isCtrlKeyHeld) return 2
+  return 1
+})
 
 const position = computed(() => {
   return props.position
