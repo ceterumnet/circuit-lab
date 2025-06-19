@@ -60,9 +60,13 @@ const interactionStore = useInteractionStore()
 const selectedComponent = computed(() => interactionStore.componentToPlace)
 const probingType = computed(() => interactionStore.probingType)
 
-// Get all available components
+// Get all available components (excluding non-placeable components)
 const availableComponents = computed(() => {
-  return getAllComponents()
+  return getAllComponents().filter((component) => {
+    // Filter out components that aren't directly placeable
+    const nonPlaceableTypes = ['wire']
+    return !nonPlaceableTypes.includes(component.type)
+  })
 })
 
 function selectComponent(type: string) {
