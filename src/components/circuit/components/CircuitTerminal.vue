@@ -96,8 +96,13 @@ function handleClick(e: KonvaEventObject<MouseEvent>) {
   console.log(
     `[CircuitTerminal] handleClick fired for component: ${props.componentId}, terminal: ${props.terminalId}`,
   )
-  // Prevent component selection by stopping the event from bubbling to the parent group.
-  e.cancelBubble = true
+
+  // Only prevent event bubbling when Ctrl is held (wire mode)
+  // This allows component dragging when not in wire mode
+  if (interactionStore.isCtrlKeyHeld) {
+    e.cancelBubble = true
+  }
+
   emit('terminal-click', props.terminalId, props.componentId, props.position)
 }
 
@@ -106,7 +111,12 @@ function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
   console.log(
     `[CircuitTerminal] handleMouseDown fired for component: ${props.componentId}, terminal: ${props.terminalId}`,
   )
-  e.cancelBubble = true
+
+  // Only prevent event bubbling when Ctrl is held (wire mode)
+  if (interactionStore.isCtrlKeyHeld) {
+    e.cancelBubble = true
+  }
+
   emit('terminal-mousedown', props.terminalId, props.componentId, props.position)
 }
 
@@ -115,7 +125,12 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   console.log(
     `[CircuitTerminal] handleMouseUp fired for component: ${props.componentId}, terminal: ${props.terminalId}`,
   )
-  e.cancelBubble = true
+
+  // Only prevent event bubbling when in wire creation mode
+  if (interactionStore.wireCreationState.isActive) {
+    e.cancelBubble = true
+  }
+
   emit('terminal-mouseup', props.terminalId, props.componentId, props.position)
 }
 
