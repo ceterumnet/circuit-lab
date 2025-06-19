@@ -8,6 +8,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   // State
   const selectedComponentIds = ref<string[]>([])
   const componentToPlace = ref<string | null>(null)
+  const isComponentPlacementPersistent = ref(false)
   const probingType = ref<'voltage' | 'current' | null>(null)
   const hoveredTerminal = ref<{ componentId: string; terminalId: string } | null>(null)
   const hoveredWireId = ref<string | null>(null)
@@ -74,11 +75,29 @@ export const useInteractionStore = defineStore('interaction', () => {
 
   function setComponentToPlace(type: string | null) {
     componentToPlace.value = type
-    // When entering placement mode, cancel any other actions
+    // When entering placement mode, enable persistence by default
     if (type) {
+      isComponentPlacementPersistent.value = true
       clearSelection()
       cancelWireCreation()
+    } else {
+      // When explicitly clearing placement, also clear persistence
+      isComponentPlacementPersistent.value = false
     }
+  }
+
+  // NEW: Function to exit placement mode (called by ESC key)
+  function exitComponentPlacement() {
+    componentToPlace.value = null
+    isComponentPlacementPersistent.value = false
+  }
+
+  // NEW: Function called after placing a component to decide whether to stay in placement mode
+  function handleComponentPlaced() {
+    if (!isComponentPlacementPersistent.value) {
+      componentToPlace.value = null
+    }
+    // If persistent, keep componentToPlace as-is for next placement
   }
 
   function selectComponent(componentId: string | null, isMultiSelect = false) {
@@ -245,6 +264,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     // State
     selectedComponentIds,
     componentToPlace,
+    isComponentPlacementPersistent,
     probingType,
     hoveredTerminal,
     hoveredWireId,
@@ -261,6 +281,8 @@ export const useInteractionStore = defineStore('interaction', () => {
     setHoveredTerminal,
     setHoveredWire,
     setComponentToPlace,
+    exitComponentPlacement,
+    handleComponentPlaced,
     selectComponent,
     addToSelection,
     removeFromSelection,

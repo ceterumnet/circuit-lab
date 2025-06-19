@@ -16,6 +16,9 @@
             <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
               🔌 Click to complete wire
             </span>
+            <span v-else-if="interactionStore.componentToPlace" class="placement-mode">
+              📍 Click to place {{ getComponentName(interactionStore.componentToPlace) }}
+            </span>
           </div>
         </div>
 
@@ -47,6 +50,7 @@
 import { computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
+import { getComponentDefinition } from '@/registry/components'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
@@ -65,6 +69,11 @@ function itemIsComponent(item: CircuitComponent | Probe | null): item is Circuit
 
 function itemIsProbe(item: CircuitComponent | Probe | null): item is Probe {
   return !!(item && 'targetId' in item)
+}
+
+function getComponentName(componentType: string): string {
+  const definition = getComponentDefinition(componentType)
+  return definition?.name || componentType
 }
 </script>
 
@@ -156,6 +165,15 @@ function itemIsProbe(item: CircuitComponent | Probe | null): item is Probe {
   color: #dc3545;
   font-weight: 500;
   background: #ffe6e6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.placement-mode {
+  font-size: 0.875rem;
+  color: #007bff;
+  font-weight: 500;
+  background: #e6f3ff;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
 }

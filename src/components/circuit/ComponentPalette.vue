@@ -30,7 +30,7 @@
           :key="componentDef.type"
           :class="['component-btn', { active: selectedComponent === componentDef.type }]"
           @click="selectComponent(componentDef.type)"
-          :title="componentDef.name"
+          :title="getComponentTooltip(componentDef)"
         >
           <component :is="getIconComponent(componentDef.icon)" class="component-icon" />
           <span class="component-label">{{ componentDef.name }}</span>
@@ -44,6 +44,7 @@
 import { computed, ref } from 'vue'
 import { getAllComponents } from '@/registry/components'
 import { useInteractionStore } from '@/stores/interaction'
+import type { ComponentDefinition } from '@/types/components'
 
 // Import our professional schematic symbols
 import ResistorSymbol from './symbols/ResistorSymbol.vue'
@@ -55,9 +56,9 @@ import ProbeSymbol from './symbols/ProbeSymbol.vue'
 
 const interactionStore = useInteractionStore()
 
-// Reactive state
-const selectedComponent = ref<string | null>(null)
-const probingType = ref<'voltage' | 'current' | null>(null)
+// Reactive state - sync with store
+const selectedComponent = computed(() => interactionStore.componentToPlace)
+const probingType = computed(() => interactionStore.probingType)
 
 // Get all available components
 const availableComponents = computed(() => {
@@ -65,19 +66,21 @@ const availableComponents = computed(() => {
 })
 
 function selectComponent(type: string) {
-  selectedComponent.value = selectedComponent.value === type ? null : type
-  interactionStore.setComponentToPlace(selectedComponent.value)
+  const newSelection = selectedComponent.value === type ? null : type
+  interactionStore.setComponentToPlace(newSelection)
   // Clear probe mode when selecting components
-  probingType.value = null
-  interactionStore.setProbeType(null)
+  if (newSelection) {
+    interactionStore.setProbeType(null)
+  }
 }
 
 function toggleProbeType(type: 'voltage' | 'current') {
-  probingType.value = probingType.value === type ? null : type
-  interactionStore.setProbeType(probingType.value)
+  const newProbeType = probingType.value === type ? null : type
+  interactionStore.setProbeType(newProbeType)
   // Clear component selection when probing
-  selectedComponent.value = null
-  interactionStore.setComponentToPlace(null)
+  if (newProbeType) {
+    interactionStore.exitComponentPlacement()
+  }
 }
 
 function getIconComponent(iconName?: string) {
@@ -90,6 +93,16 @@ function getIconComponent(iconName?: string) {
   }
 
   return iconMap[iconName as keyof typeof iconMap] || NodeSymbol
+}
+
+function getComponentTooltip(componentDef: ComponentDefinition) {
+  if (
+    selectedComponent.value === componentDef.type &&
+    interactionStore.isComponentPlacementPersistent
+  ) {
+    return `${componentDef.name} - Click to place multiple. Press ESC to exit placement mode.`
+  }
+  return componentDef.name
 }
 </script>
 

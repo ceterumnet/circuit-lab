@@ -239,7 +239,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
         if (newComponent) {
           circuitStore.addComponent(newComponent)
         }
-        interactionStore.setComponentToPlace(null)
+        interactionStore.handleComponentPlaced()
       } else if (!e.evt.shiftKey) {
         // Only clear selection on a background click if shift isn't held
         interactionStore.clearSelection()
@@ -448,7 +448,7 @@ function handleKeyDown(e: KeyboardEvent) {
     if (interactionStore.wireCreationState.isActive) {
       interactionStore.cancelWireCreation()
     } else if (interactionStore.componentToPlace) {
-      interactionStore.setComponentToPlace(null)
+      interactionStore.exitComponentPlacement()
     } else {
       interactionStore.clearSelection()
     }
