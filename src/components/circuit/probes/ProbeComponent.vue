@@ -171,33 +171,40 @@ const currentInfo = computed(() => {
   const wire = circuitStore.currentCircuit.components.find((c) => c.id === targetId)
   if (wire?.type !== 'wire' || !wire.properties) return { value: 0, isPositive: true }
 
-  // Find the component (resistor, v-source) connected to the wire to get the current from.
-  const startCompId = wire.properties.startComponentId as string
-  const endCompId = wire.properties.endComponentId as string
+  // Get the wire's current directly from the simulation results
+  let wireCurrent = currents[targetId]
 
-  let componentCurrent = currents[startCompId]
-  let isVoltageSource = false
+  if (wireCurrent === undefined) {
+    // Fallback: try to find current from connected components (for backward compatibility)
+    const startCompId = wire.properties.startComponentId as string
+    const endCompId = wire.properties.endComponentId as string
 
-  // Check if we're dealing with a voltage source and need to flip the sign
-  const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
-  const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
+    let componentCurrent = currents[startCompId]
+    let isVoltageSource = false
 
-  if (startComp?.type === 'voltage_source') {
-    isVoltageSource = true
-  } else if (endComp?.type === 'voltage_source') {
-    componentCurrent = currents[endCompId]
-    isVoltageSource = true
-  } else if (componentCurrent === undefined) {
-    componentCurrent = currents[endCompId]
+    // Check if we're dealing with a voltage source and need to flip the sign
+    const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
+    const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
+
+    if (startComp?.type === 'voltage_source') {
+      isVoltageSource = true
+    } else if (endComp?.type === 'voltage_source') {
+      componentCurrent = currents[endCompId]
+      isVoltageSource = true
+    } else if (componentCurrent === undefined) {
+      componentCurrent = currents[endCompId]
+    }
+
+    if (componentCurrent === undefined) return { value: 0, isPositive: true }
+
+    // Fix sign convention for voltage sources - flip the sign so current flowing out of positive terminal is positive
+    wireCurrent = componentCurrent
+    if (isVoltageSource) {
+      wireCurrent = -componentCurrent
+    }
   }
 
-  if (componentCurrent === undefined) return { value: 0, isPositive: true }
-
-  // Fix sign convention for voltage sources - flip the sign so current flowing out of positive terminal is positive
-  let adjustedCurrent = componentCurrent
-  if (isVoltageSource) {
-    adjustedCurrent = -componentCurrent
-  }
+  let adjustedCurrent = wireCurrent
 
   // Apply probe direction setting
   if (props.probe.direction === false) {

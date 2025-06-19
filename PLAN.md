@@ -88,16 +88,21 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] **Direction Toggle**: Added toggle in probe properties to flip measurement direction
 - [x] **Fixed Sign Convention**: Corrected voltage source current to show positive when flowing out of positive terminal
 - [x] **Traditional Circuit Analysis**: Current measurements now follow standard nodal/mesh analysis conventions
+- [x] **Wire Current Calculation**: Fixed wire current measurements using KCL-based approach instead of voltage differences
+- [x] **All Current Measurement Issues Resolved**: Wire currents now correctly show branch currents, voltage measurements accurate
 
 ### Phase 1.9: UX improvements
 
 - [ ] Implement Copy and Paste for single and multiple selected components. We will have to deal with things like labels and IDs.
-- [ ] It is a pain every time I need to create a bunch of components to do regression and validation. We either need an E2E test for things or have some canned circuits. Let's add thoughts to the document on this one.
+- [ ] It is a pain every time I need to create a bunch of components to do regression and validation. We either need:
+  - [ ] an E2E test for things
+  - [ ] have some canned circuits
+  - [ ] implement a save feature so that I don't have to keep redoing circuits
 - [ ] Component placement
   - [ ] I have to select a component and then place the component, and then if I want to place another component I need to click that component on the left hand side again. We should consider making the selection persistent and entering a component placement mode.
   - [ ] What about when I place a component and the pin intersects a wire or a terminal? I believe it should automatically connect. This would work well for NodeComponents as well as the other types. Currently it is cumbersome to place a component on an existing circuit because you have to delete a wire and then rebuild the connections
   - [ ] Keyboard shortcuts to component placement. I'm thinking we should bind the '/' key which brings up an inline component selector with quick search so you can hit '/' -> type "r" or "re" and components starting with r or re (such as resistor) will be in the list. Then it becomes super easy to not have to leave the circuit context
-- [ ] **FUTURE: Probe UI Enhancement** - Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
+- [ ] Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
 
 ### Phase 2: 📋 NEXT - Enhanced Simulation Features
 
@@ -197,7 +202,7 @@ ComponentRegistry.set('resistor', {
 circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 ```
 
-## Immediate Next Steps (Next 2 Weeks)
+## Immediate Next Steps
 
 ### 1. Enhanced Plotting System (Priority: High)
 
@@ -206,14 +211,14 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 - **Plot Controls:** Zoom, pan, cursor measurements
 - **Data Export:** CSV and image export capabilities
 
-### 2. Circuit Validation (Priority: High)
+### 2. Circuit Validation
 
 - **Error Detection:** Floating nodes, short circuits, convergence issues
 - **Visual Feedback:** Error highlighting on canvas
 - **User Guidance:** Helpful error messages and suggestions
 - **Simulation Health:** Status indicators and warnings
 
-### 3. Component Library Expansion (Priority: Medium)
+### 3. Component Library Expansion
 
 - **Capacitor Component:** With reactive impedance modeling
 - **Inductor Component:** With inductive impedance
