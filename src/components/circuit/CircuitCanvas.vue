@@ -96,6 +96,7 @@ const globalKeyHandlers = ref<{
 // Mouse interaction state
 const dragTarget = ref<string | null>(null)
 const isPanning = ref(false)
+const isSpacebarHeld = ref(false)
 const isMiddleMousePanning = ref(false)
 const panStartPosition = ref({ x: 0, y: 0 })
 const panStartTransform = ref({ x: 0, y: 0, scale: 1 })
@@ -457,26 +458,16 @@ function handleKeyDown(e: KeyboardEvent) {
     circuitStore.deleteSelectedComponent()
   }
 
-  // Pan on spacebar
+  // Track spacebar as modifier for panning
   if (e.code === 'Space' && !e.repeat) {
     e.preventDefault()
-    isPanning.value = true
-    stageConfig.value.draggable = true
-    const stage = stageRef.value?.getStage()
-    if (stage) {
-      stage.container().style.cursor = 'grab'
-    }
+    isSpacebarHeld.value = true
   }
 }
 
 function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
-  if (isPanning.value) {
-    const stage = e.target.getStage()
-    if (stage) {
-      stage.container().style.cursor = 'grabbing'
-      interactionStore.setCanvasTransform(stage.scaleX(), stage.position())
-    }
-  }
+  // This function is no longer needed since both middle mouse and spacebar panning
+  // now use the global mouse handlers for consistent behavior
 }
 
 function handleWireMouseEnter(componentId: string, _event: KonvaEventObject<MouseEvent>) {
@@ -588,11 +579,14 @@ function handleKeyUp(e: KeyboardEvent) {
 
   if (e.code === 'Space') {
     e.preventDefault()
-    isPanning.value = false
-    stageConfig.value.draggable = false
-    const stage = stageRef.value?.getStage()
-    if (stage) {
-      stage.container().style.cursor = 'default'
+    isSpacebarHeld.value = false
+    // Stop spacebar panning if it was active
+    if (isPanning.value) {
+      isPanning.value = false
+      const stage = stageRef.value?.getStage()
+      if (stage) {
+        stage.container().style.cursor = 'default'
+      }
     }
   }
 }
@@ -627,34 +621,46 @@ function handleProbeMoveEnd(probeId: string, e: KonvaEventObject<DragEvent>) {
   circuitStore.updateProbePosition(probeId, newPosition)
 }
 
-// Global mouse handler to capture middle mouse before components can intercept
+// Global mouse handlers to capture panning before components can intercept
 function handleGlobalMouseDown(e: MouseEvent) {
   if (e.button === 1) {
     // Middle mouse button
-    const stage = stageRef.value?.getStage()
-    if (stage) {
-      const rect = stage.container().getBoundingClientRect()
-      const pointer = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      }
+    startPanning(e, 'middle')
+  } else if (e.button === 0 && isSpacebarHeld.value) {
+    // Left mouse button while spacebar is held
+    startPanning(e, 'spacebar')
+  }
+}
 
-      isMiddleMousePanning.value = true
-      panStartPosition.value = pointer
-      panStartTransform.value = {
-        x: interactionStore.canvasTransform.position.x,
-        y: interactionStore.canvasTransform.position.y,
-        scale: interactionStore.canvasTransform.scale,
-      }
-      stage.container().style.cursor = 'grabbing'
-      e.preventDefault()
-      e.stopPropagation()
+function startPanning(e: MouseEvent, mode: 'middle' | 'spacebar') {
+  const stage = stageRef.value?.getStage()
+  if (stage) {
+    const rect = stage.container().getBoundingClientRect()
+    const pointer = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     }
+
+    if (mode === 'middle') {
+      isMiddleMousePanning.value = true
+    } else if (mode === 'spacebar') {
+      isPanning.value = true
+    }
+
+    panStartPosition.value = pointer
+    panStartTransform.value = {
+      x: interactionStore.canvasTransform.position.x,
+      y: interactionStore.canvasTransform.position.y,
+      scale: interactionStore.canvasTransform.scale,
+    }
+    stage.container().style.cursor = 'grabbing'
+    e.preventDefault()
+    e.stopPropagation()
   }
 }
 
 function handleGlobalMouseMove(e: MouseEvent) {
-  if (isMiddleMousePanning.value) {
+  if (isMiddleMousePanning.value || isPanning.value) {
     const stage = stageRef.value?.getStage()
     if (stage) {
       const rect = stage.container().getBoundingClientRect()
@@ -681,6 +687,15 @@ function handleGlobalMouseMove(e: MouseEvent) {
 function handleGlobalMouseUp(e: MouseEvent) {
   if (e.button === 1 && isMiddleMousePanning.value) {
     isMiddleMousePanning.value = false
+    const stage = stageRef.value?.getStage()
+    if (stage) {
+      stage.container().style.cursor = 'default'
+    }
+    e.preventDefault()
+    e.stopPropagation()
+  } else if (e.button === 0 && isPanning.value) {
+    // Left mouse up during spacebar panning
+    isPanning.value = false
     const stage = stageRef.value?.getStage()
     if (stage) {
       stage.container().style.cursor = 'default'
@@ -787,7 +802,6 @@ watch(
       @mouseup="handleMouseUp"
       @contextmenu="handleContextMenu"
       @wheel="handleStageWheel"
-      @dragmove="handleStageDragMove"
       @dblclick="handleStageDblClick"
     >
       <v-layer>
