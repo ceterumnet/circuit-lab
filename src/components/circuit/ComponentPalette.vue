@@ -4,12 +4,20 @@
       <h4>Analysis</h4>
       <div class="component-buttons">
         <button
-          :class="['component-btn', { active: isProbing }]"
-          @click="toggleProbeMode"
+          :class="['component-btn', { active: probingType === 'voltage' }]"
+          @click="toggleProbeType('voltage')"
           title="Voltage Probe"
         >
-          <span class="component-icon" v-html="probeIcon"></span>
+          <span class="component-icon" v-html="voltageProbeIcon"></span>
           <span class="component-label">Voltage Probe</span>
+        </button>
+        <button
+          :class="['component-btn', { active: probingType === 'current' }]"
+          @click="toggleProbeType('current')"
+          title="Current Probe"
+        >
+          <span class="component-icon" v-html="currentProbeIcon"></span>
+          <span class="component-label">Current Probe</span>
         </button>
       </div>
     </div>
@@ -43,9 +51,9 @@ import { getComponentsByCategory } from '@/registry/components';
 
 const interactionStore = useInteractionStore();
 
-const isProbing = computed(() => interactionStore.isProbing);
+const probingType = computed(() => interactionStore.probingType);
 
-const probeIcon = `
+const voltageProbeIcon = `
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M21.2 21.2l-4.2-4.2"/>
     <path d="M15.2 9.2a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
@@ -53,6 +61,14 @@ const probeIcon = `
     <path d="M6.25 3.75l-2.5 2.5"/>
     <path d="M4.63 8.13l-2.13 2.13a1 1 0 0 0 0 1.42l.7.7a1 1 0 0 0 1.42 0l2.12-2.12"/>
     <path d="M13 11l-2.12 2.12a1 1 0 0 1-1.42 0l-.7-.7a1 1 0 0 1 0-1.42L11 9"/>
+  </svg>
+`;
+
+const currentProbeIcon = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 16l-4-4 4-4"/>
+    <path d="M8 12h8"/>
+    <circle cx="12" cy="12" r="10"/>
   </svg>
 `;
 
@@ -84,8 +100,12 @@ function selectComponentForPlacement(componentType: string) {
   }
 }
 
-function toggleProbeMode() {
-  interactionStore.setProbeMode(!isProbing.value);
+function toggleProbeType(type: 'voltage' | 'current') {
+  if (interactionStore.probingType === type) {
+    interactionStore.setProbeType(null);
+  } else {
+    interactionStore.setProbeType(type);
+  }
 }
 </script>
 

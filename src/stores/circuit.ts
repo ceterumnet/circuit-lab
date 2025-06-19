@@ -271,16 +271,16 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
-  function addProbe(targetId: string, position: Position) {
+  function addProbe(targetId: string, position: Position, type: 'voltage' | 'current') {
     const newProbe: Probe = {
       id: generateComponentId(currentCircuit.value, 'probe'),
-      type: 'voltage',
+      type,
       targetId,
       position
     };
     currentCircuit.value.probes.push(newProbe);
     const interactionStore = useInteractionStore()
-    interactionStore.setProbeMode(false); // Exit probe mode after placing one
+    interactionStore.setProbeType(null); // Exit probe mode after placing one
   }
 
   function removeProbe(probeId: string) {

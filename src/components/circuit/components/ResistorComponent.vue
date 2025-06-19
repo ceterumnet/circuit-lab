@@ -6,7 +6,6 @@
       rotation: component.rotation,
       draggable: true,
     }"
-    @click="handleClick"
     @dragstart="handleDragStart"
     @dragmove="handleDragMove"
     @dragend="handleDragEnd"
@@ -90,7 +89,6 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'select', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragstart', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
@@ -161,10 +159,6 @@ const zigzagPoints = computed(() => {
 
   return points
 })
-
-function handleClick(e: KonvaEventObject<MouseEvent>) {
-  emit('select', e)
-}
 
 function handleDragStart(e: KonvaEventObject<MouseEvent>) {
   emit('dragstart', e)

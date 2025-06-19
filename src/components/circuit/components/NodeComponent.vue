@@ -5,12 +5,11 @@
       y: component.position.y,
       draggable: true,
     }"
-    @dragstart="handleDragStart"
+    @dragstart="$emit('dragstart', $event)"
     @dragmove="handleDragMove"
     @dragend="handleDragEnd"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
-    @click="handleClick"
   >
     <!-- Node body -->
     <v-ring
@@ -42,17 +41,19 @@ import type { KonvaEventObject } from 'konva/lib/Node'
 import { getComponentDefinition } from '@/registry/components'
 import { useInteractionStore } from '@/stores/interaction'
 
-const props = defineProps<{
+interface Props {
   component: CircuitComponent
-}>()
+}
 
-const emit = defineEmits<{
-  (e: 'select', event: KonvaEventObject<MouseEvent>): void
-  (e: 'dragstart', event: KonvaEventObject<DragEvent>): void
+interface Emits {
+  (e: 'dragstart', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
   (e: 'terminal-click', terminalId: string, componentId: string, position: Position): void
-}>()
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 
 const interactionStore = useInteractionStore()
 const nodeDefinition = computed(() => getComponentDefinition('node'))
@@ -68,14 +69,6 @@ const isHighlighted = computed(() => {
   if (wireState.startTerminal?.componentId === props.component.id) return false
   return hovered?.componentId === props.component.id
 })
-
-function handleClick(e: KonvaEventObject<MouseEvent>) {
-  emit('select', e)
-}
-
-function handleDragStart(e: KonvaEventObject<DragEvent>) {
-  emit('dragstart', e)
-}
 
 function handleDragMove(e: { target: { x(): number; y(): number } }) {
   const newPosition = {

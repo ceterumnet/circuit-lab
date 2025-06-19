@@ -105,7 +105,7 @@ export interface Circuit {
 
 export interface Probe {
   id: string
-  type: 'voltage'
+  type: 'voltage' | 'current'
   targetId: string // ID of the wire or node being probed
   position: Position
   value?: number // Last measured value

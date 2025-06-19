@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
-import VoltageProbe from '@/components/circuit/probes/VoltageProbe.vue'
+import ProbeComponent from '@/components/circuit/probes/ProbeComponent.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
 import { screenToWorld } from '@/services/coordinates'
@@ -451,15 +451,19 @@ function handleStageDblClick() {
   }
 }
 
-function handleWireProbe(wireId: string, e: KonvaEventObject<MouseEvent>) {
+function handleProbePlacement(targetId: string, e: KonvaEventObject<MouseEvent>) {
+  const probeType = interactionStore.probingType;
+  if (!probeType) return;
+
   const stage = e.target.getStage();
   if (!stage) return;
 
   const pointerPosition = stage.getPointerPosition();
   if (!pointerPosition) return;
 
-  const worldPos = screenToWorld(pointerPosition);
-  circuitStore.addProbe(wireId, worldPos);
+  const position = screenToWorld(pointerPosition);
+
+  circuitStore.addProbe(targetId, position, probeType);
 }
 
 function handleProbeSelect(probeId: string, e: KonvaEventObject<MouseEvent>) {
@@ -589,7 +593,7 @@ watch(
           @wire-mouseenter="handleWireMouseEnter"
           @wire-mouseleave="handleWireMouseLeave"
           @wire-mouseup="handleWireMouseUp"
-          @wire-probe="handleWireProbe"
+          @wire-probe="handleProbePlacement"
         />
 
         <!-- Nodes -->
@@ -614,6 +618,7 @@ watch(
           @move="handleComponentMove"
           @move-end="handleComponentMoveEnd"
           @terminal-click="handleTerminalClick"
+          @wire-probe="handleProbePlacement"
         />
 
         <!-- Wire creation preview -->
@@ -638,7 +643,7 @@ watch(
         />
 
         <!-- Probes -->
-        <voltage-probe
+        <probe-component
           v-for="probe in probes"
           :key="probe.id"
           :probe="probe"

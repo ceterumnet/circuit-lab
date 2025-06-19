@@ -6,8 +6,7 @@
       rotation: component.rotation,
       draggable: true,
     }"
-    @click="handleClick"
-    @dragstart="handleDragStart"
+    @dragstart="$emit('dragstart', $event)"
     @dragmove="handleDragMove"
     @dragend="handleDragEnd"
     @mouseenter="handleMouseEnter"
@@ -129,7 +128,6 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'select', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragstart', event: KonvaEventObject<MouseEvent>): void
   (e: 'dragmove', position: Position): void
   (e: 'dragend', position: Position): void
@@ -171,14 +169,6 @@ const isHighlighted = computed(() => {
 
   return hovered?.componentId === props.component.id
 })
-
-function handleClick(e: KonvaEventObject<MouseEvent>) {
-  emit('select', e)
-}
-
-function handleDragStart(e: KonvaEventObject<MouseEvent>) {
-  emit('dragstart', e)
-}
 
 function handleDragMove(e: { target: { x(): number; y(): number } }) {
   const newPosition = {

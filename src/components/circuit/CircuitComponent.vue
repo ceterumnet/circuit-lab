@@ -1,5 +1,5 @@
 <template>
-  <v-group>
+  <v-group @click="handleClick">
     <!-- Resistor component -->
     <resistor-component
       v-if="component.type === 'resistor'"
@@ -51,7 +51,6 @@
       :start-position="wireStartPosition"
       :end-position="wireEndPosition"
       @select="handleSelect"
-      @probe="handleWireProbe"
       @delete="handleWireDelete"
       @wire-mouseenter="handleWireMouseEnter"
       @wire-mouseleave="handleWireMouseLeave"
@@ -71,6 +70,7 @@ import NodeComponent from '@/components/circuit/components/NodeComponent.vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { getTerminalWorldPosition } from '@/services/geometry'
 import type { KonvaEventObject } from 'konva/lib/Node'
+import { useInteractionStore } from '@/stores/interaction'
 
 interface Props {
   component: CircuitComponent
@@ -92,6 +92,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const circuitStore = useCircuitStore()
+const interactionStore = useInteractionStore()
 
 // Computed properties for wire positions (reactive to component position changes)
 const wireStartPosition = computed(() => {
@@ -136,8 +137,21 @@ const wireEndPosition = computed(() => {
   return (wireProps.endPosition as Position) || { x: 0, y: 0 }
 })
 
+function handleClick(e: KonvaEventObject<MouseEvent>) {
+  // If we are in a probing mode and click a wire, place a probe.
+  if (interactionStore.probingType && props.component.type === 'wire') {
+    e.cancelBubble = true;
+    emit('wire-probe', props.component.id, e);
+    return;
+  }
+
+  // Otherwise, handle component selection.
+  emit('select', props.component.id, e);
+}
+
 function handleSelect(event: KonvaEventObject<MouseEvent>) {
-  emit('select', props.component.id, event)
+  // This is now handled by the main handleClick to avoid conflicts.
+  // emit('select', props.component.id, event)
 }
 
 function handleDragStart(event: KonvaEventObject<MouseEvent>) {
@@ -160,10 +174,6 @@ function handleTerminalClick(terminalId: string, componentId: string, position: 
     `[CircuitComponent] handleTerminalClick received from ${componentId}. Emitting up to CircuitCanvas.`,
   )
   emit('terminal-click', terminalId, componentId, position)
-}
-
-function handleWireProbe(event: KonvaEventObject<MouseEvent>) {
-  emit('wire-probe', props.component.id, event)
 }
 
 function handleWireDelete() {

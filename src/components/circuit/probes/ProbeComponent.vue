@@ -1,45 +1,67 @@
 <template>
-  <div class="probe-properties">
-    <div class="property-item">
-      <label>ID:</label>
-      <span class="property-value">{{ probe.id }}</span>
-    </div>
-
-    <div class="property-item">
-      <label>Type:</label>
-      <span class="property-value">{{ probe.type === 'voltage' ? 'Voltage' : 'Current' }} Probe</span>
-    </div>
-
-    <div class="property-item">
-      <label>Target:</label>
-      <span class="property-value">{{ probe.targetId }}</span>
-    </div>
-
-    <div class="property-item">
-        <label>Value:</label>
-        <span class="property-value">{{ probeValue }}</span>
-    </div>
-
-    <div class="property-item">
-      <button class="delete-button" @click="deleteProbe">
-        🗑️ Delete Probe
-      </button>
-    </div>
-  </div>
+  <v-group
+    ref="groupRef"
+    :config="groupConfig"
+    @dragend="handleDragEnd"
+    @click="handleClick"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
+  >
+    <v-circle
+      :config="{
+        radius: 6,
+        fill: probe.type === 'voltage' ? 'deeppink' : 'lightseagreen',
+        stroke: 'white',
+        strokeWidth: 2,
+      }"
+    />
+    <v-text
+      :config="{
+        text: probeValue,
+        x: 10,
+        y: -10,
+        fontSize: 14,
+        fill: probe.type === 'voltage' ? 'deeppink' : 'lightseagreen',
+        fontFamily: 'monospace',
+        listening: false,
+      }"
+    />
+  </v-group>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useCircuitStore } from '@/stores/circuit';
 import type { Probe } from '@/types/components';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import { getComponentDefinition } from '@/registry/components';
 
 interface Props {
   probe: Probe;
 }
 
+interface Emits {
+  (e: 'select', probeId: string, event: KonvaEventObject<MouseEvent>): void;
+  (e: 'dragend', probeId: string, event: KonvaEventObject<DragEvent>): void;
+}
+
 const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 const circuitStore = useCircuitStore();
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const groupRef = ref<any>(null);
+
+watch(() => props.probe.position, (newPosition) => {
+  const node = groupRef.value?.getNode();
+  if (node) {
+    node.to({
+      x: newPosition.x,
+      y: newPosition.y,
+      duration: 0.1, // A short animation can smooth the transition
+    });
+  }
+}, { deep: true });
 
 const probeValue = computed(() => {
   const dcSolution = circuitStore.dcSolution;
@@ -115,59 +137,37 @@ const probeValue = computed(() => {
   return 'N/A';
 });
 
-function deleteProbe() {
-  circuitStore.removeProbe(props.probe.id);
+const groupConfig = computed(() => {
+  const position = props.probe.position;
+  return {
+    ...position,
+    draggable: true
+  };
+});
+
+function handleClick(event: KonvaEventObject<MouseEvent>) {
+  emit('select', props.probe.id, event);
+}
+
+function handleDragEnd(event: KonvaEventObject<DragEvent>) {
+  // Prevent emitting the event if the position hasn't changed
+  if (event.target.x() === props.probe.position.x && event.target.y() === props.probe.position.y) {
+    return;
+  }
+  emit('dragend', props.probe.id, event);
+}
+
+function handleMouseEnter(event: KonvaEventObject<MouseEvent>) {
+  const stage = event.target.getStage();
+  if (stage) {
+    stage.container().style.cursor = 'pointer';
+  }
+}
+
+function handleMouseLeave(event: KonvaEventObject<MouseEvent>) {
+  const stage = event.target.getStage();
+  if (stage) {
+    stage.container().style.cursor = 'default';
+  }
 }
 </script>
-
-<style scoped>
-.probe-properties {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  padding: 1rem;
-}
-
-.property-item {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0.75rem;
-}
-
-.property-item:last-child {
-  margin-bottom: 0;
-}
-
-.property-item label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #495057;
-  margin-bottom: 0.25rem;
-}
-
-.property-value {
-  padding: 0.375rem 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-
-.delete-button {
-  padding: 0.5rem 1rem;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  width: 100%;
-}
-
-.delete-button:hover {
-  background: #c82333;
-}
-</style>

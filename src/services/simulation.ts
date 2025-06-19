@@ -192,8 +192,10 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     }
   }
 
-  // Step 5: Calculate currents through resistive components
+  // Step 5: Calculate currents through components
   const currentResults: Record<string, number> = {};
+
+  // Currents through resistors
   for (const r of resistors) {
     if (!r.properties?.resistance) continue;
     const def = getComponentDefinition('resistor')!;
@@ -206,6 +208,14 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     const current = (n1_volts - n2_volts) / (r.properties.resistance as number);
     currentResults[r.id] = current;
   }
+
+  // Currents through voltage sources
+  voltageSources.forEach((v, i) => {
+    const vSourceIndex = numNodes + i;
+    // The solution vector contains the current through the voltage source
+    const current = solution.get([vSourceIndex, 0]);
+    currentResults[v.id] = current;
+  });
 
   console.log('DC Analysis finished.');
   console.log('Matrix A:', A.toArray());

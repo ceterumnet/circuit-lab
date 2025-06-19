@@ -634,8 +634,6 @@ src/
 
 **Phase 1.75**: 📋 **PLANNED** - Node and Routing Refactor
 
-- **Goal**: Transition from an explicit, visible node system to an implicit, schematic-standard system for a cleaner UI and more intuitive workflow.
-
 - **Phase B: Selective Annotation (Probe Tool)**
   - [ ] By default, do not display any voltages or currents on the canvas.
   - [ ] Create a new "Probe" tool.

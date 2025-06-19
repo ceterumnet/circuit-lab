@@ -8,6 +8,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   // State
   const selectedComponentIds = ref<string[]>([])
   const componentToPlace = ref<string | null>(null)
+  const probingType = ref<'voltage' | 'current' | null>(null)
   const hoveredTerminal = ref<{ componentId: string; terminalId: string } | null>(null)
   const hoveredWireId = ref<string | null>(null)
 
@@ -31,16 +32,15 @@ export const useInteractionStore = defineStore('interaction', () => {
   })
 
   const isDraggingComponent = ref(false)
-  const isProbing = ref(false)
 
   // Actions
   function setDraggingComponent(isDragging: boolean) {
     isDraggingComponent.value = isDragging
   }
 
-  function setProbeMode(isActive: boolean) {
-    isProbing.value = isActive
-    if (isActive) {
+  function setProbeType(type: 'voltage' | 'current' | null) {
+    probingType.value = type
+    if (type) {
       setComponentToPlace(null)
       cancelWireCreation()
       clearSelection()
@@ -181,15 +181,15 @@ export const useInteractionStore = defineStore('interaction', () => {
     // State
     selectedComponentIds,
     componentToPlace,
+    probingType,
     hoveredTerminal,
     hoveredWireId,
     wireCreationState,
     canvasTransform,
     isDraggingComponent,
-    isProbing,
     // Actions
     setDraggingComponent,
-    setProbeMode,
+    setProbeType,
     setCanvasTransform,
     setHoveredTerminal,
     setHoveredWire,
