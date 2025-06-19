@@ -287,6 +287,7 @@ export const useCircuitStore = defineStore('circuit', () => {
       type,
       targetId,
       position,
+      direction: true, // Default to forward direction for current probes
     }
     currentCircuit.value.probes.push(newProbe)
     const interactionStore = useInteractionStore()
@@ -308,6 +309,13 @@ export const useCircuitStore = defineStore('circuit', () => {
     const probe = currentCircuit.value.probes.find((p) => p.id === probeId)
     if (probe) {
       probe.position = position
+    }
+  }
+
+  function updateProbeDirection(probeId: string, direction: boolean) {
+    const probe = currentCircuit.value.probes.find((p) => p.id === probeId)
+    if (probe) {
+      probe.direction = direction
     }
   }
 
@@ -341,5 +349,6 @@ export const useCircuitStore = defineStore('circuit', () => {
     addProbe,
     removeProbe,
     updateProbePosition,
+    updateProbeDirection,
   }
 })

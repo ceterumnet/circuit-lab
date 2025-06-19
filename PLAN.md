@@ -7,8 +7,8 @@ Building a web-based circuit simulation application focused on educational purpo
 ## Current Status
 
 **Architecture:** Modeless interaction with component palette  
-**Phase:** 1.8 - Advanced Circuit Building with DC Simulation  
-**Next Phase:** Phase 2 - Enhanced Simulation Features
+**Phase:** 1.86 - Professional Current Measurement System  
+**Next Phase:** Phase 1.9 - UX Improvements
 
 ### ✅ COMPLETED Features
 
@@ -81,6 +81,14 @@ Building a web-based circuit simulation application focused on educational purpo
   - **ProbeSymbol**: Professional multimeter-style symbols (V/A)
 - [x] **Educational compliance**: All symbols now follow standard circuit diagram conventions
 
+### Phase 1.86: ✅ COMPLETED - Professional Current Measurement System
+
+- [x] **Directional Current Probes**: Added directional arrows showing current flow reference direction
+- [x] **Color-Coded Current Display**: Green for positive current, red for negative current flow
+- [x] **Direction Toggle**: Added toggle in probe properties to flip measurement direction
+- [x] **Fixed Sign Convention**: Corrected voltage source current to show positive when flowing out of positive terminal
+- [x] **Traditional Circuit Analysis**: Current measurements now follow standard nodal/mesh analysis conventions
+
 ### Phase 1.9: UX improvements
 
 - [ ] Implement Copy and Paste for single and multiple selected components. We will have to deal with things like labels and IDs.
@@ -89,6 +97,7 @@ Building a web-based circuit simulation application focused on educational purpo
   - [ ] I have to select a component and then place the component, and then if I want to place another component I need to click that component on the left hand side again. We should consider making the selection persistent and entering a component placement mode.
   - [ ] What about when I place a component and the pin intersects a wire or a terminal? I believe it should automatically connect. This would work well for NodeComponents as well as the other types. Currently it is cumbersome to place a component on an existing circuit because you have to delete a wire and then rebuild the connections
   - [ ] Keyboard shortcuts to component placement. I'm thinking we should bind the '/' key which brings up an inline component selector with quick search so you can hit '/' -> type "r" or "re" and components starting with r or re (such as resistor) will be in the list. Then it becomes super easy to not have to leave the circuit context
+- [ ] **FUTURE: Probe UI Enhancement** - Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
 
 ### Phase 2: 📋 NEXT - Enhanced Simulation Features
 
@@ -263,6 +272,6 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 
 _Last Updated: January 2025_  
 _Project: Circuit Lab - Educational Circuit Simulator_  
-_Status: **Phase 1.8 COMPLETED** - DC Simulation & Measurement System_  
-_Next: **Phase 2** - Enhanced Simulation Features_  
+_Status: **Phase 1.86 COMPLETED** - Professional Current Measurement System_  
+_Next: **Phase 1.9** - UX Improvements_  
 _Development Server: `npm run dev` → http://localhost:5173/_
