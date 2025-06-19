@@ -225,6 +225,13 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           interactionStore.addToSelection(component.id)
         }
       })
+
+      circuitStore.currentCircuit.probes.forEach((probe) => {
+        const { x, y } = probe.position
+        if (x > x1 && x < x2 && y > y1 && y < y2) {
+          interactionStore.addToSelection(probe.id)
+        }
+      })
     }
   }
 

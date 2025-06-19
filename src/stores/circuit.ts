@@ -181,11 +181,21 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   function deleteSelectedComponent() {
     const interactionStore = useInteractionStore()
-    // Create a copy of the array to iterate over, as removeComponent will modify the original array
     const idsToDelete = [...interactionStore.selectedComponentIds]
+
     idsToDelete.forEach((id) => {
-      removeComponent(id)
+      const isComponent = currentCircuit.value.components.some((c) => c.id === id)
+      if (isComponent) {
+        removeComponent(id)
+        return
+      }
+
+      const isProbe = currentCircuit.value.probes.some((p) => p.id === id)
+      if (isProbe) {
+        removeProbe(id)
+      }
     })
+
     interactionStore.clearSelection()
   }
 
@@ -276,28 +286,28 @@ export const useCircuitStore = defineStore('circuit', () => {
       id: generateComponentId(currentCircuit.value, 'probe'),
       type,
       targetId,
-      position
-    };
-    currentCircuit.value.probes.push(newProbe);
+      position,
+    }
+    currentCircuit.value.probes.push(newProbe)
     const interactionStore = useInteractionStore()
-    interactionStore.setProbeType(null); // Exit probe mode after placing one
+    interactionStore.setProbeType(null) // Exit probe mode after placing one
   }
 
   function removeProbe(probeId: string) {
-    const index = currentCircuit.value.probes.findIndex((p) => p.id === probeId);
+    const index = currentCircuit.value.probes.findIndex((p) => p.id === probeId)
     if (index > -1) {
-      currentCircuit.value.probes.splice(index, 1);
+      currentCircuit.value.probes.splice(index, 1)
     }
     const interactionStore = useInteractionStore()
     if (interactionStore.selectedComponentIds.includes(probeId)) {
-      interactionStore.removeFromSelection(probeId);
+      interactionStore.removeFromSelection(probeId)
     }
   }
 
   function updateProbePosition(probeId: string, position: Position) {
-    const probe = currentCircuit.value.probes.find((p) => p.id === probeId);
+    const probe = currentCircuit.value.probes.find((p) => p.id === probeId)
     if (probe) {
-      probe.position = position;
+      probe.position = position
     }
   }
 
