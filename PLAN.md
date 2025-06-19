@@ -625,7 +625,7 @@ src/
 
 - [x] Implemented comprehensive click-to-connect wire system
 - [x] **Action Item:** Refactored `componentFactory.ts` to use the `ComponentRegistry` for true extensibility. ✅
-- [ ] **Action Item:** Evolve the `ComponentPalette` and modeless interaction to support pan, zoom, and multi-select.
+- [x] **Action Item:** Evolve the `ComponentPalette` and modeless interaction to support pan, zoom, and multi-select.
 
 **Phase 1.6**: 📋 **PLANNED** - Modal Interaction System
 
@@ -635,10 +635,10 @@ src/
 **Phase 1.75**: 📋 **PLANNED** - Node and Routing Refactor
 
 - **Phase B: Selective Annotation (Probe Tool)**
-  - [ ] By default, do not display any voltages or currents on the canvas.
-  - [ ] Create a new "Probe" tool.
-  - [ ] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
-  - [ ] Probes can be dragged and deleted.
+  - [x] By default, do not display any voltages or currents on the canvas.
+  - [x] Create a new "Probe" tool.
+  - [x] When the probe tool is active, clicking on any wire will place a persistent annotation for the voltage at that electrical node.
+  - [x] Probes can be dragged and deleted.
 
 **Phase 2**: 📋 **PLANNED** - Basic Simulation Engine
 
@@ -655,6 +655,32 @@ src/
 - Frequency response analysis
 
 ## 🔍 UX Analysis & Architectural Review
+
+### 🎯 **NEW ARCHITECTURE: Modifier-Based Wiring (The `Ctrl` Key Model)**
+
+**Key Insight**: To provide a clean, unambiguous user experience and resolve the conflict between selecting/moving a component and starting a wire from it (especially on small components like Nodes), all wiring actions will now be initiated only when the `Ctrl` key (or `Cmd` on Mac) is held down. This decision supersedes previous interaction models and resolves the core UX issues identified below.
+
+#### **New Interaction Model**
+
+*   **Default Behavior (No Modifier Key)**:
+    *   Clicking any component, including its terminals, will select that component.
+    *   Clicking and dragging any component will move it.
+    *   This makes component selection, especially for small nodes, simple and intuitive.
+
+*   **Wiring Mode (`Ctrl` Key Held Down)**:
+    *   The mouse cursor will change to a `crosshair` to indicate wiring mode is active.
+    *   Component terminals will become visually larger and highlighted, making them easy click targets.
+    *   Clicking on a highlighted terminal will begin a wire creation process.
+    *   The concept of "close enough" is implemented by enlarging the terminal's hit area when the modifier is pressed.
+
+#### **Benefits of this Model**
+
+*   ✅ **Unambiguous User Intent**: The `Ctrl` key acts as a clear declaration of the user's intent to create a wire, eliminating all confusion.
+*   ✅ **Simplified Selection**: Selecting small components is now trivial, as any click without the modifier key is a selection click.
+*   ✅ **Superior UX**: The larger, reactive terminal targets make the wiring process faster and more forgiving.
+*   ✅ **Architectural Purity**: This model perfectly adheres to the "Single Draggable Principle" without any workarounds. Dragging a component is a distinct action from the `Ctrl+Click` required for wiring.
+
+---
 
 ### Current System Issues Identified
 
