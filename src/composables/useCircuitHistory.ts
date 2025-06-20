@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useHistoryStore } from '@/stores/history'
 import { useInteractionStore } from '@/stores/interaction'
@@ -147,8 +147,8 @@ export function useCircuitHistory() {
     // Undo/Redo
     undo,
     redo,
-    canUndo: historyStore.canUndo,
-    canRedo: historyStore.canRedo,
+    canUndo: computed(() => historyStore.canUndo),
+    canRedo: computed(() => historyStore.canRedo),
 
     // History info
     getHistoryList: historyStore.getHistoryList,

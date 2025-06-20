@@ -12,7 +12,7 @@
             <div class="history-controls">
               <button
                 class="history-button"
-                :disabled="!historyActions.canUndo"
+                :disabled="!historyActions.canUndo.value"
                 @click="historyActions.undo()"
                 title="Undo (Ctrl+Z)"
               >
@@ -20,7 +20,7 @@
               </button>
               <button
                 class="history-button"
-                :disabled="!historyActions.canRedo"
+                :disabled="!historyActions.canRedo.value"
                 @click="historyActions.redo()"
                 title="Redo (Ctrl+Y)"
               >
