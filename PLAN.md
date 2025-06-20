@@ -104,7 +104,7 @@ Building a web-based circuit simulation application focused on educational purpo
 
 - [x] Add rotation handle to components when selected so they can be directly rotated
 - [ ] Implement Copy and Paste for single and multiple selected components. We will have to deal with things like labels and IDs.
-- [ ] Undo / Redo
+- [x] Undo / Redo
 - [ ] It is a pain every time I need to create a bunch of components to do regression and validation. We either need:
   - [ ] an E2E test for things
   - [ ] have some canned circuits
@@ -118,18 +118,86 @@ Building a web-based circuit simulation application focused on educational purpo
 
 ### Phase 2: 📋 NEXT - Enhanced Simulation Features
 
-**Goal:** Professional-grade simulation capabilities
+**Goal:** Professional-grade simulation capabilities with rock-solid foundation
 
-#### Immediate Priorities
+#### Critical Priority: Simulation Engine Overhaul
 
-- **Advanced Plotting System**
+**Problem**: Current simulation engine has fundamental architectural flaws that prevent scaling to complex circuits:
+
+1. **Wire Treatment Issues**: Wires defined with resistance properties but treated as perfect conductors in simulation
+2. **Current Direction Problems**: Hardcoded assumptions about current flow break with complex topologies
+3. **Multiple Voltage Source Limitation**: Artificial restriction prevents realistic circuit analysis
+4. **Component-Specific Logic**: Separate loops for different components instead of unified approach
+
+**Solution**: Complete simulation architecture rebuild with unified Modified Nodal Analysis (MNA) system:
+
+- **Unified Component Stamping System**
+
+  - Replace component-type specific loops with extensible stamping interfaces
+  - Each component type implements `ComponentStamper` interface
+  - Eliminates conditional logic based on component types
+  - Supports easy addition of new component types
+
+- **Proper Wire Resistance Handling**
+
+  - Treat wires as resistive elements with configurable resistance (default: 1mΩ)
+  - Participate fully in circuit equations rather than connectivity-only
+  - Enable modeling of wire voltage drops and power dissipation
+
+- **Multiple Voltage Source Support**
+
+  - Remove artificial single voltage source limitation
+  - Implement proper MNA stamping for multiple independent sources
+  - Support realistic multi-rail power supply circuits
+
+- **Robust Current Calculation**
+
+  - Eliminate hardcoded current direction assumptions
+  - Calculate currents directly from MNA solution for all components
+  - Proper sign conventions based on circuit analysis theory
+
+- **Extensible Component Registry**
+  - Factory pattern for component stampers
+  - Easy registration of new component types
+  - Prepare foundation for AC analysis and reactive components
+
+#### Scope Boundaries
+
+**Educational-Appropriate Complexity** ✅
+
+- Multiple voltage/current sources
+- Reactive components (L, C)
+- Basic semiconductor models (ideal diode, basic transistor)
+- Frequency domain analysis
+- Time domain simulation
+
+**Too Complex for Educational Tool** ❌
+
+- Dynamic thermal modeling with temperature-dependent resistance
+- Parasitic extraction and electromagnetic field effects
+- SPICE-level device modeling and manufacturing variations
+- Advanced semiconductor physics modeling
+
+#### Implementation Strategy
+
+**Phase 2a: Foundation Rebuild** (Critical)
+
+- [ ] Implement unified MNA stamping system
+- [ ] Add proper wire resistance handling in simulation
+- [ ] Remove multiple voltage source limitation
+- [ ] Fix current calculation logic
+- [ ] Create comprehensive test circuits for validation
+
+**Phase 2b: Enhanced Features** (After solid foundation)
+
+- [ ] **Advanced Plotting System**
 
   - Integrate Chart.js for waveform visualization
   - Time-domain plotting with oscilloscope-style interface
   - Parameter sweep visualization
   - Export plot data (CSV, image)
 
-- **Circuit Validation Engine**
+- [ ] **Circuit Validation Engine**
   - Detect floating nodes and short circuits
   - Component limit checking (power dissipation, voltage ratings)
   - Visual error indicators and helpful messages

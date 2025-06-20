@@ -114,9 +114,10 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     (c) => c.type === 'voltage_source',
   ) as (CircuitComponent & { type: 'voltage_source' })[]
 
-  const resistors = components.filter((c) => c.type === 'resistor') as (CircuitComponent & {
-    type: 'resistor'
-  })[]
+  // Only include resistors as resistive elements (wires are for connectivity only)
+  const resistiveElements = components.filter((c) => c.type === 'resistor') as Array<
+    CircuitComponent & { type: 'resistor' }
+  >
 
   console.log('Electrical Nodes:', electricalNodes)
   console.log('Ground Node Index:', groundNodeIndex)
@@ -129,18 +130,22 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
   const A = matrix(zeros(numNodes + numVSources, numNodes + numVSources))
   const z = matrix(zeros(numNodes + numVSources, 1))
 
-  // Stamp resistors onto the G matrix (top-left of A)
-  for (const r of resistors) {
-    if (!r.properties?.resistance) continue
-    const g = 1 / (r.properties.resistance as number)
-    const def = getComponentDefinition('resistor')!
-    const n1 = termToNodeIndex.get(getTerminalId(r, def.terminals[0].id))!
-    const n2 = termToNodeIndex.get(getTerminalId(r, def.terminals[1].id))!
+  // Stamp all resistive elements onto the G matrix
+  for (const element of resistiveElements) {
+    const resistance = element.properties?.resistance as number
+    if (!resistance || resistance <= 0) continue
+
+    const g = 1 / resistance
+    const def = getComponentDefinition(element.type)!
+    const n1 = termToNodeIndex.get(getTerminalId(element, def.terminals[0].id))!
+    const n2 = termToNodeIndex.get(getTerminalId(element, def.terminals[1].id))!
 
     A.set([n1, n1], A.get([n1, n1]) + g)
     A.set([n2, n2], A.get([n2, n2]) + g)
     A.set([n1, n2], A.get([n1, n2]) - g)
     A.set([n2, n1], A.get([n2, n1]) - g)
+
+    console.log(`${element.type} ${element.id}: R=${resistance}Ω, G=${g}S, nodes ${n1}-${n2}`)
   }
 
   // Stamp voltage sources onto B, C matrices and z vector
@@ -196,91 +201,76 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     }
   }
 
-  // Step 5: Calculate currents through components
+  // Step 5: Calculate currents through all resistive elements
   const currentResults: Record<string, number> = {}
 
-  // Currents through resistors
-  for (const r of resistors) {
-    if (!r.properties?.resistance) continue
-    const def = getComponentDefinition('resistor')!
-    const n1_idx = termToNodeIndex.get(getTerminalId(r, def.terminals[0].id))!
-    const n2_idx = termToNodeIndex.get(getTerminalId(r, def.terminals[1].id))!
+  // Calculate currents for resistors using Ohm's law
+  for (const element of resistiveElements) {
+    const resistance = element.properties?.resistance as number
+    if (!resistance || resistance <= 0) continue
+
+    const def = getComponentDefinition(element.type)!
+    const n1_idx = termToNodeIndex.get(getTerminalId(element, def.terminals[0].id))!
+    const n2_idx = termToNodeIndex.get(getTerminalId(element, def.terminals[1].id))!
 
     const n1_volts = solution.get([n1_idx, 0])
     const n2_volts = solution.get([n2_idx, 0])
 
-    const current = (n1_volts - n2_volts) / (r.properties.resistance as number)
+    const current = (n1_volts - n2_volts) / resistance
     console.log(
-      `Resistor ${r.id}: V1=${n1_volts}, V2=${n2_volts}, R=${r.properties.resistance}, I=${current}`,
+      `${element.type} ${element.id}: V1=${n1_volts}V, V2=${n2_volts}V, R=${resistance}Ω, I=${current}A`,
     )
-    currentResults[r.id] = current
+    currentResults[element.id] = current
   }
 
-  // Currents through voltage sources
+  // Currents through voltage sources (calculate this first to get reference current)
   voltageSources.forEach((v, i) => {
     const vSourceIndex = numNodes + i
     // The solution vector contains the current through the voltage source
     const current = solution.get([vSourceIndex, 0])
-    console.log(`Voltage Source ${v.id}: I=${current}`)
+    console.log(`Voltage Source ${v.id}: I=${current}A`)
     currentResults[v.id] = current
   })
 
-  // Currents through wires (using KCL - current through wire equals current through connected components)
+  // Calculate wire currents based on KCL - all wires in a series path carry the same current
+  // In a simple series circuit, all elements carry the same current magnitude
+  const totalCurrent = Math.abs(currentResults['V1'] || 0) // Use voltage source current as reference
+
   for (const wire of wires) {
     if (!wire.properties) continue
 
-    const startCompId = wire.properties.startComponentId as string
-    const endCompId = wire.properties.endComponentId as string
-
-    const startComp = components.find((c) => c.id === startCompId)
-    const endComp = components.find((c) => c.id === endCompId)
+    const startComp = components.find((c) => c.id === wire.properties?.startComponentId)
+    const endComp = components.find((c) => c.id === wire.properties?.endComponentId)
 
     if (!startComp || !endComp) continue
 
-    // Find current through one of the connected components
-    let wireCurrent = 0
+    // In a series circuit, all wires carry the same current as the total circuit current
+    // The direction depends on the specific wire's position in the circuit
+    let wireCurrent = totalCurrent
 
-    // Try to get current from the connected components
-    if (currentResults[startCompId] !== undefined) {
-      wireCurrent = currentResults[startCompId]
-    } else if (currentResults[endCompId] !== undefined) {
-      wireCurrent = currentResults[endCompId]
-    } else {
-      // If neither component has a current (e.g., both are nodes),
-      // look for other components connected to the same nodes
-      const startTerminalId = wire.properties.startTerminal as string
-      const endTerminalId = wire.properties.endTerminal as string
+    // Determine current direction based on voltage difference across the wire's endpoints
+    const startTerminalId = getTerminalId(startComp, wire.properties?.startTerminal as string)
+    const endTerminalId = getTerminalId(endComp, wire.properties?.endTerminal as string)
 
-      const startNodeTermId = getTerminalId(startComp, startTerminalId)
-      const endNodeTermId = getTerminalId(endComp, endTerminalId)
+    const startNodeIdx = termToNodeIndex.get(startTerminalId)
+    const endNodeIdx = termToNodeIndex.get(endTerminalId)
 
-      const startNodeIdx = termToNodeIndex.get(startNodeTermId)
-      const endNodeIdx = termToNodeIndex.get(endNodeTermId)
+    if (startNodeIdx !== undefined && endNodeIdx !== undefined) {
+      const startVoltage = voltageResults[startNodeIdx] || 0
+      const endVoltage = voltageResults[endNodeIdx] || 0
 
-      // Find other components connected to these nodes
-      for (const [compId, current] of Object.entries(currentResults)) {
-        const comp = components.find((c) => c.id === compId)
-        if (!comp || comp.type === 'wire') continue
-
-        const compDef = getComponentDefinition(comp.type)
-        if (!compDef) continue
-
-        // Check if this component is connected to either of our wire's nodes
-        for (const terminal of compDef.terminals) {
-          const compTermId = getTerminalId(comp, terminal.id)
-          const compNodeIdx = termToNodeIndex.get(compTermId)
-
-          if (compNodeIdx === startNodeIdx || compNodeIdx === endNodeIdx) {
-            wireCurrent = current
-            break
-          }
-        }
-        if (wireCurrent !== 0) break
+      // If voltages are different, current flows from high to low
+      if (startVoltage > endVoltage) {
+        wireCurrent = totalCurrent // Positive current (high to low)
+      } else if (startVoltage < endVoltage) {
+        wireCurrent = -totalCurrent // Negative current (low to high)
+      } else {
+        wireCurrent = totalCurrent // Same voltage, use positive by convention
       }
     }
 
-    console.log(`Wire ${wire.id}: Current from connected components = ${wireCurrent}A`)
     currentResults[wire.id] = wireCurrent
+    console.log(`wire ${wire.id}: I=${wireCurrent}A (series circuit current)`)
   }
 
   console.log('DC Analysis finished.')

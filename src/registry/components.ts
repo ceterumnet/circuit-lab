@@ -58,7 +58,9 @@ const wireDefinition: ComponentDefinition = {
     { id: 'start', position: { x: -20, y: 0 }, type: 'io' },
     { id: 'end', position: { x: 20, y: 0 }, type: 'io' },
   ],
-  properties: [{ key: 'resistance', type: 'number', label: 'Resistance', unit: 'Ω', default: 0 }],
+  properties: [
+    { key: 'resistance', type: 'number', label: 'Resistance', unit: 'Ω', default: 1e-6 },
+  ],
   icon: 'WireSymbol', // Line with connection points to show wire connectivity
 }
 
