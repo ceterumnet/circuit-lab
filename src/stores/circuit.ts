@@ -397,6 +397,28 @@ export const useCircuitStore = defineStore('circuit', () => {
     }
   }
 
+  function restoreCircuit(circuit: Circuit) {
+    // Clear selection before restoring
+    const interactionStore = useInteractionStore()
+    interactionStore.clearSelection()
+    interactionStore.cancelWireCreation()
+
+    // Deep clone to avoid reference issues
+    currentCircuit.value = JSON.parse(JSON.stringify(circuit))
+
+    // Clear simulation state when restoring
+    simulationResults.value = null
+    dcSolution.value = null
+    lastDcSolution.value = null
+    simulationErrors.value = []
+    hasValidSimulation.value = false
+  }
+
+  // Initialize history tracking
+  function initializeHistory() {
+    // This will be called from the main component to set up history tracking
+  }
+
   return {
     // State
     currentCircuit,
@@ -431,5 +453,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     removeProbe,
     updateProbePosition,
     updateProbeDirection,
+    restoreCircuit,
+    initializeHistory,
   }
 })

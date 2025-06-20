@@ -97,6 +97,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
+import { useHistoryStore } from '@/stores/history'
 import type { CircuitComponent } from '@/types/components'
 import { getComponentDefinition } from '@/registry/components'
 
@@ -106,6 +107,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const circuitStore = useCircuitStore()
+const historyStore = useHistoryStore()
 
 // Get the component definition from the registry
 const componentDefinition = computed(() => getComponentDefinition(props.component.type))
@@ -134,12 +136,14 @@ function updateLabel() {
   circuitStore.updateComponent(props.component.id, {
     label: editableLabel.value || undefined,
   })
+  historyStore.saveState(circuitStore.currentCircuit, 'Update label')
 }
 
 function updateRotation() {
   circuitStore.updateComponent(props.component.id, {
     rotation: editableRotation.value,
   })
+  historyStore.saveState(circuitStore.currentCircuit, 'Rotate component')
 }
 
 function updateProperty(key: string) {
@@ -151,10 +155,12 @@ function updateProperty(key: string) {
   circuitStore.updateComponent(props.component.id, {
     properties: newProperties,
   })
+  historyStore.saveState(circuitStore.currentCircuit, `Update ${key}`)
 }
 
 function deleteComponent() {
   circuitStore.removeComponent(props.component.id)
+  historyStore.saveState(circuitStore.currentCircuit, 'Delete component')
 }
 </script>
 

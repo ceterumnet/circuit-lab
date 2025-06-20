@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
+import { useCircuitHistory } from '@/composables/useCircuitHistory'
 import type { Probe } from '@/types/components'
 import { getComponentDefinition } from '@/registry/components'
 
@@ -187,7 +188,8 @@ function toggleDirection(direction: boolean) {
 }
 
 function deleteProbe() {
-  circuitStore.removeProbe(props.probe.id)
+  const historyActions = useCircuitHistory()
+  historyActions.removeProbeWithHistory(props.probe.id)
 }
 </script>
 

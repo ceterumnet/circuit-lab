@@ -162,7 +162,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
-  function finishWireCreation(terminalId: string, componentId: string) {
+  function finishWireCreation(terminalId: string, componentId: string, onCreate?: () => void) {
     if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
       cancelWireCreation()
       return
@@ -184,13 +184,14 @@ export const useInteractionStore = defineStore('interaction', () => {
         // Just cancel the wire creation, do nothing else
       } else {
         circuitStore.createWire(startTerminal, endTerminal)
+        onCreate?.() // Call the history callback after creating the wire
       }
     }
 
     cancelWireCreation()
   }
 
-  function finishWireCreationToPosition(position: Position) {
+  function finishWireCreationToPosition(position: Position, onCreate?: () => void) {
     if (!wireCreationState.value.isActive || !wireCreationState.value.startTerminal) {
       cancelWireCreation()
       return
@@ -201,6 +202,7 @@ export const useInteractionStore = defineStore('interaction', () => {
       wireCreationState.value.startTerminal,
       position,
     )
+    onCreate?.() // Call the history callback after creating the wire
 
     if (newNodeInfo) {
       // Immediately start a new wire segment from the new node
@@ -233,7 +235,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
-  function finishWireDrag(terminalId?: string, componentId?: string) {
+  function finishWireDrag(terminalId?: string, componentId?: string, onSaveHistory?: () => void) {
     if (!wireCreationState.value.isActive || !wireCreationState.value.isDragging) {
       cancelWireCreation()
       return
@@ -249,11 +251,11 @@ export const useInteractionStore = defineStore('interaction', () => {
 
     // If we have a target terminal, connect to it
     if (terminalId && componentId) {
-      finishWireCreation(terminalId, componentId)
+      finishWireCreation(terminalId, componentId, onSaveHistory)
     } else {
       // Otherwise, create a node at the current preview position
       if (wireCreationState.value.previewPosition) {
-        finishWireCreationToPosition(wireCreationState.value.previewPosition)
+        finishWireCreationToPosition(wireCreationState.value.previewPosition, onSaveHistory)
       } else {
         cancelWireCreation()
       }

@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
+import { useHistoryStore } from '@/stores/history'
+import { useCircuitHistory } from '@/composables/useCircuitHistory'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import ProbeComponent from '@/components/circuit/probes/ProbeComponent.vue'
 import RotationHandle from '@/components/circuit/RotationHandle.vue'
@@ -57,6 +59,8 @@ const gridLinesY = computed(() => {
 // Store
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
+const historyStore = useHistoryStore()
+const historyActions = useCircuitHistory()
 
 // Computed properties for rendering order
 const wires = computed(() =>
@@ -217,7 +221,9 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
       y: Math.round(worldPos.y / gridSize) * gridSize,
     }
     // Complete wire drag to position (creates node)
-    interactionStore.finishWireDrag()
+    interactionStore.finishWireDrag(undefined, undefined, () => {
+      historyStore.saveState(circuitStore.currentCircuit, 'Create wire')
+    })
     return
   }
 
@@ -238,7 +244,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           x: Math.round(worldPos.x / gridSize) * gridSize,
           y: Math.round(worldPos.y / gridSize) * gridSize,
         }
-        interactionStore.finishWireCreationToPosition(snappedPos)
+        historyActions.createWireToPositionWithHistory(snappedPos)
       } else if (interactionStore.componentToPlace) {
         const worldPos = screenToWorld(stage.getPointerPosition()!)
         const snappedPos = {
@@ -251,7 +257,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           snappedPos,
         )
         if (newComponent) {
-          circuitStore.addComponent(newComponent)
+          historyActions.addComponentWithHistory(newComponent)
         }
         interactionStore.handleComponentPlaced()
       } else if (!e.evt.shiftKey) {
@@ -373,7 +379,7 @@ function handleComponentMove(componentId: string, position: { x: number; y: numb
   })
 }
 
-function handleComponentMoveEnd(componentId: string, position: { x: number; y: number }) {
+async function handleComponentMoveEnd(componentId: string, position: { x: number; y: number }) {
   console.log(`[CircuitCanvas] handleComponentMoveEnd for ${componentId} received:`, position)
 
   // Don't end component movement while panning
@@ -402,6 +408,7 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
   const dx = position.x - startPos.x
   const dy = position.y - startPos.y
 
+  // Save history before making final position changes
   if (interactionStore.selectedComponentIds.length === 0) {
     console.warn(
       '[CircuitCanvas] selectedComponentIds is empty. Snapping only the dragged component.',
@@ -412,8 +419,17 @@ function handleComponentMoveEnd(componentId: string, position: { x: number; y: n
       y: Math.round(position.y / gridSize) * gridSize,
     }
     console.log(`[CircuitCanvas] Fallback Snapped position for ${componentId}:`, snappedPos)
-    circuitStore.moveComponent(componentId, snappedPos)
+    historyActions.moveComponentWithHistory(componentId, snappedPos)
   } else {
+    // Save history once for the move operation
+    const moveDescription =
+      interactionStore.selectedComponentIds.length > 1
+        ? `Move ${interactionStore.selectedComponentIds.length} components`
+        : 'Move component'
+
+    // Save history once for the multi-component move operation
+    historyStore.saveState(circuitStore.currentCircuit, moveDescription)
+
     interactionStore.selectedComponentIds.forEach((id) => {
       const otherStartPos = dragStartPositions.value.get(id)
       if (otherStartPos) {
@@ -469,7 +485,7 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
-    circuitStore.deleteSelectedComponent()
+    historyActions.deleteSelectedComponentWithHistory()
   }
 
   // Track spacebar as modifier for panning
@@ -509,7 +525,7 @@ function handleWireMouseUp(wireId: string, e: KonvaEventObject<MouseEvent>) {
     y: Math.round(worldPos.y / gridSize) * gridSize,
   }
 
-  circuitStore.splitWireAndConnect(wireId, snappedPos, startTerminal)
+  historyActions.splitWireAndConnectWithHistory(wireId, snappedPos, startTerminal)
   interactionStore.cancelWireCreation()
 }
 
@@ -538,7 +554,12 @@ function handleTerminalClick(terminalId: string, componentId: string) {
   const wireState = interactionStore.wireCreationState
 
   if (wireState.isActive) {
-    interactionStore.finishWireCreation(terminalId, componentId)
+    historyActions.createWireWithHistory(interactionStore.wireCreationState.startTerminal!, {
+      terminalId,
+      componentId,
+      position: { x: 0, y: 0 },
+    })
+    interactionStore.cancelWireCreation()
   } else {
     // Start wire creation only when Ctrl is held
     interactionStore.startWireCreation(terminalId, componentId)
@@ -582,7 +603,9 @@ function handleTerminalMouseUp(terminalId: string, componentId: string) {
   }
 
   // Complete the wire drag to this terminal
-  interactionStore.finishWireDrag(terminalId, componentId)
+  interactionStore.finishWireDrag(terminalId, componentId, () => {
+    historyStore.saveState(circuitStore.currentCircuit, 'Create wire')
+  })
 }
 
 function handleKeyUp(e: KeyboardEvent) {
@@ -623,7 +646,7 @@ function handleProbePlacement(targetId: string, e: KonvaEventObject<MouseEvent>)
 
   const position = screenToWorld(pointerPosition)
 
-  circuitStore.addProbe(targetId, position, probeType)
+  historyActions.addProbeWithHistory(targetId, position, probeType)
 }
 
 function handleProbeSelect(probeId: string, e: KonvaEventObject<MouseEvent>) {
@@ -632,7 +655,7 @@ function handleProbeSelect(probeId: string, e: KonvaEventObject<MouseEvent>) {
 
 function handleProbeMoveEnd(probeId: string, e: KonvaEventObject<DragEvent>) {
   const newPosition = { x: e.target.x(), y: e.target.y() }
-  circuitStore.updateProbePosition(probeId, newPosition)
+  historyActions.updateProbePositionWithHistory(probeId, newPosition)
 }
 
 // Global mouse handlers to capture panning before components can intercept
@@ -720,7 +743,7 @@ function handleGlobalMouseUp(e: MouseEvent) {
 }
 
 function handleComponentRotate(componentId: string, rotation: number) {
-  circuitStore.updateComponent(componentId, { rotation })
+  historyActions.updateComponentWithHistory(componentId, { rotation }, 'Rotate component')
 }
 
 // Lifecycle hooks

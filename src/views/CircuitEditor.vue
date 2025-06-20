@@ -8,6 +8,25 @@
         <div class="canvas-header">
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
+            <!-- Undo/Redo buttons -->
+            <div class="history-controls">
+              <button
+                class="history-button"
+                :disabled="!historyActions.canUndo"
+                @click="historyActions.undo()"
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 class="icon" />
+              </button>
+              <button
+                class="history-button"
+                :disabled="!historyActions.canRedo"
+                @click="historyActions.redo()"
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 class="icon" />
+              </button>
+            </div>
             <button
               class="simulate-button"
               :class="{
@@ -68,11 +87,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
+import { useHistoryStore } from '@/stores/history'
 import { getComponentDefinition } from '@/registry/components'
-import { Play, CheckCircle, Loader2, AlertTriangle } from 'lucide-vue-next'
+import { useCircuitHistory } from '@/composables/useCircuitHistory'
+import { Play, CheckCircle, Loader2, AlertTriangle, Undo2, Redo2 } from 'lucide-vue-next'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
@@ -82,6 +103,33 @@ import type { CircuitComponent, Probe } from '@/types/components'
 
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
+const historyStore = useHistoryStore()
+const historyActions = useCircuitHistory()
+
+// Initialize history only once in the main editor
+onMounted(() => {
+  historyStore.initializeHistory(circuitStore.currentCircuit)
+
+  // Set up keyboard shortcuts only in the main editor
+  document.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
+})
+
+// Keyboard shortcuts handler
+function handleKeyDown(event: KeyboardEvent) {
+  if (event.ctrlKey || event.metaKey) {
+    if (event.key === 'z' && !event.shiftKey) {
+      event.preventDefault()
+      historyActions.undo()
+    } else if (event.key === 'y' || (event.key === 'z' && event.shiftKey)) {
+      event.preventDefault()
+      historyActions.redo()
+    }
+  }
+}
 
 const singleSelectedItem = computed(() => circuitStore.singleSelectedItem)
 
@@ -201,6 +249,45 @@ async function runSimulation() {
 .simulate-button.has-results {
   border-color: #28a745;
   color: #28a745;
+}
+
+.history-controls {
+  display: flex;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+
+.history-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: white;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-button .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.history-button:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+  color: #343a40;
+}
+
+.history-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f8f9fa;
+  color: #adb5bd;
 }
 
 .simulation-errors {
