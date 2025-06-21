@@ -8,6 +8,17 @@
         <div class="canvas-header">
           <h2>{{ circuitStore.currentCircuit.name }}</h2>
           <div class="canvas-actions">
+            <!-- Save/Load toggle -->
+            <button
+              class="save-load-toggle"
+              :class="{ active: showSaveLoad }"
+              @click="showSaveLoad = !showSaveLoad"
+              title="Save/Load circuits"
+            >
+              <Save class="icon" />
+              Save/Load
+            </button>
+
             <!-- Undo/Redo buttons -->
             <div class="history-controls">
               <button
@@ -62,6 +73,11 @@
           </div>
         </div>
 
+        <!-- Save/Load Panel -->
+        <div v-if="showSaveLoad" class="save-load-overlay">
+          <circuit-save-load />
+        </div>
+
         <div class="canvas-container">
           <circuit-canvas class="circuit-canvas" />
         </div>
@@ -87,24 +103,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import { useHistoryStore } from '@/stores/history'
 import { getComponentDefinition } from '@/registry/components'
 import { useCircuitHistory } from '@/composables/useCircuitHistory'
-import { Play, CheckCircle, Loader2, AlertTriangle, Undo2, Redo2 } from 'lucide-vue-next'
+import { Play, CheckCircle, Loader2, AlertTriangle, Undo2, Redo2, Save } from 'lucide-vue-next'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
 import ProbeProperties from '@/components/circuit/probes/ProbeProperties.vue'
+import CircuitSaveLoad from '@/components/circuit/CircuitSaveLoad.vue'
 import type { CircuitComponent, Probe } from '@/types/components'
 
 const circuitStore = useCircuitStore()
 const interactionStore = useInteractionStore()
 const historyStore = useHistoryStore()
 const historyActions = useCircuitHistory()
+
+// Local component state
+const showSaveLoad = ref(false)
 
 // Initialize history only once in the main editor
 onMounted(() => {
@@ -198,6 +218,39 @@ async function runSimulation() {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.save-load-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  color: #495057;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.save-load-toggle:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.save-load-toggle.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.save-load-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  margin: 16px;
 }
 
 .simulate-button {

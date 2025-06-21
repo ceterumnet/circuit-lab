@@ -205,3 +205,52 @@ if (typeof window !== 'undefined') {
   console.log('   Use circuitTests.runAll() to run all tests')
   console.log('   Use circuitTests.runWireRegression() to test the wire current fix')
 }
+
+export * from './runner'
+export * from './basic-tests'
+export * from './demo'
+
+// New function to seed saved circuits with test circuits
+export async function seedSavedCircuitsWithTests(): Promise<number> {
+  // Get all available test circuits from the library
+  const testCircuits = testLibrary.getAllTests()
+
+  let seededCount = 0
+
+  testCircuits.forEach((testCircuit) => {
+    try {
+      // Get existing saved circuits to avoid duplicates
+      const savedCircuitsJson = localStorage.getItem('circuitlab_saved_circuits')
+      const savedCircuits = savedCircuitsJson ? JSON.parse(savedCircuitsJson) : {}
+
+      // Use test circuit name as the key, but add prefix to distinguish from user circuits
+      const saveName = `[Test] ${testCircuit.name}`
+
+      // Skip if already exists
+      if (savedCircuits[saveName]) {
+        console.log(`Test circuit "${saveName}" already exists, skipping`)
+        return
+      }
+
+      // Create save data with metadata
+      const saveData = {
+        circuit: JSON.parse(JSON.stringify(testCircuit.circuit)),
+        savedAt: new Date().toISOString(),
+        name: saveName,
+        isTestCircuit: true, // Mark as test circuit
+        description: testCircuit.description,
+      }
+
+      // Save to storage
+      savedCircuits[saveName] = saveData
+      localStorage.setItem('circuitlab_saved_circuits', JSON.stringify(savedCircuits))
+
+      seededCount++
+      console.log(`[Test] Seeded circuit: "${saveName}"`)
+    } catch (error) {
+      console.error(`[Test] Failed to seed circuit "${testCircuit.name}":`, error)
+    }
+  })
+
+  return seededCount
+}

@@ -410,6 +410,119 @@ export const useCircuitStore = defineStore('circuit', () => {
     hasValidSimulation.value = false
   }
 
+  function saveCircuitToStorage(name: string): boolean {
+    try {
+      // Get existing saved circuits
+      const savedCircuitsJson = localStorage.getItem('circuitlab_saved_circuits')
+      const savedCircuits = savedCircuitsJson ? JSON.parse(savedCircuitsJson) : {}
+
+      // Create save data with metadata
+      const saveData = {
+        circuit: JSON.parse(JSON.stringify(currentCircuit.value)),
+        savedAt: new Date().toISOString(),
+        name: name.trim() || 'Untitled Circuit',
+      }
+
+      // Update the circuit name if provided
+      if (name.trim()) {
+        currentCircuit.value.name = name.trim()
+      }
+
+      // Save to storage
+      savedCircuits[name.trim() || 'Untitled Circuit'] = saveData
+      localStorage.setItem('circuitlab_saved_circuits', JSON.stringify(savedCircuits))
+
+      console.log(`[Circuit] Saved circuit: "${saveData.name}"`)
+      return true
+    } catch (error) {
+      console.error('[Circuit] Failed to save circuit:', error)
+      return false
+    }
+  }
+
+  function loadCircuitFromStorage(name: string): boolean {
+    try {
+      const savedCircuitsJson = localStorage.getItem('circuitlab_saved_circuits')
+      if (!savedCircuitsJson) {
+        console.warn('[Circuit] No saved circuits found')
+        return false
+      }
+
+      const savedCircuits = JSON.parse(savedCircuitsJson)
+      const saveData = savedCircuits[name]
+
+      if (!saveData || !saveData.circuit) {
+        console.warn(`[Circuit] Circuit "${name}" not found`)
+        return false
+      }
+
+      restoreCircuit(saveData.circuit)
+      console.log(`[Circuit] Loaded circuit: "${name}" (saved ${saveData.savedAt})`)
+      return true
+    } catch (error) {
+      console.error('[Circuit] Failed to load circuit:', error)
+      return false
+    }
+  }
+
+  function getSavedCircuits(): Array<{ name: string; savedAt: string }> {
+    try {
+      const savedCircuitsJson = localStorage.getItem('circuitlab_saved_circuits')
+      if (!savedCircuitsJson) return []
+
+      const savedCircuits = JSON.parse(savedCircuitsJson)
+      return Object.keys(savedCircuits)
+        .map((name) => ({
+          name,
+          savedAt: savedCircuits[name].savedAt,
+        }))
+        .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
+    } catch (error) {
+      console.error('[Circuit] Failed to get saved circuits:', error)
+      return []
+    }
+  }
+
+  function deleteCircuitFromStorage(name: string): boolean {
+    try {
+      const savedCircuitsJson = localStorage.getItem('circuitlab_saved_circuits')
+      if (!savedCircuitsJson) return false
+
+      const savedCircuits = JSON.parse(savedCircuitsJson)
+      if (!(name in savedCircuits)) return false
+
+      delete savedCircuits[name]
+      localStorage.setItem('circuitlab_saved_circuits', JSON.stringify(savedCircuits))
+      console.log(`[Circuit] Deleted circuit: "${name}"`)
+      return true
+    } catch (error) {
+      console.error('[Circuit] Failed to delete circuit:', error)
+      return false
+    }
+  }
+
+  function exportCircuitAsJSON(): string {
+    return JSON.stringify(currentCircuit.value, null, 2)
+  }
+
+  function importCircuitFromJSON(jsonString: string): boolean {
+    try {
+      const circuit = JSON.parse(jsonString) as Circuit
+
+      // Basic validation
+      if (!circuit.id || !circuit.components || !Array.isArray(circuit.components)) {
+        throw new Error('Invalid circuit format')
+      }
+
+      restoreCircuit(circuit)
+      console.log(`[Circuit] Imported circuit: "${circuit.name}"`)
+      return true
+    } catch (error) {
+      console.error('[Circuit] Failed to import circuit:', error)
+      return false
+    }
+  }
+
   // Initialize history tracking
   function initializeHistory() {
     // This will be called from the main component to set up history tracking
@@ -450,6 +563,12 @@ export const useCircuitStore = defineStore('circuit', () => {
     updateProbePosition,
     updateProbeDirection,
     restoreCircuit,
+    saveCircuitToStorage,
+    loadCircuitFromStorage,
+    getSavedCircuits,
+    deleteCircuitFromStorage,
+    exportCircuitAsJSON,
+    importCircuitFromJSON,
     initializeHistory,
   }
 })
