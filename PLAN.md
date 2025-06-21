@@ -334,11 +334,11 @@ circuitStore.setSimulationThrottleMs(150) // Adjust throttling delay
 - ✅ **Error Handling:** Real-time simulation respects circuit validation
 - ✅ **Foundation Complete:** Ready for switches and potentiometers implementation
 
-### Phase 1.97: Non-Linear DC Foundation (Current Sources)
+### Phase 1.97: ✅ COMPLETED - Non-Linear DC Foundation
 
 **Goal:** Add fundamental DC components and establish non-linear solving capabilities
 
-**Status:** ✅ **CURRENT SOURCES IMPLEMENTED SUCCESSFULLY**
+**Status:** ✅ **SUCCESSFULLY COMPLETED - SWITCHES IMPLEMENTED**
 
 #### Linear DC Components (High Priority)
 
@@ -354,12 +354,17 @@ circuitStore.setSimulationThrottleMs(150) // Adjust throttling delay
   - ✅ **Component Integration:** Full integration with palette, properties, and circuit validation
   - ✅ **Test Suite:** Comprehensive validation with mixed-source circuit testing
 
-- [ ] **Basic Switches**
+- [x] **Basic Switches** ✅ **COMPLETED**
 
-  - Simple open/closed switch component
-  - Interactive toggle functionality
-  - Infinite/zero resistance modeling
-  - Circuit topology modification support
+  - ✅ Interactive open/closed switch component with click-to-toggle functionality
+  - ✅ Professional IEEE-standard symbol with visual state indication (blade position + text)
+  - ✅ Realistic electrical modeling: 1mΩ (closed) vs 1GΩ (open) resistance
+  - ✅ MNA simulation integration using existing resistive stamping infrastructure
+  - ✅ Component palette integration with proper icon and categorization
+  - ✅ Real-time simulation updates and circuit topology modification support
+  - ✅ **Educational Value:** Students can explore switching effects and circuit topology changes
+  - ✅ **Test Suite:** Comprehensive validation with both open and closed switch scenarios
+  - ✅ **Foundation for Advanced Components:** Ready for relay circuits, logic gates, and complex switching
 
 - [ ] **Potentiometers/Variable Resistors**
   - Adjustable resistance with slider interface
@@ -414,92 +419,56 @@ circuitStore.setSimulationThrottleMs(150) // Adjust throttling delay
 - [ ] **Educational Value:** Enhanced circuit analysis problems including superposition and source transformations
 - [ ] **Robust Solving:** Reliable convergence for common non-linear circuits with proper error handling
 
-### Phase 1.98: 📋 PLANNED - Basic Transistor Implementation
+### Phase 1.98: 📋 NEXT - Potentiometers & Variable Resistors
 
-**Goal:** Implement fundamental transistor models to enable amplifier and switching circuits
+**Goal:** Implement adjustable resistance components for parameter studies and circuit analysis
 
-**Status:** Requires completion of Phase 1.97 non-linear foundation
+**Status:** Ready to begin - Phase 1.97 foundation complete
 
-#### BJT Transistor Implementation
+#### Potentiometer Implementation
 
-- [ ] **Basic BJT Model (NPN/PNP)**
+- [ ] **Variable Resistor Component**
 
-  - Simplified Ebers-Moll model
-  - Current-controlled operation (β-based)
-  - Saturation, active, and cutoff regions
-  - Temperature-independent model
+  - Adjustable resistance with configurable range (e.g., 0-10kΩ)
+  - Real-time resistance modification via slider interface
+  - Wiper position visualization on component symbol
+  - Two-terminal configuration for basic variable resistance
 
-- [ ] **BJT Component Interface**
+- [ ] **Three-Terminal Potentiometer**
 
-  - Three-terminal symbol (collector, base, emitter)
-  - Configurable β (current gain) parameter
-  - Saturation voltage settings
-  - Visual orientation indicators
+  - Full potentiometer with wiper terminal access
+  - Voltage divider configuration support
+  - Wiper position affects resistance ratios
+  - Professional potentiometer symbol with wiper indication
 
-- [ ] **BJT Circuit Support**
-  - Common emitter amplifier configurations
-  - Switch mode operation
-  - Current mirror circuits
-  - Darlington pair configurations
+- [ ] **Interactive Controls**
 
-#### FET Transistor Implementation
-
-- [ ] **Basic MOSFET Model (NMOS/PMOS)**
-
-  - Simplified square-law model
-  - Voltage-controlled operation
-  - Triode and saturation regions
-  - Threshold voltage modeling
-
-- [ ] **MOSFET Component Interface**
-
-  - Three-terminal symbol (drain, gate, source)
-  - Configurable threshold voltage and transconductance
-  - Enhancement/depletion mode support
-  - Body connection handling
-
-- [ ] **MOSFET Circuit Support**
-  - Common source amplifier configurations
-  - Digital logic gate foundations
-  - Current source circuits
-  - Complementary CMOS pairs
-
-#### Advanced Transistor Features
-
-- [ ] **Operating Point Analysis**
-
-  - Automatic Q-point calculation
-  - Bias point stability analysis
-  - Small-signal parameter extraction
-  - Operating region identification
-
-- [ ] **Transistor Modeling Enhancements**
-  - Early effect modeling (finite output resistance)
-  - Temperature coefficient support
-  - Parasitic capacitance modeling (AC preparation)
-  - Power dissipation calculations
+  - Property panel slider for resistance adjustment
+  - Direct component interaction (click and drag wiper)
+  - Keyboard shortcuts for fine adjustment
+  - Real-time simulation updates during adjustment
 
 #### Educational Applications
 
-- [ ] **Amplifier Design Tools**
+- [ ] **Parameter Study Tools**
 
-  - Gain calculation and visualization
-  - Frequency response preparation
-  - Bias network design assistance
-  - Load line analysis
+  - Resistance sweep analysis
+  - Circuit sensitivity studies
+  - Load line analysis with variable load
+  - Voltage divider ratio exploration
 
-- [ ] **Digital Logic Foundations**
-  - Inverter circuit analysis
-  - Logic gate implementation
-  - Switching time analysis
-  - Power consumption calculations
+- [ ] **Circuit Analysis Enhancement**
+  - Variable bias circuits
+  - Gain control in amplifier circuits
+  - Filter tuning applications
+  - Impedance matching studies
 
 **SUCCESS CRITERIA:**
 
-- [ ] **Transistor Functionality:** Basic NPN/PNP BJT and NMOS/PMOS MOSFET models working
-- [ ] **Circuit Applications:** Common amplifier and switch circuits operational
-- [ ] **Educational Value:** Students can design and analyze transistor circuits
-- [ ] **Foundation for Advanced Features:** Solid base for AC analysis and complex models
+- [ ] **Interactive Adjustment:** Smooth real-time resistance changes with immediate simulation feedback
+- [ ] **Educational Value:** Students can perform parameter studies and sensitivity analysis
+- [ ] **Professional Interface:** Intuitive controls matching real potentiometer behavior
+- [ ] **Foundation for Advanced Circuits:** Ready for bias networks and control circuits
 
 ### Phase 2: 📋 PLANNED - AC Analysis & Reactive Components
 
@@ -786,37 +755,37 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 
 ## Immediate Next Steps
 
-### 1. Continue Phase 1.97 - Non-Linear DC Foundation (Priority: High)
+### 1. Continue Phase 1.98 - Potentiometers & Variable Resistors (Priority: High)
 
-✅ **COMPLETED:** Independent Current Sources - Full implementation with mixed-source support
+✅ **PHASE 1.97 COMPLETED:** Independent Current Sources + Basic Switches - Full implementation with mixed-source support and interactive switching
 
 **Next Components to Implement:**
 
-- **Basic Switches:** Interactive open/closed switch components with infinite/zero resistance
-- **Potentiometers/Variable Resistors:** Adjustable resistance with slider interface and real-time updates
-- **Simple Diode Model:** Basic exponential I-V characteristic with Newton-Raphson solver
-- **Iterative Solver Implementation:** Non-linear circuit solving capability for diode circuits
+- **Variable Resistors:** Two-terminal adjustable resistance components with slider interface
+- **Three-Terminal Potentiometers:** Full potentiometer with wiper access for voltage divider applications
+- **Interactive Controls:** Real-time resistance adjustment with immediate simulation feedback
+- **Parameter Study Tools:** Circuit sensitivity analysis and resistance sweep capabilities
 
-### 2. Complete Phase 1.98 - Basic Transistor Implementation
+### 2. Begin Phase 1.99 - Simple Diode Models & Non-Linear Solving
+
+- **Basic Diode Implementation:** Simple exponential I-V characteristic model
+- **Newton-Raphson Solver:** Iterative solving for non-linear circuits
+- **LED Components:** Visual diode models with forward voltage characteristics
+- **Rectifier Circuit Support:** Basic diode applications and analysis
+
+### 3. Phase 2.0 - Basic Transistor Implementation
 
 - **BJT Transistor Models:** Simple NPN/PNP models with Ebers-Moll equations
 - **MOSFET Models:** Basic NMOS/PMOS square-law models
 - **Operating Point Analysis:** Q-point calculation and visualization
 - **Amplifier Circuit Support:** Common emitter/source configurations
 
-### 3. Phase 2 - AC Analysis Foundation
+### 4. Phase 3.0 - AC Analysis & Reactive Components
 
 - **Reactive Components:** Add capacitor and inductor components
 - **Complex Number MNA:** Extend simulation for frequency domain
 - **AC Source Components:** Voltage/current sources with phase support
 - **Basic Bode Plots:** Magnitude and phase response visualization
-
-### 4. Phase 4 - Enhanced Plotting System
-
-- **Chart.js Integration:** Professional plotting library integration
-- **Oscilloscope Interface:** Multi-channel waveform visualization
-- **Advanced Measurements:** RMS, peak, power, and phase measurements
-- **Interactive Analysis:** Parameter sweeps and what-if scenarios
 
 ## Success Metrics
 

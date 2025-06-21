@@ -419,6 +419,19 @@ class NodeStamper implements ComponentStamper {
 }
 
 /**
+ * Switch component stamper - Models switch as variable resistance
+ */
+class SwitchStamper extends ResistiveStamper {
+  constructor(component: CircuitComponent) {
+    // Switch resistance based on state: Open = high resistance (1GΩ), Closed = low resistance (1mΩ)
+    const isOpen = component.properties?.isOpen === true // Default to closed (safer for circuits)
+    const resistance = isOpen ? 1e9 : 1e-3 // 1GΩ for open, 1mΩ for closed
+    super(component.id, component.type, component, resistance)
+    console.log(`Switch ${component.id}: ${isOpen ? 'OPEN' : 'CLOSED'} (R=${resistance}Ω)`)
+  }
+}
+
+/**
  * Component stamper factory
  */
 class ComponentStamperFactory {
@@ -427,6 +440,7 @@ class ComponentStamperFactory {
     ['wire', WireStamper],
     ['voltage_source', VoltageSourceStamper],
     ['current_source', CurrentSourceStamper],
+    ['switch', SwitchStamper],
     ['ground', GroundStamper],
     ['node', NodeStamper],
   ])

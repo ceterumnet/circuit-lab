@@ -62,6 +62,19 @@ const nodeDefinition: ComponentDefinition = {
   icon: 'NodeSymbol', // Simple filled circle for wire junctions
 }
 
+const switchDefinition: ComponentDefinition = {
+  type: 'switch',
+  name: 'Switch',
+  category: 'active',
+  complexity: 'simple',
+  terminals: [
+    { id: 'terminal1', position: { x: 0, y: -30 }, type: 'io' },
+    { id: 'terminal2', position: { x: 0, y: 30 }, type: 'io' },
+  ],
+  properties: [{ key: 'isOpen', type: 'boolean', label: 'Open/Closed', default: false }],
+  icon: 'SwitchSymbol', // Professional switch symbol with state indication
+}
+
 const wireDefinition: ComponentDefinition = {
   type: 'wire',
   name: 'Wire',
@@ -81,6 +94,7 @@ const wireDefinition: ComponentDefinition = {
 ComponentRegistry.set('resistor', resistorDefinition)
 ComponentRegistry.set('voltage_source', voltageSourceDefinition)
 ComponentRegistry.set('current_source', currentSourceDefinition)
+ComponentRegistry.set('switch', switchDefinition)
 ComponentRegistry.set('ground', groundDefinition)
 ComponentRegistry.set('node', nodeDefinition)
 ComponentRegistry.set('wire', wireDefinition)
@@ -90,6 +104,7 @@ export {
   resistorDefinition,
   voltageSourceDefinition,
   currentSourceDefinition,
+  switchDefinition,
   groundDefinition,
   nodeDefinition,
   wireDefinition,

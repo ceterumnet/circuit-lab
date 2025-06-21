@@ -1,6 +1,7 @@
 import type { TestCircuit } from './types'
 import type { Circuit } from '@/types/components'
 import { basicCurrentSource } from './current-source-test'
+import { switchTests } from './switch-test'
 
 /**
  * Basic test circuits for validating core simulation functionality
@@ -613,4 +614,5 @@ export const basicTests: TestCircuit[] = [
   multiVoltageSource,
   isolatedCircuits,
   basicCurrentSource,
+  ...switchTests,
 ]
