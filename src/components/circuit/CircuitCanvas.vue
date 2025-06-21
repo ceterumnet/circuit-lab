@@ -233,7 +233,7 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
         circuitStore.currentCircuit,
         interactionStore.componentToPlace,
         snappedPos,
-        0, // TODO: Use actual rotation when rotation is implemented for placement
+        interactionStore.componentPlacementPreview.rotation, // Use placement rotation
       )
 
       interactionStore.updateComponentPlacementPreview(snappedPos, intersections)
@@ -287,7 +287,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
       circuitStore.currentCircuit,
       interactionStore.componentToPlace,
       snappedPos,
-      0, // TODO: Use actual rotation when rotation is implemented for placement
+      interactionStore.componentPlacementPreview.rotation, // Use placement rotation
     )
 
     console.log(`[Canvas] Found ${intersections.length} intersections:`, intersections)
@@ -298,6 +298,8 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
       snappedPos,
     )
     if (newComponent) {
+      // Apply placement rotation
+      newComponent.rotation = interactionStore.componentPlacementPreview.rotation
       console.log(`[Canvas] Created component:`, newComponent)
       if (intersections.length > 0) {
         console.log(`[Canvas] Using auto-connect for component placement`)
@@ -350,7 +352,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           circuitStore.currentCircuit,
           interactionStore.componentToPlace,
           snappedPos,
-          0, // TODO: Use actual rotation when rotation is implemented for placement
+          interactionStore.componentPlacementPreview.rotation, // Use placement rotation
         )
 
         console.log(`[Canvas] Found ${intersections.length} intersections:`, intersections)
@@ -361,6 +363,8 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           snappedPos,
         )
         if (newComponent) {
+          // Apply placement rotation
+          newComponent.rotation = interactionStore.componentPlacementPreview.rotation
           console.log(`[Canvas] Created component:`, newComponent)
           if (intersections.length > 0) {
             console.log(`[Canvas] Using auto-connect for component placement`)
@@ -600,6 +604,14 @@ function handleKeyDown(e: KeyboardEvent) {
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
     historyActions.deleteSelectedComponentWithHistory()
+  }
+
+  // NEW: Handle 'r' key for rotating components during placement
+  if (e.key === 'r' || e.key === 'R') {
+    if (interactionStore.componentToPlace) {
+      e.preventDefault()
+      interactionStore.rotatePlacementComponent()
+    }
   }
 
   // Track spacebar as modifier for panning - but only if not typing in an input field
@@ -889,11 +901,18 @@ const previewComponent = computed(() => {
   }
 
   // Create a temporary component for preview
-  return componentFactory.createComponent(
+  const component = componentFactory.createComponent(
     circuitStore.currentCircuit,
     interactionStore.componentToPlace,
     interactionStore.componentPlacementPreview.position,
   )
+
+  // Apply placement rotation
+  if (component) {
+    component.rotation = interactionStore.componentPlacementPreview.rotation
+  }
+
+  return component
 })
 
 const wireIntersectionIndicators = computed(() => {

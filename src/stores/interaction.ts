@@ -22,6 +22,7 @@ export const useInteractionStore = defineStore('interaction', () => {
   // NEW: Component placement preview state
   const componentPlacementPreview = ref<{
     position: Position | null
+    rotation: number
     intersections: Array<{
       type: 'terminal' | 'wire'
       terminalId: string
@@ -32,6 +33,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     }>
   }>({
     position: null,
+    rotation: 0,
     intersections: [],
   })
 
@@ -290,12 +292,28 @@ export const useInteractionStore = defineStore('interaction', () => {
       intersectionPoint?: Position
     }> = [],
   ) {
-    componentPlacementPreview.value = { position, intersections }
+    componentPlacementPreview.value = {
+      position,
+      rotation: componentPlacementPreview.value.rotation, // Preserve current rotation
+      intersections,
+    }
   }
 
   // NEW: Clear component placement preview
   function clearComponentPlacementPreview() {
-    componentPlacementPreview.value = { position: null, intersections: [] }
+    componentPlacementPreview.value = { position: null, rotation: 0, intersections: [] }
+  }
+
+  // NEW: Rotate component placement by 90 degrees
+  function rotatePlacementComponent() {
+    if (componentToPlace.value) {
+      const currentRotation = componentPlacementPreview.value.rotation
+      const newRotation = (currentRotation + 90) % 360
+      componentPlacementPreview.value = {
+        ...componentPlacementPreview.value,
+        rotation: newRotation,
+      }
+    }
   }
 
   return {
@@ -324,6 +342,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     handleComponentPlaced,
     updateComponentPlacementPreview,
     clearComponentPlacementPreview,
+    rotatePlacementComponent,
     selectComponent,
     addToSelection,
     removeFromSelection,
