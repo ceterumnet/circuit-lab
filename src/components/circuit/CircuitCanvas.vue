@@ -622,59 +622,62 @@ function handleKeyDown(e: KeyboardEvent) {
     historyActions.deleteSelectedComponentWithHistory()
   }
 
-  // NEW: Enhanced keyboard shortcuts for component placement and rotation
-  if (e.key === 'r' || e.key === 'R') {
-    if (interactionStore.componentToPlace) {
-      // During placement: Handle rotation (clockwise or counter-clockwise)
-      e.preventDefault()
-      if (e.shiftKey) {
-        interactionStore.rotatePlacementComponentCounterClockwise()
-      } else {
-        interactionStore.rotatePlacementComponent()
-      }
-    } else {
-      // Not in placement mode: Start placing Resistor
-      e.preventDefault()
-      interactionStore.setComponentToPlace('resistor')
-    }
-  }
-
-  // NEW: Quick component placement shortcuts
-  if (e.key === 'v' || e.key === 'V') {
-    if (!interactionStore.componentToPlace) {
-      e.preventDefault()
-      interactionStore.setComponentToPlace('voltage_source')
-    }
-  }
-
-  if (e.key === 'g' || e.key === 'G') {
-    if (!interactionStore.componentToPlace) {
-      e.preventDefault()
-      interactionStore.setComponentToPlace('ground')
-    }
-  }
-
-  if (e.key === 'n' || e.key === 'N') {
-    if (!interactionStore.componentToPlace) {
-      e.preventDefault()
-      interactionStore.setComponentToPlace('node')
-    }
-  }
-
-  // NEW: Handle '/' key for component selector
-  if (e.key === '/') {
-    if (!interactionStore.componentSelectorState.isOpen) {
-      e.preventDefault()
-      // Get current mouse position or center of canvas
-      const stage = stageRef.value?.getStage()
-      let position = null
-      if (stage) {
-        const pointer = stage.getPointerPosition()
-        if (pointer) {
-          position = screenToWorld(pointer)
+  // Component placement shortcuts (only when Ctrl/Cmd is NOT held)
+  if (!e.ctrlKey && !e.metaKey) {
+    // Enhanced keyboard shortcuts for component placement and rotation
+    if (e.key === 'r' || e.key === 'R') {
+      if (interactionStore.componentToPlace) {
+        // During placement: Handle rotation (clockwise or counter-clockwise)
+        e.preventDefault()
+        if (e.shiftKey) {
+          interactionStore.rotatePlacementComponentCounterClockwise()
+        } else {
+          interactionStore.rotatePlacementComponent()
         }
+      } else {
+        // Not in placement mode: Start placing Resistor
+        e.preventDefault()
+        interactionStore.setComponentToPlace('resistor')
       }
-      interactionStore.openComponentSelector(position)
+    }
+
+    // Quick component placement shortcuts
+    if (e.key === 'v' || e.key === 'V') {
+      if (!interactionStore.componentToPlace) {
+        e.preventDefault()
+        interactionStore.setComponentToPlace('voltage_source')
+      }
+    }
+
+    if (e.key === 'g' || e.key === 'G') {
+      if (!interactionStore.componentToPlace) {
+        e.preventDefault()
+        interactionStore.setComponentToPlace('ground')
+      }
+    }
+
+    if (e.key === 'n' || e.key === 'N') {
+      if (!interactionStore.componentToPlace) {
+        e.preventDefault()
+        interactionStore.setComponentToPlace('node')
+      }
+    }
+
+    // Component selector (/) - also only when Ctrl/Cmd is not held
+    if (e.key === '/') {
+      if (!interactionStore.componentSelectorState.isOpen) {
+        e.preventDefault()
+        // Get current mouse position or center of canvas
+        const stage = stageRef.value?.getStage()
+        let position = null
+        if (stage) {
+          const pointer = stage.getPointerPosition()
+          if (pointer) {
+            position = screenToWorld(pointer)
+          }
+        }
+        interactionStore.openComponentSelector(position)
+      }
     }
   }
 

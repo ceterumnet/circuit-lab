@@ -147,7 +147,31 @@ function handleKeyDown(event: KeyboardEvent) {
     } else if (event.key === 'y' || (event.key === 'z' && event.shiftKey)) {
       event.preventDefault()
       historyActions.redo()
+    } else if (event.key === 'c') {
+      event.preventDefault()
+      handleCopy()
+    } else if (event.key === 'v') {
+      event.preventDefault()
+      handlePaste()
     }
+  }
+}
+
+// Copy functionality
+function handleCopy() {
+  const success = circuitStore.copySelectedComponents()
+  if (success) {
+    console.log('Components copied to clipboard')
+    // TODO: Show toast notification
+  }
+}
+
+// Paste functionality
+function handlePaste() {
+  const success = historyActions.pasteComponentsWithHistory()
+  if (success) {
+    console.log('Components pasted from clipboard')
+    // TODO: Show toast notification
   }
 }
 

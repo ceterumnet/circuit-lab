@@ -33,6 +33,9 @@ export const useCircuitStore = defineStore('circuit', () => {
   const simulationErrors = ref<string[]>([])
   const hasValidSimulation = ref(false)
 
+  // Clipboard functionality
+  const clipboardComponents = ref<CircuitComponent[]>([])
+
   // Getters
   const singleSelectedItem = computed(() => {
     const interactionStore = useInteractionStore()
@@ -628,6 +631,104 @@ export const useCircuitStore = defineStore('circuit', () => {
     // This will be called from the main component to set up history tracking
   }
 
+  // Copy selected components to clipboard
+  function copySelectedComponents() {
+    const interactionStore = useInteractionStore()
+    const selectedIds = interactionStore.selectedComponentIds
+
+    if (selectedIds.length === 0) {
+      console.log('No components selected to copy')
+      return false
+    }
+
+    // Get selected components (excluding wires for now - they're more complex)
+    const componentsToCopy = currentCircuit.value.components.filter(
+      (c) => selectedIds.includes(c.id) && c.type !== 'wire',
+    )
+
+    if (componentsToCopy.length === 0) {
+      console.log('No copyable components selected')
+      return false
+    }
+
+    // Deep copy the components to avoid reference issues
+    clipboardComponents.value = componentsToCopy.map((component) => ({
+      ...component,
+      properties: component.properties ? { ...component.properties } : undefined,
+    }))
+
+    console.log(`Copied ${clipboardComponents.value.length} components to clipboard`)
+    return true
+  }
+
+  // Paste components from clipboard
+  function pasteComponents() {
+    if (clipboardComponents.value.length === 0) {
+      console.log('No components in clipboard to paste')
+      return false
+    }
+
+    const interactionStore = useInteractionStore()
+    const pastedIds: string[] = []
+
+    // Calculate offset to avoid overlapping with originals
+    const PASTE_OFFSET = 50
+
+    // Find the bounding box center of clipboard components
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity
+    clipboardComponents.value.forEach((component) => {
+      minX = Math.min(minX, component.position.x)
+      minY = Math.min(minY, component.position.y)
+      maxX = Math.max(maxX, component.position.x)
+      maxY = Math.max(maxY, component.position.y)
+    })
+
+    const centerX = (minX + maxX) / 2
+    const centerY = (minY + maxY) / 2
+
+    // Paste each component with new ID and offset position
+    clipboardComponents.value.forEach((originalComponent) => {
+      // Generate new unique ID
+      const newId = generateComponentId(currentCircuit.value, originalComponent.type)
+
+      // Calculate relative position from center and apply offset
+      const relativeX = originalComponent.position.x - centerX
+      const relativeY = originalComponent.position.y - centerY
+      const newPosition = {
+        x: centerX + relativeX + PASTE_OFFSET,
+        y: centerY + relativeY + PASTE_OFFSET,
+      }
+
+      // Create new component with new ID and position
+      const newComponent: CircuitComponent = {
+        ...originalComponent,
+        id: newId,
+        position: newPosition,
+        selected: false, // Don't select pasted components initially
+        properties: originalComponent.properties ? { ...originalComponent.properties } : undefined,
+      }
+
+      // Add to circuit
+      addComponent(newComponent)
+      pastedIds.push(newId)
+    })
+
+    // Select the pasted components
+    interactionStore.clearSelection()
+    pastedIds.forEach((id) => interactionStore.addToSelection(id))
+
+    console.log(`Pasted ${pastedIds.length} components with IDs: ${pastedIds.join(', ')}`)
+    return true
+  }
+
+  // Check if clipboard has components
+  function hasClipboardContent() {
+    return clipboardComponents.value.length > 0
+  }
+
   return {
     // State
     currentCircuit,
@@ -672,5 +773,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     exportCircuitAsJSON,
     importCircuitFromJSON,
     initializeHistory,
+    copySelectedComponents,
+    pasteComponents,
+    hasClipboardContent,
   }
 })

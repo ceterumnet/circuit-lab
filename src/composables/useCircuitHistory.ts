@@ -140,6 +140,14 @@ export function useCircuitHistory() {
     historyStore.initializeHistory(circuitStore.currentCircuit)
   }
 
+  function pasteComponentsWithHistory(description?: string) {
+    const success = circuitStore.pasteComponents()
+    if (success) {
+      historyStore.saveState(circuitStore.currentCircuit, description || 'Paste components')
+    }
+    return success
+  }
+
   // NEW: Add component with auto-connect functionality
   function addComponentWithAutoConnectHistory(
     component: CircuitComponent,
@@ -247,6 +255,7 @@ export function useCircuitHistory() {
     deleteSelectedComponentWithHistory,
     updateComponentWithHistory,
     clearCircuitWithHistory,
+    pasteComponentsWithHistory,
 
     // Undo/Redo
     undo,
