@@ -1,5 +1,5 @@
 <template>
-  <v-group>
+  <v-group :config="{ listening: !interactionStore.componentToPlace }">
     <!-- The hit area is now a complex path to match the visible wire -->
     <v-path
       :config="{

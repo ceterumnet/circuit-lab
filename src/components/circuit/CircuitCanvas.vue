@@ -164,9 +164,18 @@ function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
 
-  // Check if we clicked on the background
-  const isBackground = e.target === stage || e.target.name() === 'grid-background'
+  // Check if we clicked on the background (stage, grid-background, or grid lines)
+  const isBackground =
+    e.target === stage ||
+    e.target.name() === 'grid-background' ||
+    e.target.getClassName() === 'Line'
+
   if (isBackground) {
+    // Don't start marquee selection if we're placing a component - let handleMouseUp handle it directly
+    if (interactionStore.componentToPlace) {
+      return
+    }
+
     const pos = screenToWorld(stage.getPointerPosition()!)
     selectionBox.value = {
       visible: true,
@@ -236,6 +245,8 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   const stage = e.target.getStage()
   if (!stage) return
 
+  console.log(`[Canvas] handleMouseUp called, target:`, e.target.getClassName())
+
   // NEW: Handle wire drag completion on empty space
   if (interactionStore.wireCreationState.isDragging) {
     const worldPos = screenToWorld(stage.getPointerPosition()!)
@@ -247,6 +258,58 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
     interactionStore.finishWireDrag(undefined, undefined, () => {
       historyStore.saveState(circuitStore.currentCircuit, 'Create wire')
     })
+    return
+  }
+
+  // Check if this is a background click (stage, grid-background, or grid lines)
+  const isBackgroundClick =
+    e.target === stage ||
+    e.target.name() === 'grid-background' ||
+    e.target.getClassName() === 'Line'
+
+  // Handle direct component placement on background clicks
+  if (isBackgroundClick && interactionStore.componentToPlace) {
+    const worldPos = screenToWorld(stage.getPointerPosition()!)
+    const snappedPos = {
+      x: Math.round(worldPos.x / gridSize) * gridSize,
+      y: Math.round(worldPos.y / gridSize) * gridSize,
+    }
+
+    console.log(
+      `[Canvas] Component placement clicked at world position:`,
+      worldPos,
+      'snapped to:',
+      snappedPos,
+    )
+
+    // Check for intersections before creating the component
+    const intersections = geometry.findIntersectionsForComponent(
+      circuitStore.currentCircuit,
+      interactionStore.componentToPlace,
+      snappedPos,
+      0, // TODO: Use actual rotation when rotation is implemented for placement
+    )
+
+    console.log(`[Canvas] Found ${intersections.length} intersections:`, intersections)
+
+    const newComponent = componentFactory.createComponent(
+      circuitStore.currentCircuit,
+      interactionStore.componentToPlace,
+      snappedPos,
+    )
+    if (newComponent) {
+      console.log(`[Canvas] Created component:`, newComponent)
+      if (intersections.length > 0) {
+        console.log(`[Canvas] Using auto-connect for component placement`)
+        // Use auto-connect history action
+        historyActions.addComponentWithAutoConnectHistory(newComponent, intersections)
+      } else {
+        console.log(`[Canvas] Using regular placement (no intersections)`)
+        // Use regular history action
+        historyActions.addComponentWithHistory(newComponent)
+      }
+    }
+    interactionStore.handleComponentPlaced()
     return
   }
 
