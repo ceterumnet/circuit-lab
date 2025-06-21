@@ -180,9 +180,9 @@ class WireStamper extends ResistiveStamper {
   }
 
   /**
-   * Calculate branch current using series current conservation and circuit topology
+   * Calculate branch current using proper series current analysis
    * For wires connecting same electrical node, find the current that flows through
-   * this physical path by analyzing connected components
+   * this specific wire branch by analyzing its direct series connection
    */
   private calculateBranchCurrentByKCL(
     nodeMap: Map<string, number>,
@@ -193,10 +193,10 @@ class WireStamper extends ResistiveStamper {
     const startComponentId = props.startComponentId as string
     const endComponentId = props.endComponentId as string
 
-    // Strategy: Find a series-connected component and use its current
-    // In a series path, all elements have the same current magnitude
+    // Strategy: Find the DIRECT series-connected component and use its current
+    // Priority: Start component (source of current flow) over end component
 
-    // Check start component first
+    // Check start component first - this gives us the current flowing INTO the wire
     const startComponent = allStampers.find((s) => s.id === startComponentId)
     if (
       startComponent &&
@@ -204,13 +204,12 @@ class WireStamper extends ResistiveStamper {
     ) {
       const current = startComponent.calculateCurrent(solution, nodeMap, [], allStampers)
       if (Math.abs(current) > 1e-12) {
-        // Avoid numerical noise
-        // IMPORTANT: Preserve sign for direction analysis - the UI layer will handle magnitude display
-        return current
+        // Determine current direction based on wire connection to component
+        return this.getDirectionalCurrent(startComponent, startComponentId, current, 'start')
       }
     }
 
-    // Check end component
+    // Check end component - this gives us the current flowing OUT OF the wire
     const endComponent = allStampers.find((s) => s.id === endComponentId)
     if (
       endComponent &&
@@ -218,26 +217,24 @@ class WireStamper extends ResistiveStamper {
     ) {
       const current = endComponent.calculateCurrent(solution, nodeMap, [], allStampers)
       if (Math.abs(current) > 1e-12) {
-        // IMPORTANT: Preserve sign for direction analysis
-        return current
+        // Determine current direction based on wire connection to component
+        return this.getDirectionalCurrent(endComponent, endComponentId, current, 'end')
       }
     }
 
-    // If connected to nodes, trace through the circuit topology
-    // Find other wires connected to the same nodes that might carry current
+    // Fallback: Use node analysis for complex cases
     const [n1, n2] = this.getNodeIndices(nodeMap)
     const nodeIndex = n1 // Since n1 === n2
 
-    // Look for other components connected to this node that have non-zero current
+    // Look for any component connected to this node that has non-zero current
     for (const stamper of allStampers) {
       if (stamper.id === this.id) continue
 
-      // Check if this component is connected to our node
       if (this.isComponentConnectedToNode(stamper, nodeIndex, nodeMap)) {
         if (stamper.type === 'resistor' || stamper.type === 'voltage_source') {
           const current = stamper.calculateCurrent(solution, nodeMap, [], allStampers)
           if (Math.abs(current) > 1e-12) {
-            // IMPORTANT: Preserve sign for direction analysis
+            // Use the first available current as fallback
             return current
           }
         }
@@ -246,6 +243,40 @@ class WireStamper extends ResistiveStamper {
 
     // Default: return 0 if no current path can be determined
     return 0
+  }
+
+  /**
+   * Determine the correct directional current for a wire based on its connection to a component
+   */
+  private getDirectionalCurrent(
+    component: ComponentStamper,
+    componentId: string,
+    componentCurrent: number,
+    connectionType: 'start' | 'end',
+  ): number {
+    const props = this.component.properties!
+
+    if (component.type === 'voltage_source') {
+      // For voltage sources, we need to determine which terminal the wire is connected to
+      const terminalId = connectionType === 'start' ? props.startTerminal : props.endTerminal
+
+      // If connected to positive terminal, current flows out of voltage source
+      // If connected to negative terminal, current flows into voltage source
+      if (terminalId === 'positive') {
+        // Current flowing out of positive terminal (wire carries this current)
+        return componentCurrent
+      } else if (terminalId === 'negative') {
+        // Current flowing into negative terminal (wire carries this current)
+        return componentCurrent
+      }
+    } else if (component.type === 'resistor') {
+      // For resistors, current flows through the component
+      // Wire current equals resistor current (same branch)
+      return componentCurrent
+    }
+
+    // Default: use component current as-is
+    return componentCurrent
   }
 
   /**

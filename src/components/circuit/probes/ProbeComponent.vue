@@ -207,9 +207,28 @@ const physicalCurrentInfo = computed(() => {
   // Physical Current Direction Algorithm:
   // - Positive current: flows from startComponent to endComponent
   // - Negative current: flows from endComponent to startComponent
+  // - Special case: Ground components are treated as current sinks (educational convention)
   // - Always display positive magnitude with arrow showing direction
 
-  const flowsStartToEnd = rawCurrent >= 0
+  let flowsStartToEnd = rawCurrent >= 0
+
+  // Special handling for ground-connected wires:
+  // Ground should always be treated as a current sink for educational clarity
+  if (wire?.properties) {
+    const startCompId = wire.properties.startComponentId as string
+    const endCompId = wire.properties.endComponentId as string
+    const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
+    const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
+
+    // If end component is ground, current should flow towards it (start → end)
+    if (endComp?.type === 'ground') {
+      flowsStartToEnd = true // Always show current flowing towards ground
+    }
+    // If start component is ground, current should flow away from it (end → start)
+    else if (startComp?.type === 'ground') {
+      flowsStartToEnd = false // Always show current flowing away from ground
+    }
+  }
 
   // Debug logging for current direction analysis
   if (wire?.properties && Math.abs(rawCurrent) > 1e-12) {
@@ -218,6 +237,11 @@ const physicalCurrentInfo = computed(() => {
     const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
     const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
 
+    const naturalFlowDirection = rawCurrent >= 0 ? 'Start→End' : 'End→Start'
+    const isGroundOverride =
+      (endComp?.type === 'ground' && rawCurrent < 0) ||
+      (startComp?.type === 'ground' && rawCurrent >= 0)
+
     console.log(`🔍 Current Probe Debug for ${targetId}:`)
     console.log(`  Raw Current: ${rawCurrent.toFixed(6)}A`)
     console.log(
@@ -225,7 +249,11 @@ const physicalCurrentInfo = computed(() => {
     )
     console.log(`  Start Component: ${startComp?.type} (${startCompId})`)
     console.log(`  End Component: ${endComp?.type} (${endCompId})`)
-    console.log(`  Flow Direction: ${flowsStartToEnd ? 'Start→End' : 'End→Start'}`)
+    console.log(`  Natural Flow Direction: ${naturalFlowDirection}`)
+    if (isGroundOverride) {
+      console.log(`  🔄 GROUND OVERRIDE: Forcing current towards/away from ground`)
+    }
+    console.log(`  Final Flow Direction: ${flowsStartToEnd ? 'Start→End' : 'End→Start'}`)
     console.log(`  Arrow will point: ${flowsStartToEnd ? 'RIGHT (→)' : 'LEFT (←)'}`)
     console.log(
       `  Physical meaning: Current flows FROM ${flowsStartToEnd ? startCompId : endCompId} TO ${flowsStartToEnd ? endCompId : startCompId}`,

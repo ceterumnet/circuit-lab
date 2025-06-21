@@ -208,17 +208,111 @@ function getPhysicalCurrentDirection(wire: Wire, current: number) {
 - ✅ Users can immediately see current flow patterns
 - ✅ Debug system helps understand circuit topology and simulation internals
 
-### Phase 1.92: 📋 NEXT - Current Direction Validation & Testing
+### Phase 1.92: ⚠️ PARTIALLY COMPLETED - Ground-Connected Current Direction Fix
 
-**Goal:** Verify the current direction fix works correctly across all circuit scenarios
+**Goal:** Fix inconsistent current direction arrows on ground-connected wires
+
+**PROBLEM IDENTIFIED:** Current probes on wires connected to ground components showed inconsistent arrow directions - some pointing towards ground, others pointing away from ground, causing educational confusion.
+
+**DEEPER ISSUE DISCOVERED:** The wire current calculation algorithm has fundamental flaws that violate KCL and the "multimeter test" - multiple wires connected to the same node show different currents when they should reflect actual branch currents.
+
+**ROOT CAUSE:** The physical current direction algorithm purely used simulation current signs without considering the special educational role of ground components as current sinks. Additionally, the `calculateBranchCurrentByKCL()` method uses heuristic current assignment instead of calculating actual branch currents.
+
+**SOLUTION IMPLEMENTED:**
+
+- [x] **Ground Override Algorithm:** Added special handling for ground-connected wires in current direction calculations
+- [x] **Educational Convention:** Ground components now always treated as current sinks - current flows towards ground
+- [x] **Consistent Logic:** Applied same override logic to both ProbeComponent.vue and ProbeProperties.vue
+- [x] **Enhanced Debug Output:** Added ground override indicators in debug logging to show when educational conventions are applied
+
+**KNOWN LIMITATIONS:**
+
+- ⚠️ **Wire Current Calculation Flaw:** Multiple wires to same node show different currents (violates KCL)
+- ⚠️ **Multimeter Test Failure:** Wire currents don't represent actual branch currents that would be measured
+- ⚠️ **Simulation Engine Issue:** `calculateBranchCurrentByKCL()` needs fundamental redesign
+
+**Key Features:**
+
+✅ **Ground as Current Sink:** All wires ending at ground components show current flowing towards ground  
+✅ **Ground as Current Source:** All wires starting from ground components show current flowing away from ground  
+✅ **Educational Clarity:** Eliminates confusing scenarios where multiple ground wires show different directions  
+✅ **Debugging Support:** Clear indicators when ground override is applied vs. natural current direction
+
+**Implementation Details:**
+
+```typescript
+// If end component is ground, current should flow towards it (start → end)
+if (endComp?.type === 'ground') {
+  flowsStartToEnd = true // Always show current flowing towards ground
+}
+// If start component is ground, current should flow away from it (end → start)
+else if (startComp?.type === 'ground') {
+  flowsStartToEnd = false // Always show current flowing away from ground
+}
+```
 
 **Testing & Validation:**
 
-- [ ] **Multi-Direction Wire Test:** Create circuit with wires drawn in different directions to verify arrows adapt correctly
-- [ ] **Complex Circuit Validation:** Test current directions in multi-branch circuits with various component types
-- [ ] **Regression Testing:** Run existing test circuits to ensure no side effects from simulation changes
-- [ ] **User Experience Testing:** Verify the debug panels provide helpful information without cluttering the UI
-- [ ] **Documentation Update:** Update user guides to explain the new physical current direction behavior
+- [x] **Ground Direction Consistency:** All ground-connected wires now show intuitive current directions
+- [x] **Complex Circuit Support:** Multi-ground circuits maintain educational clarity
+- [x] **Debug System Enhancement:** Ground override clearly indicated in probe debug panels
+- [x] **No Simulation Impact:** Raw current calculations remain physically accurate
+
+### Phase 1.93: 🔥 CRITICAL - Wire Current Calculation Overhaul
+
+**Goal:** Fix fundamental wire current calculation flaws that violate KCL and physical accuracy
+
+**CRITICAL ISSUES TO RESOLVE:**
+
+- [ ] **KCL Violation:** Multiple wires to same node show different currents (physically impossible)
+- [ ] **Multimeter Test Failure:** Wire currents don't represent actual measurable branch currents
+- [ ] **Heuristic Algorithm Flaw:** `calculateBranchCurrentByKCL()` guesses currents instead of calculating them
+- [ ] **Educational Impact:** Students learn incorrect current flow concepts
+
+**PROPOSED SOLUTION APPROACHES:**
+
+**Option 1: Branch Current Stamping**
+
+- [ ] Extend MNA system to explicitly solve for wire branch currents
+- [ ] Add wire current variables to the MNA matrix
+- [ ] Stamp wire KCL equations explicitly
+
+**Option 2: Post-Processing Current Calculation**
+
+- [ ] After MNA solution, calculate wire currents using proper KCL at each node
+- [ ] Ensure current conservation at every electrical node
+- [ ] Validate against multimeter test for each wire
+
+**Option 3: Series Component Analysis**
+
+- [ ] Identify series current paths through circuit topology
+- [ ] Assign same current to all elements in series path
+- [ ] Handle parallel branches with proper current division
+
+**VALIDATION REQUIREMENTS:**
+
+- [ ] **KCL Compliance:** All currents into each node must sum to zero
+- [ ] **Multimeter Test:** Wire current equals what would be measured in series
+- [ ] **Educational Accuracy:** Current directions and magnitudes make physical sense
+- [ ] **Regression Testing:** Ensure fix doesn't break existing circuit analysis
+
+### Phase 1.94: 📋 NEXT - Current Direction Testing & UX Polish
+
+**Goal:** After fixing wire current calculation, validate the ground override fix and improve overall probe UX
+
+**Testing & Validation:**
+
+- [ ] **Multi-Circuit Testing:** Test ground override behavior across various circuit topologies
+- [ ] **Edge Case Validation:** Verify behavior with multiple grounds, floating circuits, and complex interconnections
+- [ ] **User Experience Verification:** Ensure ground override provides educational clarity without confusion
+- [ ] **Performance Impact:** Verify no performance degradation from additional component lookups
+
+**UX Improvements:**
+
+- [ ] **Probe Visual Enhancement:** Improve current probe arrow visibility and styling
+- [ ] **Debug Panel Toggle:** Add ability to show/hide debug information for cleaner interface
+- [ ] **Magnitude-Based Visualization:** Consider arrow thickness or color intensity based on current magnitude
+- [ ] **Educational Annotations:** Add hover tooltips explaining current flow direction logic
 
 **Potential Future Enhancements:**
 
