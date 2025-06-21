@@ -209,6 +209,8 @@ if (typeof window !== 'undefined') {
 export * from './runner'
 export * from './basic-tests'
 export * from './demo'
+export * from './current-source-test'
+export * from './current-source-runner'
 
 // New function to seed saved circuits with test circuits
 export async function seedSavedCircuitsWithTests(): Promise<number> {

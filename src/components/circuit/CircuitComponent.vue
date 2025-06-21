@@ -26,6 +26,19 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- Current source component -->
+    <current-source-component
+      v-else-if="component.type === 'current_source'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Ground component -->
     <ground-component
       v-else-if="component.type === 'ground'"
@@ -72,6 +85,7 @@ import { computed } from 'vue'
 import type { CircuitComponent, Position } from '@/types/components'
 import ResistorComponent from '@/components/circuit/components/ResistorComponent.vue'
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
+import CurrentSourceComponent from '@/components/circuit/components/CurrentSourceComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
 import NodeComponent from '@/components/circuit/components/NodeComponent.vue'

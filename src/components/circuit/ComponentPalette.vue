@@ -49,6 +49,7 @@ import type { ComponentDefinition } from '@/types/components'
 // Import our professional schematic symbols
 import ResistorSymbol from './symbols/ResistorSymbol.vue'
 import VoltageSourceSymbol from './symbols/VoltageSourceSymbol.vue'
+import CurrentSourceSymbol from './symbols/CurrentSourceSymbol.vue'
 import GroundSymbol from './symbols/GroundSymbol.vue'
 import NodeSymbol from './symbols/NodeSymbol.vue'
 import WireSymbol from './symbols/WireSymbol.vue'
@@ -91,6 +92,7 @@ function getIconComponent(iconName?: string) {
   const iconMap = {
     ResistorSymbol: ResistorSymbol,
     VoltageSourceSymbol: VoltageSourceSymbol,
+    CurrentSourceSymbol: CurrentSourceSymbol,
     GroundSymbol: GroundSymbol,
     NodeSymbol: NodeSymbol,
     WireSymbol: WireSymbol,

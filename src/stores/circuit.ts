@@ -181,6 +181,14 @@ export const useCircuitStore = defineStore('circuit', () => {
           )
         }
       }
+      if (component.type === 'current_source') {
+        const current = component.properties?.current as number | undefined
+        if (!current || current === 0) {
+          errors.push(
+            `Current source ${component.label || component.id} has invalid current value.`,
+          )
+        }
+      }
     })
 
     // Note: Multiple voltage sources are now supported with the new simulation engine

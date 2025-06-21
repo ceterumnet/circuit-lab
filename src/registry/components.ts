@@ -29,6 +29,19 @@ const voltageSourceDefinition: ComponentDefinition = {
   icon: 'VoltageSourceSymbol', // Professional circle with polarity markings
 }
 
+const currentSourceDefinition: ComponentDefinition = {
+  type: 'current_source',
+  name: 'Current Source',
+  category: 'power',
+  complexity: 'simple',
+  terminals: [
+    { id: 'positive', position: { x: 0, y: -30 }, type: 'power', label: '+' },
+    { id: 'negative', position: { x: 0, y: 30 }, type: 'power', label: '-' },
+  ],
+  properties: [{ key: 'current', type: 'number', label: 'Current', unit: 'A', default: 0.001 }],
+  icon: 'CurrentSourceSymbol', // Professional circle with current arrow
+}
+
 const groundDefinition: ComponentDefinition = {
   type: 'ground',
   name: 'Ground',
@@ -67,6 +80,7 @@ const wireDefinition: ComponentDefinition = {
 // Register all components
 ComponentRegistry.set('resistor', resistorDefinition)
 ComponentRegistry.set('voltage_source', voltageSourceDefinition)
+ComponentRegistry.set('current_source', currentSourceDefinition)
 ComponentRegistry.set('ground', groundDefinition)
 ComponentRegistry.set('node', nodeDefinition)
 ComponentRegistry.set('wire', wireDefinition)
@@ -75,6 +89,7 @@ ComponentRegistry.set('wire', wireDefinition)
 export {
   resistorDefinition,
   voltageSourceDefinition,
+  currentSourceDefinition,
   groundDefinition,
   nodeDefinition,
   wireDefinition,
