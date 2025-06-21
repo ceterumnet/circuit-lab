@@ -8,6 +8,7 @@
         strokeWidth: 12,
         lineCap: 'round',
         lineJoin: 'round',
+        listening: !interactionStore.componentToPlace, // Disable hit detection during component placement
       }"
       @click="handleClick"
       @dblclick="handleDoubleClick"
@@ -160,6 +161,12 @@ const wirePathData = computed(() => {
 })
 
 function handleClick(e: KonvaEventObject<MouseEvent>) {
+  // Don't handle wire clicks if we're in component placement mode
+  // This allows component placement to work properly on wires
+  if (interactionStore.componentToPlace) {
+    return
+  }
+
   if (interactionStore.probingType) {
     emit('probe', e)
   } else {
@@ -172,6 +179,11 @@ function handleDoubleClick() {
 }
 
 function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
+  // Don't change cursor or emit events if we're in component placement mode
+  if (interactionStore.componentToPlace) {
+    return
+  }
+
   const stage = e.target.getStage()
   if (stage) {
     stage.container().style.cursor = 'pointer'
@@ -180,6 +192,11 @@ function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
 }
 
 function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
+  // Don't change cursor or emit events if we're in component placement mode
+  if (interactionStore.componentToPlace) {
+    return
+  }
+
   const stage = e.target.getStage()
   if (stage) {
     stage.container().style.cursor = 'default'
@@ -188,6 +205,12 @@ function handleMouseLeave(e: KonvaEventObject<MouseEvent>) {
 }
 
 function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
+  // Don't emit wire mouseup if we're in component placement mode
+  // This prevents interference with component placement
+  if (interactionStore.componentToPlace) {
+    return
+  }
+
   emit('wire-mouseup', e)
 }
 </script>

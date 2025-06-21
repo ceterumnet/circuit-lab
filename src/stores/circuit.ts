@@ -326,6 +326,106 @@ export const useCircuitStore = defineStore('circuit', () => {
     createWire(newWireStartTerminal, nodeTerminal)
   }
 
+  // NEW: Split wire and connect directly to terminal (no intermediate node)
+  function splitWireAndConnectDirect(
+    wireId: string,
+    newTerminal: { terminalId: string; componentId: string; position: Position },
+  ) {
+    const originalWire = currentCircuit.value.components.find((c) => c.id === wireId)
+    if (!originalWire || originalWire.type !== 'wire' || !originalWire.properties) return
+
+    // 1. Save original wire's endpoints
+    const startComponentId = originalWire.properties.startComponentId as string
+    const startTerminalId = originalWire.properties.startTerminal as string
+    const endComponentId = originalWire.properties.endComponentId as string
+    const endTerminalId = originalWire.properties.endTerminal as string
+
+    // 2. Delete the original wire
+    deleteWire(wireId)
+
+    // 3. Create two new wires: original endpoints to the new terminal
+    createWire(
+      { componentId: startComponentId, terminalId: startTerminalId, position: { x: 0, y: 0 } },
+      newTerminal,
+    )
+    createWire(
+      { componentId: endComponentId, terminalId: endTerminalId, position: { x: 0, y: 0 } },
+      newTerminal,
+    )
+  }
+
+  // NEW: Split wire and connect multiple terminals at once (replaces wire section)
+  function splitWireAndConnectMultiple(
+    wireId: string,
+    newTerminals: Array<{ terminalId: string; componentId: string; position: Position }>,
+  ) {
+    console.log(`[Circuit] splitWireAndConnectMultiple: wireId=${wireId}, terminals=`, newTerminals)
+
+    const originalWire = currentCircuit.value.components.find((c) => c.id === wireId)
+    if (!originalWire || originalWire.type !== 'wire' || !originalWire.properties) {
+      console.error(`[Circuit] Original wire ${wireId} not found or invalid`)
+      return
+    }
+
+    // 1. Save original wire's endpoints
+    const startComponentId = originalWire.properties.startComponentId as string
+    const startTerminalId = originalWire.properties.startTerminal as string
+    const endComponentId = originalWire.properties.endComponentId as string
+    const endTerminalId = originalWire.properties.endTerminal as string
+
+    console.log(
+      `[Circuit] Original wire endpoints: ${startComponentId}:${startTerminalId} -> ${endComponentId}:${endTerminalId}`,
+    )
+
+    // 2. Delete the original wire
+    deleteWire(wireId)
+    console.log(`[Circuit] Deleted original wire ${wireId}`)
+
+    // 3. For components with exactly 2 terminals (like resistors), create series connection
+    if (newTerminals.length === 2) {
+      console.log(`[Circuit] Creating series connection for 2 terminals (no internal wire)`)
+      // Connect: original_start -> terminal1, terminal2 -> original_end
+      // The connection between terminal1 and terminal2 is implicit in the component
+      console.log(
+        `[Circuit] Creating wire: ${startComponentId}:${startTerminalId} -> ${newTerminals[0].componentId}:${newTerminals[0].terminalId}`,
+      )
+      createWire(
+        { componentId: startComponentId, terminalId: startTerminalId, position: { x: 0, y: 0 } },
+        newTerminals[0],
+      )
+
+      console.log(
+        `[Circuit] Creating wire: ${newTerminals[1].componentId}:${newTerminals[1].terminalId} -> ${endComponentId}:${endTerminalId}`,
+      )
+      createWire(newTerminals[1], {
+        componentId: endComponentId,
+        terminalId: endTerminalId,
+        position: { x: 0, y: 0 },
+      })
+    } else {
+      console.log(`[Circuit] Creating parallel connections for ${newTerminals.length} terminals`)
+      // For other cases (single terminal like nodes, or more complex), use original logic
+      for (const newTerminal of newTerminals) {
+        console.log(
+          `[Circuit] Creating wire: ${startComponentId}:${startTerminalId} -> ${newTerminal.componentId}:${newTerminal.terminalId}`,
+        )
+        createWire(
+          { componentId: startComponentId, terminalId: startTerminalId, position: { x: 0, y: 0 } },
+          newTerminal,
+        )
+        console.log(
+          `[Circuit] Creating wire: ${endComponentId}:${endTerminalId} -> ${newTerminal.componentId}:${newTerminal.terminalId}`,
+        )
+        createWire(
+          { componentId: endComponentId, terminalId: endTerminalId, position: { x: 0, y: 0 } },
+          newTerminal,
+        )
+      }
+    }
+
+    console.log(`[Circuit] splitWireAndConnectMultiple completed`)
+  }
+
   function createNodeAndConnectWire(
     startTerminal: { terminalId: string; componentId: string; position: Position },
     position: Position,
@@ -557,6 +657,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     deleteWire,
     runDCSimulation,
     splitWireAndConnect,
+    splitWireAndConnectDirect,
+    splitWireAndConnectMultiple,
     createNodeAndConnectWire,
     addProbe,
     removeProbe,

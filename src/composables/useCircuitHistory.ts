@@ -99,6 +99,26 @@ export function useCircuitHistory() {
     historyStore.saveState(circuitStore.currentCircuit, description || 'Split wire')
   }
 
+  // NEW: Split wire and connect directly to terminal
+  function splitWireAndConnectDirectWithHistory(
+    wireId: string,
+    newTerminal: { terminalId: string; componentId: string; position: Position },
+    description?: string,
+  ) {
+    circuitStore.splitWireAndConnectDirect(wireId, newTerminal)
+    historyStore.saveState(circuitStore.currentCircuit, description || 'Connect to wire')
+  }
+
+  // NEW: Split wire and connect multiple terminals
+  function splitWireAndConnectMultipleWithHistory(
+    wireId: string,
+    newTerminals: Array<{ terminalId: string; componentId: string; position: Position }>,
+    description?: string,
+  ) {
+    circuitStore.splitWireAndConnectMultiple(wireId, newTerminals)
+    historyStore.saveState(circuitStore.currentCircuit, description || 'Connect multiple to wire')
+  }
+
   function removeProbeWithHistory(probeId: string, description?: string) {
     circuitStore.removeProbe(probeId)
     historyStore.saveState(circuitStore.currentCircuit, description || 'Remove probe')
@@ -120,6 +140,87 @@ export function useCircuitHistory() {
     historyStore.initializeHistory(circuitStore.currentCircuit)
   }
 
+  // NEW: Add component with auto-connect functionality
+  function addComponentWithAutoConnectHistory(
+    component: CircuitComponent,
+    intersections: Array<{
+      type: 'terminal' | 'wire'
+      terminalId: string
+      targetTerminalId?: string
+      targetComponentId?: string
+      targetWireId?: string
+      intersectionPoint?: Position
+    }>,
+    description?: string,
+  ) {
+    console.log(
+      `[AutoConnect] Adding component ${component.id} with ${intersections.length} intersections:`,
+      intersections,
+    )
+
+    // First add the component
+    circuitStore.addComponent(component)
+
+    // Group intersections by wire to handle multiple terminals on same wire
+    const wireIntersections = new Map<string, Array<(typeof intersections)[0]>>()
+    const terminalIntersections: Array<(typeof intersections)[0]> = []
+
+    for (const intersection of intersections) {
+      if (intersection.type === 'wire' && intersection.targetWireId) {
+        if (!wireIntersections.has(intersection.targetWireId)) {
+          wireIntersections.set(intersection.targetWireId, [])
+        }
+        wireIntersections.get(intersection.targetWireId)!.push(intersection)
+      } else if (intersection.type === 'terminal') {
+        terminalIntersections.push(intersection)
+      }
+    }
+
+    console.log(
+      `[AutoConnect] Grouped into ${wireIntersections.size} wire intersections and ${terminalIntersections.length} terminal intersections`,
+    )
+    console.log(`[AutoConnect] Wire intersections:`, Array.from(wireIntersections.entries()))
+    console.log(`[AutoConnect] Terminal intersections:`, terminalIntersections)
+
+    // Handle terminal-to-terminal connections
+    for (const intersection of terminalIntersections) {
+      if (intersection.targetComponentId && intersection.targetTerminalId) {
+        const componentTerminal = {
+          terminalId: intersection.terminalId,
+          componentId: component.id,
+          position: { x: 0, y: 0 }, // Will be calculated by createWire
+        }
+        const targetTerminal = {
+          terminalId: intersection.targetTerminalId,
+          componentId: intersection.targetComponentId,
+          position: { x: 0, y: 0 }, // Will be calculated by createWire
+        }
+        circuitStore.createWire(componentTerminal, targetTerminal)
+      }
+    }
+
+    // Handle wire intersections (one wire at a time to avoid duplication)
+    for (const [wireId, wireIntersectionList] of wireIntersections) {
+      console.log(
+        `[AutoConnect] Processing wire ${wireId} with ${wireIntersectionList.length} intersections`,
+      )
+
+      // For all components (including nodes), use the new logic
+      const componentTerminals = wireIntersectionList.map((intersection) => ({
+        terminalId: intersection.terminalId,
+        componentId: component.id,
+        position: { x: 0, y: 0 }, // Will be calculated by createWire
+      }))
+
+      console.log(`[AutoConnect] Component terminals for wire ${wireId}:`, componentTerminals)
+      circuitStore.splitWireAndConnectMultiple(wireId, componentTerminals)
+    }
+
+    const desc =
+      description || `Add ${component.type}${intersections.length > 0 ? ' with auto-connect' : ''}`
+    historyStore.saveState(circuitStore.currentCircuit, desc)
+  }
+
   // Undo/redo functions (without automatic keyboard setup)
   function undo() {
     return historyStore.undo()
@@ -132,6 +233,7 @@ export function useCircuitHistory() {
   return {
     // History actions
     addComponentWithHistory,
+    addComponentWithAutoConnectHistory,
     removeComponentWithHistory,
     moveComponentWithHistory,
     createWireWithHistory,
@@ -140,6 +242,8 @@ export function useCircuitHistory() {
     removeProbeWithHistory,
     updateProbePositionWithHistory,
     splitWireAndConnectWithHistory,
+    splitWireAndConnectDirectWithHistory,
+    splitWireAndConnectMultipleWithHistory,
     deleteSelectedComponentWithHistory,
     updateComponentWithHistory,
     clearCircuitWithHistory,

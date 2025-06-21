@@ -19,6 +19,22 @@ export const useInteractionStore = defineStore('interaction', () => {
   // NEW: Flag to prevent click events immediately after wire drag completion
   const justCompletedWireDrag = ref(false)
 
+  // NEW: Component placement preview state
+  const componentPlacementPreview = ref<{
+    position: Position | null
+    intersections: Array<{
+      type: 'terminal' | 'wire'
+      terminalId: string
+      targetTerminalId?: string
+      targetComponentId?: string
+      targetWireId?: string
+      intersectionPoint?: Position
+    }>
+  }>({
+    position: null,
+    intersections: [],
+  })
+
   const wireCreationState = ref<{
     isActive: boolean
     isDragging: boolean
@@ -262,6 +278,26 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
+  // NEW: Update component placement preview
+  function updateComponentPlacementPreview(
+    position: Position | null,
+    intersections: Array<{
+      type: 'terminal' | 'wire'
+      terminalId: string
+      targetTerminalId?: string
+      targetComponentId?: string
+      targetWireId?: string
+      intersectionPoint?: Position
+    }> = [],
+  ) {
+    componentPlacementPreview.value = { position, intersections }
+  }
+
+  // NEW: Clear component placement preview
+  function clearComponentPlacementPreview() {
+    componentPlacementPreview.value = { position: null, intersections: [] }
+  }
+
   return {
     // State
     selectedComponentIds,
@@ -275,6 +311,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     isDraggingComponent,
     isCtrlKeyHeld,
     justCompletedWireDrag,
+    componentPlacementPreview,
     // Actions
     setDraggingComponent,
     setCtrlKeyHeld,
@@ -285,6 +322,8 @@ export const useInteractionStore = defineStore('interaction', () => {
     setComponentToPlace,
     exitComponentPlacement,
     handleComponentPlaced,
+    updateComponentPlacementPreview,
+    clearComponentPlacementPreview,
     selectComponent,
     addToSelection,
     removeFromSelection,

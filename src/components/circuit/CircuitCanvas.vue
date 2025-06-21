@@ -9,9 +9,10 @@ import ProbeComponent from '@/components/circuit/probes/ProbeComponent.vue'
 import RotationHandle from '@/components/circuit/RotationHandle.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
+import * as geometry from '@/services/geometry'
 import { screenToWorld } from '@/services/coordinates'
-import type { CircuitComponent as CircuitComponentType } from '@/types/components'
 import { getComponentDefinition } from '@/registry/components'
+import type { CircuitComponent as CircuitComponentType, Position } from '@/types/components'
 
 // Stage configuration
 const stageConfig = ref({
@@ -207,6 +208,28 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
       }
     }
   }
+
+  // Handle component placement preview
+  if (interactionStore.componentToPlace) {
+    const pos = stage.getPointerPosition()
+    if (pos) {
+      const worldPos = screenToWorld(pos)
+      const snappedPos = {
+        x: Math.round(worldPos.x / gridSize) * gridSize,
+        y: Math.round(worldPos.y / gridSize) * gridSize,
+      }
+
+      // Check for intersections and update preview
+      const intersections = geometry.findIntersectionsForComponent(
+        circuitStore.currentCircuit,
+        interactionStore.componentToPlace,
+        snappedPos,
+        0, // TODO: Use actual rotation when rotation is implemented for placement
+      )
+
+      interactionStore.updateComponentPlacementPreview(snappedPos, intersections)
+    }
+  }
 }
 
 function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
@@ -251,13 +274,40 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           x: Math.round(worldPos.x / gridSize) * gridSize,
           y: Math.round(worldPos.y / gridSize) * gridSize,
         }
+
+        console.log(
+          `[Canvas] Component placement clicked at world position:`,
+          worldPos,
+          'snapped to:',
+          snappedPos,
+        )
+
+        // Check for intersections before creating the component
+        const intersections = geometry.findIntersectionsForComponent(
+          circuitStore.currentCircuit,
+          interactionStore.componentToPlace,
+          snappedPos,
+          0, // TODO: Use actual rotation when rotation is implemented for placement
+        )
+
+        console.log(`[Canvas] Found ${intersections.length} intersections:`, intersections)
+
         const newComponent = componentFactory.createComponent(
           circuitStore.currentCircuit,
           interactionStore.componentToPlace,
           snappedPos,
         )
         if (newComponent) {
-          historyActions.addComponentWithHistory(newComponent)
+          console.log(`[Canvas] Created component:`, newComponent)
+          if (intersections.length > 0) {
+            console.log(`[Canvas] Using auto-connect for component placement`)
+            // Use auto-connect history action
+            historyActions.addComponentWithAutoConnectHistory(newComponent, intersections)
+          } else {
+            console.log(`[Canvas] Using regular placement (no intersections)`)
+            // Use regular history action
+            historyActions.addComponentWithHistory(newComponent)
+          }
         }
         interactionStore.handleComponentPlaced()
       } else if (!e.evt.shiftKey) {
@@ -479,6 +529,7 @@ function handleKeyDown(e: KeyboardEvent) {
       interactionStore.cancelWireCreation()
     } else if (interactionStore.componentToPlace) {
       interactionStore.exitComponentPlacement()
+      interactionStore.clearComponentPlacementPreview()
     } else {
       interactionStore.clearSelection()
     }
@@ -768,6 +819,87 @@ function handleComponentRotate(componentId: string, rotation: number) {
   historyActions.updateComponentWithHistory(componentId, { rotation }, 'Rotate component')
 }
 
+// Computed properties for component placement preview
+const previewComponent = computed(() => {
+  if (!interactionStore.componentToPlace || !interactionStore.componentPlacementPreview.position) {
+    return null
+  }
+
+  // Create a temporary component for preview
+  return componentFactory.createComponent(
+    circuitStore.currentCircuit,
+    interactionStore.componentToPlace,
+    interactionStore.componentPlacementPreview.position,
+  )
+})
+
+const wireIntersectionIndicators = computed(() => {
+  return interactionStore.componentPlacementPreview.intersections
+    .filter((i) => i.type === 'wire')
+    .map((intersection) => ({
+      x: intersection.intersectionPoint?.x || 0,
+      y: intersection.intersectionPoint?.y || 0,
+    }))
+})
+
+const terminalIntersectionIndicators = computed(() => {
+  return interactionStore.componentPlacementPreview.intersections
+    .filter((i) => i.type === 'terminal')
+    .map((intersection) => {
+      if (!intersection.targetComponentId || !intersection.targetTerminalId) {
+        return { x: 0, y: 0 }
+      }
+
+      const component = circuitStore.currentCircuit.components.find(
+        (c) => c.id === intersection.targetComponentId,
+      )
+      if (!component) return { x: 0, y: 0 }
+
+      return geometry.getTerminalWorldPosition(component, intersection.targetTerminalId)
+    })
+})
+
+const connectionPreviewLines = computed(() => {
+  if (!previewComponent.value) return []
+
+  const lines: Array<{ from: Position; to: Position }> = []
+
+  interactionStore.componentPlacementPreview.intersections.forEach((intersection) => {
+    if (!previewComponent.value) return
+
+    // Get the terminal position on the preview component
+    const terminalPosition = geometry.getTerminalWorldPosition(
+      previewComponent.value,
+      intersection.terminalId,
+    )
+
+    if (intersection.type === 'wire') {
+      // Line from component terminal to wire intersection point
+      lines.push({
+        from: terminalPosition,
+        to: intersection.intersectionPoint || terminalPosition,
+      })
+    } else if (intersection.type === 'terminal') {
+      // Line from component terminal to target terminal
+      const targetComponent = circuitStore.currentCircuit.components.find(
+        (c) => c.id === intersection.targetComponentId,
+      )
+      if (targetComponent && intersection.targetTerminalId) {
+        const targetPosition = geometry.getTerminalWorldPosition(
+          targetComponent,
+          intersection.targetTerminalId,
+        )
+        lines.push({
+          from: terminalPosition,
+          to: targetPosition,
+        })
+      }
+    }
+  })
+
+  return lines
+})
+
 // Lifecycle hooks
 onMounted(() => {
   if (!containerRef.value) return
@@ -984,6 +1116,75 @@ watch(
           @select="handleProbeSelect"
           @dragend="handleProbeMoveEnd"
         />
+
+        <!-- Component placement preview -->
+        <v-group
+          v-if="
+            interactionStore.componentPlacementPreview.position && interactionStore.componentToPlace
+          "
+        >
+          <!-- Ghost/preview component -->
+          <v-group
+            :config="{
+              opacity: 0.6,
+              listening: false,
+            }"
+          >
+            <!-- Render the actual component as a ghost -->
+            <circuit-component
+              v-if="previewComponent"
+              :component="previewComponent"
+              :listening="false"
+            />
+          </v-group>
+
+          <!-- Connection indicators -->
+          <v-group :config="{ listening: false }">
+            <!-- Wire intersection highlights -->
+            <v-circle
+              v-for="(intersection, index) in wireIntersectionIndicators"
+              :key="`wire-${index}`"
+              :config="{
+                x: intersection.x,
+                y: intersection.y,
+                radius: 8,
+                stroke: '#ffa500',
+                strokeWidth: 3,
+                dash: [8, 4],
+                listening: false,
+              }"
+            />
+
+            <!-- Terminal connection highlights -->
+            <v-circle
+              v-for="(intersection, index) in terminalIntersectionIndicators"
+              :key="`terminal-${index}`"
+              :config="{
+                x: intersection.x,
+                y: intersection.y,
+                radius: 6,
+                stroke: '#28a745',
+                strokeWidth: 3,
+                dash: [6, 3],
+                listening: false,
+              }"
+            />
+
+            <!-- Connection preview lines -->
+            <v-line
+              v-for="(line, index) in connectionPreviewLines"
+              :key="`line-${index}`"
+              :config="{
+                points: [line.from.x, line.from.y, line.to.x, line.to.y],
+                stroke: '#17a2b8',
+                strokeWidth: 2,
+                dash: [10, 5],
+                opacity: 0.7,
+                listening: false,
+              }"
+            />
+          </v-group>
+        </v-group>
 
         <!-- Rotation Handle (shown when single component is selected) -->
         <rotation-handle

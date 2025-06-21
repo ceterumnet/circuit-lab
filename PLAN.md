@@ -109,7 +109,7 @@ Building a web-based circuit simulation application focused on educational purpo
 - [ ] It is a pain every time I need to create a bunch of components to do regression and validation. We either need:
   - [ ] an E2E test for things
   - [x] have some canned circuits (only basic tests)
-  - [ ] implement a save feature so that I don't have to keep redoing circuits
+  - [x] implement a save feature so that I don't have to keep redoing circuits
 - [ ] Component placement
   - [x] I have to select a component and then place the component, and then if I want to place another component I need to click that component on the left hand side again. We should consider making the selection persistent and entering a component placement mode.
   - [ ] What about when I place a component and the pin intersects a wire or a terminal? I believe it should automatically connect. This would work well for NodeComponents as well as the other types. Currently it is cumbersome to place a component on an existing circuit because you have to delete a wire and then rebuild the connections
