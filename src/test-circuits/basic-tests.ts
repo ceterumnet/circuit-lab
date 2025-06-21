@@ -395,7 +395,219 @@ export const multiVoltageSource: TestCircuit = {
   },
 }
 
+export const isolatedCircuits: TestCircuit = {
+  name: 'Two Isolated Circuits',
+  description: 'Two completely separate circuits to test multi-ground handling',
+  category: 'regression',
+  tags: ['isolated-circuits', 'multi-ground', 'regression'],
+  circuit: {
+    id: 'isolated-circuits-test',
+    name: 'Isolated Circuits Test',
+    components: [
+      // First isolated circuit: V1 + R1 + R2 + GND1
+      {
+        id: 'V1',
+        type: 'voltage_source',
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        selected: false,
+        properties: { voltage: 5 },
+      },
+      {
+        id: 'R1',
+        type: 'resistor',
+        position: { x: 200, y: 100 },
+        rotation: 0,
+        selected: false,
+        properties: { resistance: 1000 },
+      },
+      {
+        id: 'R2',
+        type: 'resistor',
+        position: { x: 200, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: { resistance: 1000 },
+      },
+      {
+        id: 'GND1',
+        type: 'ground',
+        position: { x: 100, y: 250 },
+        rotation: 0,
+        selected: false,
+      },
+      // Second isolated circuit: V2 + R3 + R4 + GND2
+      {
+        id: 'V2',
+        type: 'voltage_source',
+        position: { x: 400, y: 100 },
+        rotation: 0,
+        selected: false,
+        properties: { voltage: 5 },
+      },
+      {
+        id: 'R3',
+        type: 'resistor',
+        position: { x: 500, y: 100 },
+        rotation: 0,
+        selected: false,
+        properties: { resistance: 1000 },
+      },
+      {
+        id: 'R4',
+        type: 'resistor',
+        position: { x: 500, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: { resistance: 1000 },
+      },
+      {
+        id: 'GND2',
+        type: 'ground',
+        position: { x: 400, y: 250 },
+        rotation: 0,
+        selected: false,
+      },
+      // Wires for first circuit
+      {
+        id: 'W1',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'V1',
+          startTerminal: 'positive',
+          endComponentId: 'R1',
+          endTerminal: 'terminal1',
+        },
+      },
+      {
+        id: 'W2',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'R1',
+          startTerminal: 'terminal2',
+          endComponentId: 'R2',
+          endTerminal: 'terminal1',
+        },
+      },
+      {
+        id: 'W3',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'R2',
+          startTerminal: 'terminal2',
+          endComponentId: 'GND1',
+          endTerminal: 'terminal',
+        },
+      },
+      {
+        id: 'W4',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'V1',
+          startTerminal: 'negative',
+          endComponentId: 'GND1',
+          endTerminal: 'terminal',
+        },
+      },
+      // Wires for second circuit
+      {
+        id: 'W5',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'V2',
+          startTerminal: 'positive',
+          endComponentId: 'R3',
+          endTerminal: 'terminal1',
+        },
+      },
+      {
+        id: 'W6',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'R3',
+          startTerminal: 'terminal2',
+          endComponentId: 'R4',
+          endTerminal: 'terminal1',
+        },
+      },
+      {
+        id: 'W7',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'R4',
+          startTerminal: 'terminal2',
+          endComponentId: 'GND2',
+          endTerminal: 'terminal',
+        },
+      },
+      {
+        id: 'W8',
+        type: 'wire',
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          startComponentId: 'V2',
+          startTerminal: 'negative',
+          endComponentId: 'GND2',
+          endTerminal: 'terminal',
+        },
+      },
+    ],
+    wires: [],
+    probes: [],
+    nodes: {},
+  } as Circuit,
+  expected: {
+    voltages: {
+      // First circuit nodes
+      '0': 5.0, // V1+ terminal
+      '1': 0.0, // GND1 (should be 0V)
+      '2': 2.5, // Between R1 and R2 in first circuit
+      // Second circuit nodes
+      '3': 5.0, // V2+ terminal
+      '4': 0.0, // GND2 (should be 0V, NOT -2.5V!)
+      '5': 2.5, // Between R3 and R4 in second circuit
+    },
+    currents: {
+      V1: -0.0025, // 2.5mA from first voltage source
+      R1: 0.0025, // 2.5mA through R1
+      R2: 0.0025, // 2.5mA through R2
+      V2: -0.0025, // 2.5mA from second voltage source
+      R3: 0.0025, // 2.5mA through R3
+      R4: 0.0025, // 2.5mA through R4
+    },
+    tolerance: 0.001,
+  },
+}
+
 /**
  * All basic test circuits
  */
-export const basicTests: TestCircuit[] = [voltageDivider, wireCurrentRegression, multiVoltageSource]
+export const basicTests: TestCircuit[] = [
+  voltageDivider,
+  wireCurrentRegression,
+  multiVoltageSource,
+  isolatedCircuits,
+]

@@ -443,9 +443,10 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     const components = circuit.components
 
     // Step 1: Build electrical nodes using the same logic as before
-    const { electricalNodes, termToNodeIndex, groundNodeIndex } = buildElectricalNodes(components)
+    const { electricalNodes, termToNodeIndex, groundNodeIndex, groundNodeIndices } =
+      buildElectricalNodes(components)
 
-    if (groundNodeIndex === -1) {
+    if (groundNodeIndices.length === 0) {
       console.error('Circuit must have a ground connection or a voltage source.')
       return null
     }
@@ -496,16 +497,17 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
       nextBranchIndex += result.branchCurrents.length
     }
 
-    // Step 6: Apply ground constraint
-    if (groundNodeIndex !== -1) {
+    // Step 6: Apply ground constraints for all isolated circuits
+    console.log('Applying ground constraints for nodes:', groundNodeIndices)
+    for (const groundIndex of groundNodeIndices) {
       // Zero out ground node row and column
       for (let i = 0; i < matrixSize; i++) {
-        mnaMatrix.set([groundNodeIndex, i], 0)
-        mnaMatrix.set([i, groundNodeIndex], 0)
+        mnaMatrix.set([groundIndex, i], 0)
+        mnaMatrix.set([i, groundIndex], 0)
       }
       // Set ground node equation: V_ground = 0
-      mnaMatrix.set([groundNodeIndex, groundNodeIndex], 1)
-      rhsVector.set([groundNodeIndex, 0], 0)
+      mnaMatrix.set([groundIndex, groundIndex], 1)
+      rhsVector.set([groundIndex, 0], 0)
     }
 
     // Step 7: Solve the system
@@ -606,18 +608,38 @@ function buildElectricalNodes(components: CircuitComponent[]) {
     }
   }
 
-  // Find ground node
-  let groundNodeIndex = electricalNodes.findIndex((node) =>
-    node.some((termId) => termId.includes('ground')),
-  )
+  // Find all ground nodes and identify circuit islands
+  const groundNodeIndices: number[] = []
 
-  // If no ground, use negative terminal of first voltage source
-  if (groundNodeIndex === -1) {
-    const firstVSource = components.find((c) => c.type === 'voltage_source')
-    if (firstVSource) {
-      const vSourceDef = getComponentDefinition('voltage_source')
-      const negTerminal = getTerminalId(firstVSource, vSourceDef!.terminals[1].id)
-      groundNodeIndex = electricalNodes.findIndex((node) => node.includes(negTerminal))
+  // First, find all explicit ground nodes
+  electricalNodes.forEach((node, index) => {
+    if (node.some((termId) => termId.includes('ground'))) {
+      groundNodeIndices.push(index)
+    }
+  })
+
+  // If no explicit grounds, find reference nodes for each isolated circuit
+  if (groundNodeIndices.length === 0) {
+    // Identify isolated circuits by finding nodes connected to voltage sources
+    const voltageSourceNodes = new Set<number>()
+
+    for (const component of components) {
+      if (component.type === 'voltage_source') {
+        const vSourceDef = getComponentDefinition('voltage_source')
+        if (vSourceDef) {
+          const negTerminal = getTerminalId(component, vSourceDef.terminals[1].id)
+          // Find which electrical node this terminal belongs to
+          for (let i = 0; i < electricalNodes.length; i++) {
+            if (electricalNodes[i].includes(negTerminal)) {
+              if (!voltageSourceNodes.has(i)) {
+                voltageSourceNodes.add(i)
+                groundNodeIndices.push(i)
+              }
+              break
+            }
+          }
+        }
+      }
     }
   }
 
@@ -627,5 +649,8 @@ function buildElectricalNodes(components: CircuitComponent[]) {
     node.forEach((termId) => termToNodeIndex.set(termId, i))
   })
 
-  return { electricalNodes, termToNodeIndex, groundNodeIndex }
+  // For backward compatibility, return the first ground node as the primary ground
+  const groundNodeIndex = groundNodeIndices.length > 0 ? groundNodeIndices[0] : -1
+
+  return { electricalNodes, termToNodeIndex, groundNodeIndex, groundNodeIndices }
 }
