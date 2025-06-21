@@ -169,29 +169,13 @@ const physicalCurrentInfo = computed(() => {
     }
   }
 
-  // Physical Current Direction Algorithm:
+  // PURE PHYSICS-BASED CURRENT DIRECTION ALGORITHM:
   // - Positive current: flows from startComponent to endComponent
   // - Negative current: flows from endComponent to startComponent
-  // - Special case: Ground components are treated as current sinks (educational convention)
-  // - Always display positive magnitude with arrow showing direction
+  // - NO GROUND OVERRIDES: Ground symbols do not artificially change current direction
+  // - Always display positive magnitude with arrow showing actual current flow
 
-  let flowsStartToEnd = rawCurrent >= 0
-
-  // Special handling for ground-connected wires:
-  // Ground should always be treated as a current sink for educational clarity
-  const startCompId = wire.properties.startComponentId as string
-  const endCompId = wire.properties.endComponentId as string
-  const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
-  const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
-
-  // If end component is ground, current should flow towards it (start → end)
-  if (endComp?.type === 'ground') {
-    flowsStartToEnd = true // Always show current flowing towards ground
-  }
-  // If start component is ground, current should flow away from it (end → start)
-  else if (startComp?.type === 'ground') {
-    flowsStartToEnd = false // Always show current flowing away from ground
-  }
+  const flowsStartToEnd = rawCurrent >= 0
 
   return {
     magnitude: Math.abs(rawCurrent),

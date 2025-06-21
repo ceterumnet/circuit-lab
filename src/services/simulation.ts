@@ -104,15 +104,16 @@ class ResistorStamper extends ResistiveStamper {
 }
 
 /**
- * Wire component stamper - wires as resistive elements that participate in MNA equations
+ * Wire component stamper - ALL wires now get branch current variables for proper MNA analysis
+ * This eliminates heuristic-based current calculations and ensures KCL compliance
  */
 class WireStamper extends ResistiveStamper {
   private branchIndex: number = -1
 
   constructor(component: CircuitComponent) {
-    // Use wire's configured resistance, default to very small value (1μΩ) for realistic modeling
-    // This allows wires to participate in simulation without significantly affecting most circuits
-    const resistance = (component.properties?.resistance as number) || 1e-6
+    // Use wire's configured resistance, default to 1mΩ for numerical stability
+    // 1mΩ is small enough to be negligible in most circuits but avoids conditioning issues
+    const resistance = (component.properties?.resistance as number) || 1e-3
     super(component.id, component.type, component, resistance)
   }
 
@@ -125,7 +126,18 @@ class WireStamper extends ResistiveStamper {
     const n1 = nodeMap.get(startTerminalId)
     const n2 = nodeMap.get(endTerminalId)
 
+    // DEBUG: Log wire terminal mapping details
+    console.log(`🔍 Wire ${this.id} terminal mapping:`)
+    console.log(`  Start: ${startTerminalId} → node ${n1}`)
+    console.log(`  End: ${endTerminalId} → node ${n2}`)
+    console.log(`  Wire properties:`, props)
+
     if (n1 === undefined || n2 === undefined) {
+      console.error(`❌ Wire ${this.id}: Missing node mappings!`)
+      console.error(`  Available node mappings:`)
+      for (const [termId, nodeIdx] of nodeMap.entries()) {
+        console.error(`    ${termId} → ${nodeIdx}`)
+      }
       throw new Error(`Wire ${this.id}: Could not find node indices for terminals`)
     }
 
@@ -140,24 +152,39 @@ class WireStamper extends ResistiveStamper {
   ): StampResult {
     const [n1, n2] = this.getNodeIndices(nodeMap)
 
-    // For wires connecting different nodes, use standard resistor stamp
-    if (n1 !== n2) {
-      const g = 1 / this.resistance
-      mnaMatrix.set([n1, n1], (mnaMatrix.get([n1, n1]) as number) + g)
-      mnaMatrix.set([n2, n2], (mnaMatrix.get([n2, n2]) as number) + g)
-      mnaMatrix.set([n1, n2], (mnaMatrix.get([n1, n2]) as number) - g)
-      mnaMatrix.set([n2, n1], (mnaMatrix.get([n2, n1]) as number) - g)
-
-      console.log(`Wire ${this.id}: R=${this.resistance}Ω, nodes ${n1}-${n2} (different nodes)`)
+    // SPECIAL CASE: Same-node wires (n1 === n2) don't carry current
+    // These represent direct connections within the same electrical node
+    if (n1 === n2) {
+      console.log(`Wire ${this.id}: Same-node connection (${n1}-${n2}), no branch current needed`)
       return { branchCurrents: [] }
     }
 
-    // For wires connecting same node, don't add to MNA matrix
-    // Current will be calculated using topology analysis after solving
+    this.branchIndex = nextBranchIndex
+
+    // EXTENDED MNA: Different-node wires get branch current variables
+    // This ensures every inter-node wire current is directly calculated by MNA
+
+    // Standard voltage-controlled current source stamp (wire as resistor with branch current)
+    // Equations: V1 - V2 = I_wire * R_wire
+    //           I_wire is the branch current variable
+
+    // B matrix: current flowing from node n1 to node n2
+    mnaMatrix.set([n1, this.branchIndex], 1)
+    mnaMatrix.set([n2, this.branchIndex], -1)
+
+    // C matrix: voltage constraint equation
+    mnaMatrix.set([this.branchIndex, n1], 1)
+    mnaMatrix.set([this.branchIndex, n2], -1)
+
+    // Add resistance effect to the branch equation
+    // V1 - V2 - I_wire * R_wire = 0
+    mnaMatrix.set([this.branchIndex, this.branchIndex], -this.resistance)
+
     console.log(
-      `Wire ${this.id}: R=${this.resistance}Ω, nodes ${n1}-${n2} (same node, topology analysis)`,
+      `Wire ${this.id}: R=${this.resistance}Ω, nodes ${n1}-${n2}, branch current index ${this.branchIndex}`,
     )
-    return { branchCurrents: [] }
+
+    return { branchCurrents: [this.branchIndex] }
   }
 
   calculateCurrent(
@@ -168,143 +195,24 @@ class WireStamper extends ResistiveStamper {
   ): number {
     const [n1, n2] = this.getNodeIndices(nodeMap)
 
-    // If wire connects different nodes, use standard Ohm's law
-    if (n1 !== n2) {
-      const v1 = solution.get([n1, 0]) as number
-      const v2 = solution.get([n2, 0]) as number
-      return (v1 - v2) / this.resistance
+    // Same-node wires carry zero current by definition
+    if (n1 === n2) {
+      console.log(`Wire ${this.id}: Same-node wire, current = 0A`)
+      return 0
     }
 
-    // For wires connecting same node, calculate using topology analysis
-    return this.calculateBranchCurrentByKCL(nodeMap, solution, allStampers || [])
-  }
-
-  /**
-   * Calculate branch current using proper series current analysis
-   * For wires connecting same electrical node, find the current that flows through
-   * this specific wire branch by analyzing its direct series connection
-   */
-  private calculateBranchCurrentByKCL(
-    nodeMap: Map<string, number>,
-    solution: Matrix,
-    allStampers: ComponentStamper[],
-  ): number {
-    const props = this.component.properties!
-    const startComponentId = props.startComponentId as string
-    const endComponentId = props.endComponentId as string
-
-    // Strategy: Find the DIRECT series-connected component and use its current
-    // Priority: Start component (source of current flow) over end component
-
-    // Check start component first - this gives us the current flowing INTO the wire
-    const startComponent = allStampers.find((s) => s.id === startComponentId)
-    if (
-      startComponent &&
-      (startComponent.type === 'resistor' || startComponent.type === 'voltage_source')
-    ) {
-      const current = startComponent.calculateCurrent(solution, nodeMap, [], allStampers)
-      if (Math.abs(current) > 1e-12) {
-        // Determine current direction based on wire connection to component
-        return this.getDirectionalCurrent(startComponent, startComponentId, current, 'start')
-      }
+    // CRITICAL: Direct MNA solution - no heuristics, no special cases
+    // This is the current that a real multimeter would measure if inserted in series
+    if (this.branchIndex === -1) {
+      console.error(
+        `Wire ${this.id}: Branch index not set for inter-node wire, cannot calculate current`,
+      )
+      return 0
     }
 
-    // Check end component - this gives us the current flowing OUT OF the wire
-    const endComponent = allStampers.find((s) => s.id === endComponentId)
-    if (
-      endComponent &&
-      (endComponent.type === 'resistor' || endComponent.type === 'voltage_source')
-    ) {
-      const current = endComponent.calculateCurrent(solution, nodeMap, [], allStampers)
-      if (Math.abs(current) > 1e-12) {
-        // Determine current direction based on wire connection to component
-        return this.getDirectionalCurrent(endComponent, endComponentId, current, 'end')
-      }
-    }
-
-    // Fallback: Use node analysis for complex cases
-    const [n1, n2] = this.getNodeIndices(nodeMap)
-    const nodeIndex = n1 // Since n1 === n2
-
-    // Look for any component connected to this node that has non-zero current
-    for (const stamper of allStampers) {
-      if (stamper.id === this.id) continue
-
-      if (this.isComponentConnectedToNode(stamper, nodeIndex, nodeMap)) {
-        if (stamper.type === 'resistor' || stamper.type === 'voltage_source') {
-          const current = stamper.calculateCurrent(solution, nodeMap, [], allStampers)
-          if (Math.abs(current) > 1e-12) {
-            // Use the first available current as fallback
-            return current
-          }
-        }
-      }
-    }
-
-    // Default: return 0 if no current path can be determined
-    return 0
-  }
-
-  /**
-   * Determine the correct directional current for a wire based on its connection to a component
-   */
-  private getDirectionalCurrent(
-    component: ComponentStamper,
-    componentId: string,
-    componentCurrent: number,
-    connectionType: 'start' | 'end',
-  ): number {
-    const props = this.component.properties!
-
-    if (component.type === 'voltage_source') {
-      // For voltage sources, we need to determine which terminal the wire is connected to
-      const terminalId = connectionType === 'start' ? props.startTerminal : props.endTerminal
-
-      // If connected to positive terminal, current flows out of voltage source
-      // If connected to negative terminal, current flows into voltage source
-      if (terminalId === 'positive') {
-        // Current flowing out of positive terminal (wire carries this current)
-        return componentCurrent
-      } else if (terminalId === 'negative') {
-        // Current flowing into negative terminal (wire carries this current)
-        return componentCurrent
-      }
-    } else if (component.type === 'resistor') {
-      // For resistors, current flows through the component
-      // Wire current equals resistor current (same branch)
-      return componentCurrent
-    }
-
-    // Default: use component current as-is
-    return componentCurrent
-  }
-
-  /**
-   * Check if a component is connected to a specific electrical node
-   */
-  private isComponentConnectedToNode(
-    component: ComponentStamper,
-    nodeIndex: number,
-    nodeMap: Map<string, number>,
-  ): boolean {
-    if (component.type === 'wire') {
-      const wire = component as WireStamper
-      const [n1, n2] = wire.getNodeIndices(nodeMap)
-      return n1 === nodeIndex || n2 === nodeIndex
-    } else if (component.type === 'resistor' || component.type === 'voltage_source') {
-      // For other components, check their terminals using component ID
-      const definition = getComponentDefinition(component.type)
-      if (definition) {
-        for (const terminal of definition.terminals) {
-          const terminalId = `${component.id}:${terminal.id}`
-          const termNodeIndex = nodeMap.get(terminalId)
-          if (termNodeIndex === nodeIndex) {
-            return true
-          }
-        }
-      }
-    }
-    return false
+    const current = solution.get([this.branchIndex, 0]) as number
+    console.log(`Wire ${this.id}: Direct MNA current = ${current}A`)
+    return current
   }
 }
 
@@ -503,13 +411,20 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     let totalBranchCurrents = 0
     const numNodes = electricalNodes.length
 
-    // First pass: count how many branch currents each component will need
+    // CRITICAL: Only components that need branch currents add them to the MNA matrix
+    // This eliminates the need for heuristic current calculations
     for (const stamper of stampers) {
       if (stamper.type === 'voltage_source') {
         totalBranchCurrents += 1 // Each voltage source adds one branch current
+      } else if (stamper.type === 'wire') {
+        // Only inter-node wires get branch currents, same-node wires don't
+        const wireStamper = stamper as WireStamper
+        const [n1, n2] = wireStamper.getNodeIndices(termToNodeIndex)
+        if (n1 !== n2) {
+          totalBranchCurrents += 1 // Only inter-node wires add branch currents
+        }
       }
-      // Note: Same-node wires don't add branch currents to MNA matrix
-      // Their currents are calculated using topology analysis after solving
+      // Other components (resistors, grounds, nodes) don't add branch currents
     }
 
     const matrixSize = numNodes + totalBranchCurrents
@@ -581,82 +496,93 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
 }
 
 /**
- * Build electrical nodes (extracted from original logic)
+ * Build electrical nodes for Extended MNA (each terminal is its own node initially)
+ * BUT: Ground terminals should be grouped into the same electrical node
  */
 function buildElectricalNodes(components: CircuitComponent[]) {
-  const wires = components.filter((c) => c.type === 'wire') as Wire[]
   const getTerminalId = (c: CircuitComponent, t: string) => `${c.id}:${t}`
 
-  // Build adjacency list
-  const adj: Record<string, string[]> = {}
+  // EXTENDED MNA APPROACH: Each terminal gets its own electrical node
+  // Wires will connect between these nodes as circuit elements
+  const electricalNodes: string[][] = []
+  const allTerminals: string[] = []
 
+  // Collect all component terminals (except wires and nodes have special handling)
   for (const component of components) {
-    if (component.type === 'wire' || component.type === 'node') continue
+    if (component.type === 'wire') continue // Wires don't have their own nodes
+
     const definition = getComponentDefinition(component.type)
     const termIds = (definition?.terminals || []).map((t) => t.id)
+
     for (const termId of termIds) {
       const globalTermId = getTerminalId(component, termId)
-      if (!adj[globalTermId]) adj[globalTermId] = []
+      allTerminals.push(globalTermId)
     }
   }
 
-  for (const wire of wires) {
-    if (!wire.properties) continue
-    const props = wire.properties
+  // CRITICAL FIX: Group all ground terminals into a single electrical node
+  // This ensures all grounds are at the same potential (equipotential)
+  const groundTerminals: string[] = []
+  const nonGroundTerminals: string[] = []
 
-    const startComp = components.find((c) => c.id === props.startComponentId)
-    const endComp = components.find((c) => c.id === props.endComponentId)
-    if (!startComp || !endComp) continue
+  for (const terminalId of allTerminals) {
+    const [componentId] = terminalId.split(':')
+    const component = components.find((c) => c.id === componentId)
 
-    const startTerminalId = getTerminalId(startComp, props.startTerminal as string)
-    const endTerminalId = getTerminalId(endComp, props.endTerminal as string)
-
-    if (!adj[startTerminalId]) adj[startTerminalId] = []
-    if (!adj[endTerminalId]) adj[endTerminalId] = []
-    adj[startTerminalId].push(endTerminalId)
-    adj[endTerminalId].push(startTerminalId)
-  }
-
-  // Find connected components (electrical nodes)
-  const visited = new Set<string>()
-  const electricalNodes: string[][] = []
-
-  for (const termId in adj) {
-    if (!visited.has(termId)) {
-      const newNode: string[] = []
-      const q = [termId]
-      visited.add(termId)
-      let head = 0
-
-      while (head < q.length) {
-        const current = q[head++]
-        newNode.push(current)
-        for (const neighbor of adj[current]) {
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor)
-            q.push(neighbor)
-          }
-        }
-      }
-      electricalNodes.push(newNode)
+    if (component?.type === 'ground') {
+      groundTerminals.push(terminalId)
+    } else {
+      nonGroundTerminals.push(terminalId)
     }
   }
 
-  // Find all ground nodes and identify circuit islands
+  // Create individual nodes for non-ground terminals
+  for (const terminalId of nonGroundTerminals) {
+    electricalNodes.push([terminalId])
+  }
+
+  // Create ONE node for ALL ground terminals (equipotential)
+  if (groundTerminals.length > 0) {
+    electricalNodes.push(groundTerminals)
+    console.log(
+      `🔍 Extended MNA: Grouped ${groundTerminals.length} ground terminals into single node`,
+    )
+  }
+
+  console.log(`🔍 Extended MNA: Created ${electricalNodes.length} electrical nodes`)
+  for (let i = 0; i < electricalNodes.length; i++) {
+    if (electricalNodes[i].length === 1) {
+      console.log(`  Node ${i}: ${electricalNodes[i][0]}`)
+    } else {
+      console.log(`  Node ${i}: [${electricalNodes[i].join(', ')}] (equipotential ground)`)
+    }
+  }
+
+  // Find the ground node (there should be exactly one equipotential ground node)
   const groundNodeIndices: number[] = []
 
-  // First, find all explicit ground nodes
-  electricalNodes.forEach((node, index) => {
-    if (node.some((termId) => termId.includes('ground'))) {
-      groundNodeIndices.push(index)
+  // Find the electrical node that contains ground terminals
+  for (let i = 0; i < electricalNodes.length; i++) {
+    const node = electricalNodes[i]
+    // Check if this node contains any ground terminals
+    const hasGroundTerminal = node.some((terminalId) => {
+      const [componentId] = terminalId.split(':')
+      const component = components.find((c) => c.id === componentId)
+      return component?.type === 'ground'
+    })
+
+    if (hasGroundTerminal) {
+      groundNodeIndices.push(i)
+      console.log(
+        `🔍 Extended MNA: Found equipotential ground node ${i} with terminals: [${node.join(', ')}]`,
+      )
+      break // There should be only one ground node now
     }
-  })
+  }
 
-  // If no explicit grounds, find reference nodes for each isolated circuit
+  // If no explicit grounds, use ONLY ONE voltage source negative terminal as reference
+  // Extended MNA only needs one reference point for the entire connected circuit
   if (groundNodeIndices.length === 0) {
-    // Identify isolated circuits by finding nodes connected to voltage sources
-    const voltageSourceNodes = new Set<number>()
-
     for (const component of components) {
       if (component.type === 'voltage_source') {
         const vSourceDef = getComponentDefinition('voltage_source')
@@ -665,17 +591,23 @@ function buildElectricalNodes(components: CircuitComponent[]) {
           // Find which electrical node this terminal belongs to
           for (let i = 0; i < electricalNodes.length; i++) {
             if (electricalNodes[i].includes(negTerminal)) {
-              if (!voltageSourceNodes.has(i)) {
-                voltageSourceNodes.add(i)
-                groundNodeIndices.push(i)
-              }
-              break
+              groundNodeIndices.push(i)
+              console.log(
+                `🔍 Extended MNA: Using single ground reference at node ${i} (${negTerminal})`,
+              )
+              break // ONLY ONE reference point needed for entire circuit
             }
           }
         }
+        break // Stop after finding first voltage source
       }
     }
   }
+
+  console.log(
+    `🔍 Extended MNA: Found ${groundNodeIndices.length} ground reference nodes:`,
+    groundNodeIndices,
+  )
 
   // Create terminal to node index mapping
   const termToNodeIndex = new Map<string, number>()
