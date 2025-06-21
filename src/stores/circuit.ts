@@ -169,12 +169,8 @@ export const useCircuitStore = defineStore('circuit', () => {
       }
     })
 
-    // Check for short circuits (voltage sources with zero resistance paths)
-    // This is a simplified check - a more comprehensive version would analyze the circuit topology
-    const voltageSourcesCount = components.filter((c) => c.type === 'voltage_source').length
-    if (voltageSourcesCount > 1) {
-      errors.push('Multiple voltage sources detected. This may cause convergence issues.')
-    }
+    // Note: Multiple voltage sources are now supported with the new simulation engine
+    // No longer artificially limiting circuits to single voltage source
 
     simulationErrors.value = errors
     return errors
