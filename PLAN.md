@@ -107,7 +107,7 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] Undo / Redo
 - [ ] It is a pain every time I need to create a bunch of components to do regression and validation. We either need:
   - [ ] an E2E test for things
-  - [ ] have some canned circuits
+  - [x] have some canned circuits (only basic tests)
   - [ ] implement a save feature so that I don't have to keep redoing circuits
 - [ ] Component placement
   - [x] I have to select a component and then place the component, and then if I want to place another component I need to click that component on the left hand side again. We should consider making the selection persistent and entering a component placement mode.
@@ -192,7 +192,16 @@ Building a web-based circuit simulation application focused on educational purpo
   - **Implementation**: Same-node wires use circuit topology analysis instead of MNA branch variables
   - **Result**: Wire currents now accurately reflect physical current flow (e.g., W4 shows correct 2.67mA)
   - **Architecture**: Prevented singular matrix issues while maintaining accurate current measurements
-- [ ] Create comprehensive test circuits for validation
+- [x] **Comprehensive Test Circuit System** ✅ **IMPLEMENTED**
+  - **Architecture**: Created robust testing infrastructure with `TestCircuit` interface, `TestCircuitRunner` class, and `TestCircuitLibrary`
+  - **Browser Console API**: Added `window.circuitTests` for easy developer testing and validation
+  - **Test Cases**: Implemented regression tests including:
+    - Simple Voltage Divider (basic nodal analysis validation)
+    - Wire Current Detection Regression (specifically tests W4 wire current fix)
+    - Dual Voltage Sources (multi-source circuit validation)
+  - **Validation Features**: JSON-based circuit definitions, automated tolerance checking, detailed error reporting with percentage errors
+  - **Integration**: Automatically loaded via `main.ts` with comprehensive documentation in `src/test-circuits/README.md`
+  - **Results**: Confirmed fix success - Wire W4 now correctly shows 2mA instead of 0mA, all measurements match expected values
 
 **Phase 2b: Enhanced Features** (After solid foundation)
 

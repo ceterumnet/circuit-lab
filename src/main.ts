@@ -10,6 +10,9 @@ import router from './router'
 // Load component registry
 import '@/registry/components'
 
+// Load test circuit system (provides browser console API)
+import '@/test-circuits'
+
 const app = createApp(App)
 
 app.use(createPinia())
