@@ -7,6 +7,7 @@ import { useCircuitHistory } from '@/composables/useCircuitHistory'
 import CircuitComponent from '@/components/circuit/CircuitComponent.vue'
 import ProbeComponent from '@/components/circuit/probes/ProbeComponent.vue'
 import RotationHandle from '@/components/circuit/RotationHandle.vue'
+import ComponentSelector from '@/components/circuit/ComponentSelector.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
 import * as geometry from '@/services/geometry'
@@ -605,7 +606,9 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 
   if (e.key === 'Escape') {
-    if (interactionStore.wireCreationState.isActive) {
+    if (interactionStore.componentSelectorState.isOpen) {
+      interactionStore.closeComponentSelector()
+    } else if (interactionStore.wireCreationState.isActive) {
       interactionStore.cancelWireCreation()
     } else if (interactionStore.componentToPlace) {
       interactionStore.exitComponentPlacement()
@@ -655,6 +658,23 @@ function handleKeyDown(e: KeyboardEvent) {
     if (!interactionStore.componentToPlace) {
       e.preventDefault()
       interactionStore.setComponentToPlace('node')
+    }
+  }
+
+  // NEW: Handle '/' key for component selector
+  if (e.key === '/') {
+    if (!interactionStore.componentSelectorState.isOpen) {
+      e.preventDefault()
+      // Get current mouse position or center of canvas
+      const stage = stageRef.value?.getStage()
+      let position = null
+      if (stage) {
+        const pointer = stage.getPointerPosition()
+        if (pointer) {
+          position = screenToWorld(pointer)
+        }
+      }
+      interactionStore.openComponentSelector(position)
     }
   }
 
@@ -1327,6 +1347,9 @@ watch(
         />
       </v-layer>
     </v-stage>
+
+    <!-- Component Selector Overlay -->
+    <component-selector />
   </div>
 </template>
 

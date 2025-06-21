@@ -19,6 +19,19 @@ export const useInteractionStore = defineStore('interaction', () => {
   // NEW: Flag to prevent click events immediately after wire drag completion
   const justCompletedWireDrag = ref(false)
 
+  // NEW: Component selector state (for / key functionality)
+  const componentSelectorState = ref<{
+    isOpen: boolean
+    searchQuery: string
+    selectedIndex: number
+    position: Position | null
+  }>({
+    isOpen: false,
+    searchQuery: '',
+    selectedIndex: 0,
+    position: null,
+  })
+
   // NEW: Component placement preview state
   const componentPlacementPreview = ref<{
     position: Position | null
@@ -328,6 +341,44 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
+  // NEW: Component selector functions
+  function openComponentSelector(position: Position | null = null) {
+    componentSelectorState.value = {
+      isOpen: true,
+      searchQuery: '',
+      selectedIndex: 0,
+      position,
+    }
+    // Clear any existing component placement
+    setComponentToPlace(null)
+    cancelWireCreation()
+  }
+
+  function closeComponentSelector() {
+    componentSelectorState.value = {
+      isOpen: false,
+      searchQuery: '',
+      selectedIndex: 0,
+      position: null,
+    }
+  }
+
+  function updateComponentSelectorSearch(query: string) {
+    componentSelectorState.value.searchQuery = query
+    componentSelectorState.value.selectedIndex = 0 // Reset selection to first item
+  }
+
+  function setComponentSelectorIndex(index: number) {
+    componentSelectorState.value.selectedIndex = index
+  }
+
+  function selectFromComponentSelector() {
+    if (!componentSelectorState.value.isOpen) return null
+
+    // This will be implemented once we have the filtered results logic
+    return null
+  }
+
   return {
     // State
     selectedComponentIds,
@@ -342,6 +393,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     isCtrlKeyHeld,
     justCompletedWireDrag,
     componentPlacementPreview,
+    componentSelectorState,
     // Actions
     setDraggingComponent,
     setCtrlKeyHeld,
@@ -368,5 +420,10 @@ export const useInteractionStore = defineStore('interaction', () => {
     startWireDrag,
     updateWireDrag,
     finishWireDrag,
+    openComponentSelector,
+    closeComponentSelector,
+    updateComponentSelectorSearch,
+    setComponentSelectorIndex,
+    selectFromComponentSelector,
   }
 })
