@@ -122,136 +122,119 @@ Building a web-based circuit simulation application focused on educational purpo
 - [ ] Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
 - [ ] Add the ability to select a group of items in the canvas and save them as a reusable fragment / building block. This will eventually allow us to have user created components and logical sub-components where we don't necessarily need to represent everything on the circuit all the time visually if that makes sense.
 
-### Phase 2: 📋 NEXT - Enhanced Simulation Features
+### Phase 2: 📋 NEXT - AC Analysis & Reactive Components
 
-**Goal:** Professional-grade simulation capabilities with rock-solid foundation
+**Goal:** Extend simulation capabilities beyond DC to support frequency-domain analysis
 
-#### Critical Priority: Simulation Engine Overhaul
+**Status:** The DC simulation engine foundation is complete with unified MNA stamping system, multiple voltage source support, and comprehensive testing infrastructure.
 
-**Problem**: Current simulation engine has fundamental architectural flaws that prevent scaling to complex circuits:
+#### Core AC Analysis Features
 
-1. **Wire Treatment Issues**: Wires defined with resistance properties but treated as perfect conductors in simulation
-2. **Current Direction Problems**: Hardcoded assumptions about current flow break with complex topologies
-3. **Multiple Voltage Source Limitation**: Artificial restriction prevents realistic circuit analysis
-4. **Component-Specific Logic**: Separate loops for different components instead of unified approach
+- [ ] **Reactive Component Support**
 
-**Solution**: Complete simulation architecture rebuild with unified Modified Nodal Analysis (MNA) system:
+  - Capacitor component with frequency-dependent impedance
+  - Inductor component with inductive reactance
+  - Complex impedance calculations in frequency domain
 
-- **Unified Component Stamping System**
+- [ ] **AC Analysis Engine**
 
-  - Replace component-type specific loops with extensible stamping interfaces
-  - Each component type implements `ComponentStamper` interface
-  - Eliminates conditional logic based on component types
-  - Supports easy addition of new component types
+  - Extend MNA system for complex number calculations
+  - Frequency sweep analysis (AC sweep)
+  - Phasor-based voltage and current calculations
 
-- **Proper Wire Resistance Handling**
+- [ ] **AC Component Stampers**
+  - `CapacitorStamper` with jωC impedance modeling
+  - `InductorStamper` with jωL impedance modeling
+  - AC voltage/current source stampers with phase support
 
-  - Treat wires as resistive elements with configurable resistance (default: 1mΩ)
-  - Participate fully in circuit equations rather than connectivity-only
-  - Enable modeling of wire voltage drops and power dissipation
+#### Frequency Domain Analysis
 
-- **Multiple Voltage Source Support**
+- [ ] **Bode Plot Generation**
 
-  - Remove artificial single voltage source limitation
-  - Implement proper MNA stamping for multiple independent sources
-  - Support realistic multi-rail power supply circuits
+  - Magnitude and phase response plots
+  - Transfer function analysis
+  - Pole-zero identification
 
-- **Robust Current Calculation**
+- [ ] **AC Measurement Tools**
+  - RMS voltage and current measurements
+  - Phase angle measurements between signals
+  - Power calculations (real, reactive, apparent)
 
-  - Eliminate hardcoded current direction assumptions
-  - Calculate currents directly from MNA solution for all components
-  - Proper sign conventions based on circuit analysis theory
+#### Educational Features
 
-- **Extensible Component Registry**
-  - Factory pattern for component stampers
-  - Easy registration of new component types
-  - Prepare foundation for AC analysis and reactive components
+- [ ] **Interactive Frequency Response**
 
-#### Scope Boundaries
+  - Real-time Bode plot updates as circuit changes
+  - Visual phasor diagrams
+  - Resonance frequency identification
 
-**Educational-Appropriate Complexity** ✅
+- [ ] **AC Circuit Validation**
+  - Impedance matching analysis
+  - Filter response characterization
+  - Stability analysis for feedback circuits
 
-- Multiple voltage/current sources
-- Reactive components (L, C)
-- Basic semiconductor models (ideal diode, basic transistor)
-- Frequency domain analysis
-- Time domain simulation
+### Phase 3: 📋 PLANNED - Enhanced Plotting & Visualization
 
-**Too Complex for Educational Tool** ❌
+**Goal:** Professional-grade measurement and visualization capabilities
 
-- Dynamic thermal modeling with temperature-dependent resistance
-- Parasitic extraction and electromagnetic field effects
-- SPICE-level device modeling and manufacturing variations
-- Advanced semiconductor physics modeling
+#### Advanced Plotting System
 
-#### Implementation Strategy
+- [ ] **Chart.js Integration**
 
-**Phase 2a: Foundation Rebuild** ✅ **COMPLETED**
-
-- [x] Implement unified MNA stamping system
-- [x] Add proper wire resistance handling in simulation
-- [x] Remove multiple voltage source limitation
-- [x] Fix current calculation logic
-- [x] **CRITICAL BUG: Wire Branch Current Detection** ✅ **RESOLVED**
-  - **Solution**: Implemented topology-based current analysis using series current conservation
-  - **Key Insight**: Distinguished between electrical node equivalence and physical current paths
-  - **Implementation**: Same-node wires use circuit topology analysis instead of MNA branch variables
-  - **Result**: Wire currents now accurately reflect physical current flow (e.g., W4 shows correct 2.67mA)
-  - **Architecture**: Prevented singular matrix issues while maintaining accurate current measurements
-- [x] **Comprehensive Test Circuit System** ✅ **IMPLEMENTED**
-  - **Architecture**: Created robust testing infrastructure with `TestCircuit` interface, `TestCircuitRunner` class, and `TestCircuitLibrary`
-  - **Browser Console API**: Added `window.circuitTests` for easy developer testing and validation
-  - **Test Cases**: Implemented regression tests including:
-    - Simple Voltage Divider (basic nodal analysis validation)
-    - Wire Current Detection Regression (specifically tests W4 wire current fix)
-    - Dual Voltage Sources (multi-source circuit validation)
-  - **Validation Features**: JSON-based circuit definitions, automated tolerance checking, detailed error reporting with percentage errors
-  - **Integration**: Automatically loaded via `main.ts` with comprehensive documentation in `src/test-circuits/README.md`
-  - **Results**: Confirmed fix success - Wire W4 now correctly shows 2mA instead of 0mA, all measurements match expected values
-
-**Phase 2b: Enhanced Features** (After solid foundation)
-
-- [ ] **Advanced Plotting System**
-
-  - Integrate Chart.js for waveform visualization
+  - Waveform visualization with interactive plots
   - Time-domain plotting with oscilloscope-style interface
   - Parameter sweep visualization
-  - Export plot data (CSV, image)
+  - Export plot data (CSV, image formats)
 
-- [ ] **Circuit Validation Engine**
-  - Detect floating nodes and short circuits
-  - Component limit checking (power dissipation, voltage ratings)
-  - Visual error indicators and helpful messages
-  - Simulation convergence monitoring
-
-#### Secondary Features
-
-- **Enhanced Measurement Tools**
-
-  - Multi-channel oscilloscope interface
+- [ ] **Multi-Channel Oscilloscope Interface**
+  - Multiple probe channels with color coding
+  - Trigger controls and time base adjustment
+  - Cursor measurements and automatic measurements
   - FFT analysis for frequency content
-  - RMS and peak measurements
-  - Cursor measurements on plots
 
-- **Circuit Analysis Tools**
+#### Enhanced Measurement Tools
+
+- [ ] **Advanced Probe System**
+
+  - RMS and peak voltage/current measurements
+  - Power measurements (instantaneous, average, RMS)
+  - Phase angle measurements between signals
+  - Harmonic distortion analysis
+
+- [ ] **Circuit Analysis Tools**
   - Operating point analysis display
   - Small-signal parameter extraction
-  - Sensitivity analysis
-  - Circuit performance metrics
+  - Sensitivity analysis capabilities
+  - Circuit performance metrics dashboard
 
-### Phase 3: 📋 PLANNED - Advanced Components
+#### Visualization Improvements
+
+- [ ] **Circuit Validation Engine**
+
+  - Visual error indicators with hover tooltips
+  - Component stress analysis with color coding
+  - Real-time convergence monitoring
+  - Power dissipation visualization
+
+- [ ] **Interactive Analysis**
+  - Parameter sweep with real-time plot updates
+  - What-if analysis with component value sliders
+  - Comparison mode for multiple circuit configurations
+  - Performance optimization suggestions
+
+### Phase 4: 📋 PLANNED - Advanced Components
 
 - **Passive Components:** Capacitors, inductors, transformers
 - **Semiconductor Devices:** Diodes, LEDs, basic transistors
-- **AC Analysis:** Frequency response, Bode plots, impedance
+- **Advanced Models:** Op-amps, MOSFETs with realistic characteristics
 - **Time-Domain Analysis:** Transient response, settling time
 
-### Phase 4: 📋 FUTURE - Professional Features
+### Phase 5: 📋 FUTURE - Professional Features
 
-- **Advanced Semiconductors:** Op-amps, MOSFETs, complex models
 - **Digital Components:** Logic gates, flip-flops, counters
 - **Mixed-Signal Analysis:** Combined analog/digital simulation
 - **Educational Content:** Tutorials, guided exercises, explanations
+- **Advanced Simulation:** Monte Carlo analysis, worst-case scenarios
 
 ## Technical Architecture
 
@@ -305,33 +288,32 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 
 ## Immediate Next Steps
 
-### 1. Enhanced Plotting System (Priority: High)
+### 1. Complete Phase 1.9 UX Improvements (Priority: High)
 
-- **Chart.js Integration:** Add charting library for data visualization
-- **Oscilloscope Interface:** Time-domain waveform display
-- **Plot Controls:** Zoom, pan, cursor measurements
-- **Data Export:** CSV and image export capabilities
+- **Copy/Paste Functionality:** Single and multiple component duplication
+- **Improved Current Probe Rendering:** Better visual design and positioning
+- **Reusable Circuit Fragments:** Save component groups as building blocks
 
-### 2. Circuit Validation
+### 2. AC Analysis Foundation (Phase 2)
 
-- **Error Detection:** Floating nodes, short circuits, convergence issues
-- **Visual Feedback:** Error highlighting on canvas
-- **User Guidance:** Helpful error messages and suggestions
-- **Simulation Health:** Status indicators and warnings
+- **Reactive Components:** Add capacitor and inductor components
+- **Complex Number MNA:** Extend simulation for frequency domain
+- **AC Source Components:** Voltage/current sources with phase support
+- **Basic Bode Plots:** Magnitude and phase response visualization
 
-### 3. Component Library Expansion
+### 3. Enhanced Plotting System (Phase 3)
 
-- **Capacitor Component:** With reactive impedance modeling
-- **Inductor Component:** With inductive impedance
-- **LED Component:** With forward voltage characteristics
-- **Basic Op-Amp:** Ideal amplifier model
+- **Chart.js Integration:** Professional plotting library integration
+- **Oscilloscope Interface:** Multi-channel waveform visualization
+- **Advanced Measurements:** RMS, peak, power, and phase measurements
+- **Interactive Analysis:** Parameter sweeps and what-if scenarios
 
-### 4. Testing Infrastructure (Priority: Medium)
+### 4. Component Library Expansion (Phase 4)
 
-- **Unit Tests:** Component behavior and simulation accuracy
-- **E2E Tests:** User workflow validation
-- **Performance Tests:** Large circuit handling
-- **Regression Tests:** Feature stability
+- **Semiconductor Devices:** Diodes, LEDs, basic transistors
+- **Op-Amp Models:** Ideal and realistic operational amplifier models
+- **Advanced Passives:** Transformers, coupled inductors
+- **Digital Components:** Basic logic gates for mixed-signal analysis
 
 ## Success Metrics
 
@@ -343,13 +325,21 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 - ✅ Professional canvas interaction (pan, zoom, multi-select)
 - ✅ Robust component placement and wiring system
 
-### Phase 2 Goals
+### Phase 2 Goals (AC Analysis)
+
+- [ ] Reactive component library (capacitors, inductors)
+- [ ] Frequency-domain analysis with complex number support
+- [ ] Basic Bode plot generation and visualization
+- [ ] AC voltage/current sources with phase control
+- [ ] Educational phasor diagrams and AC circuit analysis
+
+### Phase 3 Goals (Plotting & Visualization)
 
 - [ ] Professional oscilloscope-style measurement interface
+- [ ] Multi-channel waveform visualization with Chart.js
+- [ ] Advanced measurement tools (RMS, power, phase)
+- [ ] Parameter sweep and interactive analysis capabilities
 - [ ] Comprehensive circuit validation and error reporting
-- [ ] Expanded component library with AC-capable elements
-- [ ] Performance handling of 50+ component circuits
-- [ ] Educational content integration
 
 ### Long-term Vision (6-12 months)
 
