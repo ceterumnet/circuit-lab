@@ -50,6 +50,17 @@ export const useInteractionStore = defineStore('interaction', () => {
     intersections: [],
   })
 
+  // NEW: Paste placement preview state
+  const pastePlacementPreview = ref<{
+    isActive: boolean
+    position: Position | null
+    rotation: number
+  }>({
+    isActive: false,
+    position: null,
+    rotation: 0,
+  })
+
   const wireCreationState = ref<{
     isActive: boolean
     isDragging: boolean
@@ -341,6 +352,50 @@ export const useInteractionStore = defineStore('interaction', () => {
     }
   }
 
+  // NEW: Paste placement functions
+  function startPastePlacement() {
+    pastePlacementPreview.value = {
+      isActive: true,
+      position: null,
+      rotation: 0,
+    }
+    // Cancel other modes when starting paste placement
+    setComponentToPlace(null)
+    cancelWireCreation()
+  }
+
+  function updatePastePlacementPreview(position: Position | null) {
+    if (pastePlacementPreview.value.isActive) {
+      pastePlacementPreview.value.position = position
+    }
+  }
+
+  function rotatePastePlacement() {
+    if (pastePlacementPreview.value.isActive) {
+      pastePlacementPreview.value.rotation += 90
+      if (pastePlacementPreview.value.rotation >= 360) {
+        pastePlacementPreview.value.rotation = 0
+      }
+    }
+  }
+
+  function rotatePastePlacementCounterClockwise() {
+    if (pastePlacementPreview.value.isActive) {
+      pastePlacementPreview.value.rotation -= 90
+      if (pastePlacementPreview.value.rotation < 0) {
+        pastePlacementPreview.value.rotation = 270
+      }
+    }
+  }
+
+  function cancelPastePlacement() {
+    pastePlacementPreview.value = {
+      isActive: false,
+      position: null,
+      rotation: 0,
+    }
+  }
+
   // NEW: Component selector functions
   function openComponentSelector(position: Position | null = null) {
     componentSelectorState.value = {
@@ -393,6 +448,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     isCtrlKeyHeld,
     justCompletedWireDrag,
     componentPlacementPreview,
+    pastePlacementPreview,
     componentSelectorState,
     // Actions
     setDraggingComponent,
@@ -408,6 +464,11 @@ export const useInteractionStore = defineStore('interaction', () => {
     clearComponentPlacementPreview,
     rotatePlacementComponent,
     rotatePlacementComponentCounterClockwise,
+    startPastePlacement,
+    updatePastePlacementPreview,
+    rotatePastePlacement,
+    rotatePastePlacementCounterClockwise,
+    cancelPastePlacement,
     selectComponent,
     addToSelection,
     removeFromSelection,

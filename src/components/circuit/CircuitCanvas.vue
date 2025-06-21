@@ -172,8 +172,8 @@ function handleStageMouseDown(e: KonvaEventObject<MouseEvent>) {
     e.target.getClassName() === 'Line'
 
   if (isBackground) {
-    // Don't start marquee selection if we're placing a component - let handleMouseUp handle it directly
-    if (interactionStore.componentToPlace) {
+    // Don't start marquee selection if we're placing a component or pasting - let handleMouseUp handle it directly
+    if (interactionStore.componentToPlace || interactionStore.pastePlacementPreview.isActive) {
       return
     }
 
@@ -216,6 +216,20 @@ function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
       } else {
         interactionStore.updateWirePreview(worldPos)
       }
+    }
+  }
+
+  // Handle paste placement preview
+  if (interactionStore.pastePlacementPreview.isActive) {
+    const pos = stage.getPointerPosition()
+    if (pos) {
+      const worldPos = screenToWorld(pos)
+      const snappedPos = {
+        x: Math.round(worldPos.x / gridSize) * gridSize,
+        y: Math.round(worldPos.y / gridSize) * gridSize,
+      }
+
+      interactionStore.updatePastePlacementPreview(snappedPos)
     }
   }
 
@@ -267,6 +281,30 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
     e.target === stage ||
     e.target.name() === 'grid-background' ||
     e.target.getClassName() === 'Line'
+
+  // Handle paste placement on background clicks
+  if (isBackgroundClick && interactionStore.pastePlacementPreview.isActive) {
+    const worldPos = screenToWorld(stage.getPointerPosition()!)
+    const snappedPos = {
+      x: Math.round(worldPos.x / gridSize) * gridSize,
+      y: Math.round(worldPos.y / gridSize) * gridSize,
+    }
+
+    console.log(`[Canvas] Paste placement clicked at position:`, snappedPos)
+
+    // Place the components at the target position with current rotation
+    const success = historyActions.pasteComponentsAtPositionWithHistory(
+      snappedPos,
+      interactionStore.pastePlacementPreview.rotation,
+    )
+
+    if (success) {
+      console.log('Components pasted successfully')
+      // Exit paste placement mode
+      interactionStore.cancelPastePlacement()
+    }
+    return
+  }
 
   // Handle direct component placement on background clicks
   if (isBackgroundClick && interactionStore.componentToPlace) {
@@ -334,6 +372,26 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
           y: Math.round(worldPos.y / gridSize) * gridSize,
         }
         historyActions.createWireToPositionWithHistory(snappedPos)
+      } else if (interactionStore.pastePlacementPreview.isActive) {
+        const worldPos = screenToWorld(stage.getPointerPosition()!)
+        const snappedPos = {
+          x: Math.round(worldPos.x / gridSize) * gridSize,
+          y: Math.round(worldPos.y / gridSize) * gridSize,
+        }
+
+        console.log(`[Canvas] Paste placement clicked at position:`, snappedPos)
+
+        // Place the components at the target position with current rotation
+        const success = historyActions.pasteComponentsAtPositionWithHistory(
+          snappedPos,
+          interactionStore.pastePlacementPreview.rotation,
+        )
+
+        if (success) {
+          console.log('Components pasted successfully')
+          // Exit paste placement mode
+          interactionStore.cancelPastePlacement()
+        }
       } else if (interactionStore.componentToPlace) {
         const worldPos = screenToWorld(stage.getPointerPosition()!)
         const snappedPos = {
@@ -608,6 +666,8 @@ function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     if (interactionStore.componentSelectorState.isOpen) {
       interactionStore.closeComponentSelector()
+    } else if (interactionStore.pastePlacementPreview.isActive) {
+      interactionStore.cancelPastePlacement()
     } else if (interactionStore.wireCreationState.isActive) {
       interactionStore.cancelWireCreation()
     } else if (interactionStore.componentToPlace) {
@@ -626,7 +686,15 @@ function handleKeyDown(e: KeyboardEvent) {
   if (!e.ctrlKey && !e.metaKey) {
     // Enhanced keyboard shortcuts for component placement and rotation
     if (e.key === 'r' || e.key === 'R') {
-      if (interactionStore.componentToPlace) {
+      if (interactionStore.pastePlacementPreview.isActive) {
+        // During paste placement: Handle rotation (clockwise or counter-clockwise)
+        e.preventDefault()
+        if (e.shiftKey) {
+          interactionStore.rotatePastePlacementCounterClockwise()
+        } else {
+          interactionStore.rotatePastePlacement()
+        }
+      } else if (interactionStore.componentToPlace) {
         // During placement: Handle rotation (clockwise or counter-clockwise)
         e.preventDefault()
         if (e.shiftKey) {
@@ -972,6 +1040,75 @@ const previewComponent = computed(() => {
   }
 
   return component
+})
+
+// Computed properties for paste placement preview
+const pastePreviewComponents = computed(() => {
+  if (
+    !interactionStore.pastePlacementPreview.isActive ||
+    !interactionStore.pastePlacementPreview.position
+  ) {
+    return []
+  }
+
+  if (!circuitStore.hasClipboardContent()) {
+    return []
+  }
+
+  const clipboardComponents = circuitStore.getClipboardComponents()
+  const targetPosition = interactionStore.pastePlacementPreview.position
+  const rotation = interactionStore.pastePlacementPreview.rotation
+
+  // Find the bounding box center of clipboard components
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
+  clipboardComponents.forEach((component: CircuitComponentType) => {
+    minX = Math.min(minX, component.position.x)
+    minY = Math.min(minY, component.position.y)
+    maxX = Math.max(maxX, component.position.x)
+    maxY = Math.max(maxY, component.position.y)
+  })
+
+  const centerX = (minX + maxX) / 2
+  const centerY = (minY + maxY) / 2
+
+  // Create preview components positioned relative to target
+  return clipboardComponents.map((originalComponent: CircuitComponentType) => {
+    // Calculate relative position from center
+    let relativeX = originalComponent.position.x - centerX
+    let relativeY = originalComponent.position.y - centerY
+
+    // Apply rotation if specified
+    if (rotation !== 0) {
+      const rad = (rotation * Math.PI) / 180
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+      const newRelativeX = relativeX * cos - relativeY * sin
+      const newRelativeY = relativeX * sin + relativeY * cos
+      relativeX = newRelativeX
+      relativeY = newRelativeY
+    }
+
+    // Position relative to target position
+    const newPosition = {
+      x: targetPosition.x + relativeX,
+      y: targetPosition.y + relativeY,
+    }
+
+    // Calculate new component rotation
+    const newComponentRotation = (originalComponent.rotation + rotation) % 360
+
+    // Create preview component
+    return {
+      ...originalComponent,
+      id: `preview-${originalComponent.id}`, // Unique preview ID
+      position: newPosition,
+      rotation: newComponentRotation,
+      selected: false,
+    }
+  })
 })
 
 const wireIntersectionIndicators = computed(() => {
@@ -1323,6 +1460,29 @@ watch(
                 opacity: 0.7,
                 listening: false,
               }"
+            />
+          </v-group>
+        </v-group>
+
+        <!-- Paste placement preview -->
+        <v-group
+          v-if="
+            interactionStore.pastePlacementPreview.isActive && pastePreviewComponents.length > 0
+          "
+        >
+          <!-- Ghost/preview components -->
+          <v-group
+            :config="{
+              opacity: 0.6,
+              listening: false,
+            }"
+          >
+            <!-- Render each component in the clipboard as a ghost -->
+            <circuit-component
+              v-for="previewComponent in pastePreviewComponents"
+              :key="previewComponent.id"
+              :component="previewComponent"
+              :listening="false"
             />
           </v-group>
         </v-group>

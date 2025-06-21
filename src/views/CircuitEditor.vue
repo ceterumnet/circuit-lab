@@ -168,11 +168,15 @@ function handleCopy() {
 
 // Paste functionality
 function handlePaste() {
-  const success = historyActions.pasteComponentsWithHistory()
-  if (success) {
-    console.log('Components pasted from clipboard')
-    // TODO: Show toast notification
+  // Check if there are components in clipboard
+  if (!circuitStore.hasClipboardContent()) {
+    console.log('No components in clipboard to paste')
+    return
   }
+
+  // Start paste placement mode
+  interactionStore.startPastePlacement()
+  console.log('Started paste placement mode - move mouse and click to place')
 }
 
 const singleSelectedItem = computed(() => circuitStore.singleSelectedItem)

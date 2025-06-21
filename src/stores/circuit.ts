@@ -661,8 +661,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     return true
   }
 
-  // Paste components from clipboard
-  function pasteComponents() {
+  // Paste components from clipboard at a specific position
+  function pasteComponentsAtPosition(targetPosition: Position, rotation: number = 0) {
     if (clipboardComponents.value.length === 0) {
       console.log('No components in clipboard to paste')
       return false
@@ -670,9 +670,6 @@ export const useCircuitStore = defineStore('circuit', () => {
 
     const interactionStore = useInteractionStore()
     const pastedIds: string[] = []
-
-    // Calculate offset to avoid overlapping with originals
-    const PASTE_OFFSET = 50
 
     // Find the bounding box center of clipboard components
     let minX = Infinity,
@@ -689,24 +686,41 @@ export const useCircuitStore = defineStore('circuit', () => {
     const centerX = (minX + maxX) / 2
     const centerY = (minY + maxY) / 2
 
-    // Paste each component with new ID and offset position
+    // Paste each component with new ID and positioned relative to target
     clipboardComponents.value.forEach((originalComponent) => {
       // Generate new unique ID
       const newId = generateComponentId(currentCircuit.value, originalComponent.type)
 
-      // Calculate relative position from center and apply offset
-      const relativeX = originalComponent.position.x - centerX
-      const relativeY = originalComponent.position.y - centerY
-      const newPosition = {
-        x: centerX + relativeX + PASTE_OFFSET,
-        y: centerY + relativeY + PASTE_OFFSET,
+      // Calculate relative position from center
+      let relativeX = originalComponent.position.x - centerX
+      let relativeY = originalComponent.position.y - centerY
+
+      // Apply rotation if specified
+      if (rotation !== 0) {
+        const rad = (rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        const newRelativeX = relativeX * cos - relativeY * sin
+        const newRelativeY = relativeX * sin + relativeY * cos
+        relativeX = newRelativeX
+        relativeY = newRelativeY
       }
+
+      // Position relative to target position
+      const newPosition = {
+        x: targetPosition.x + relativeX,
+        y: targetPosition.y + relativeY,
+      }
+
+      // Calculate new component rotation
+      const newComponentRotation = (originalComponent.rotation + rotation) % 360
 
       // Create new component with new ID and position
       const newComponent: CircuitComponent = {
         ...originalComponent,
         id: newId,
         position: newPosition,
+        rotation: newComponentRotation,
         selected: false, // Don't select pasted components initially
         properties: originalComponent.properties ? { ...originalComponent.properties } : undefined,
       }
@@ -720,13 +734,46 @@ export const useCircuitStore = defineStore('circuit', () => {
     interactionStore.clearSelection()
     pastedIds.forEach((id) => interactionStore.addToSelection(id))
 
-    console.log(`Pasted ${pastedIds.length} components with IDs: ${pastedIds.join(', ')}`)
+    console.log(
+      `Pasted ${pastedIds.length} components at position ${targetPosition.x}, ${targetPosition.y}`,
+    )
     return true
+  }
+
+  // Legacy paste function for backward compatibility (with offset)
+  function pasteComponents() {
+    if (clipboardComponents.value.length === 0) {
+      console.log('No components in clipboard to paste')
+      return false
+    }
+
+    // Find the center of clipboard components and offset by 50px
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity
+    clipboardComponents.value.forEach((component) => {
+      minX = Math.min(minX, component.position.x)
+      minY = Math.min(minY, component.position.y)
+      maxX = Math.max(maxX, component.position.x)
+      maxY = Math.max(maxY, component.position.y)
+    })
+
+    const centerX = (minX + maxX) / 2
+    const centerY = (minY + maxY) / 2
+    const offsetPosition = { x: centerX + 50, y: centerY + 50 }
+
+    return pasteComponentsAtPosition(offsetPosition, 0)
   }
 
   // Check if clipboard has components
   function hasClipboardContent() {
     return clipboardComponents.value.length > 0
+  }
+
+  // Get clipboard components (for preview)
+  function getClipboardComponents() {
+    return clipboardComponents.value
   }
 
   return {
@@ -775,6 +822,8 @@ export const useCircuitStore = defineStore('circuit', () => {
     initializeHistory,
     copySelectedComponents,
     pasteComponents,
+    pasteComponentsAtPosition,
     hasClipboardContent,
+    getClipboardComponents,
   }
 })
