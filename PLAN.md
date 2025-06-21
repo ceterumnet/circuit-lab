@@ -482,7 +482,7 @@ PrecisionTest.runAnalysis()
 - ✅ **Professional Practice:** Simulation quality now matches professional circuit analysis tools
 - ✅ **Debug Capabilities:** Precision analysis tools help understand numerical behavior
 
-### Phase 1.96: 🔧 NEXT - Advanced Wire Resistance Management
+### Phase 1.96: 🔧 LATER - Advanced Wire Resistance Management (after we add more components, AC, etc...)
 
 **Goal:** Implement configurable wire resistance system with user interface and validation
 
@@ -521,6 +521,170 @@ PrecisionTest.runAnalysis()
 - [ ] **Validation System:** Automatic detection and warnings for numerical issues
 - [ ] **Professional Features:** Wire resistance analysis matching industry tools
 - [ ] **Educational Value:** Clear understanding of wire resistance impact on circuit behavior
+
+### Phase 1.97: 📋 PLANNED - Non-Linear DC Foundation
+
+**Goal:** Add fundamental DC components and establish non-linear solving capabilities
+
+**Status:** Ready to expand DC analysis beyond linear resistor circuits
+
+#### Linear DC Components (High Priority)
+
+- [ ] **Independent Current Sources**
+
+  - DC current source component with configurable current value
+  - Proper MNA stamping for current source constraints (RHS vector injection)
+  - **Mixed Source Support:** Current sources work alongside voltage sources in same circuit
+  - Norton equivalent circuit support and source transformation examples
+  - Bidirectional current flow capability
+  - **Educational Applications:** Superposition theorem, Thevenin/Norton equivalents, mixed source analysis
+
+- [ ] **Basic Switches**
+
+  - Simple open/closed switch component
+  - Interactive toggle functionality
+  - Infinite/zero resistance modeling
+  - Circuit topology modification support
+
+- [ ] **Potentiometers/Variable Resistors**
+  - Adjustable resistance with slider interface
+  - Real-time resistance modification
+  - Wiper position visualization
+  - Parameter study support
+
+#### Non-Linear DC Analysis (Medium Priority)
+
+- [ ] **Simple Diode Model**
+
+  - Basic exponential I-V characteristic
+  - Forward/reverse bias behavior
+  - Temperature-independent simplified model
+  - Rectifier circuit support
+
+- [ ] **Iterative Solver Implementation**
+
+  - Newton-Raphson method for non-linear circuits
+  - Convergence monitoring and error handling
+  - Operating point calculation
+  - Robust initial guess algorithms
+
+- [ ] **LED Components**
+  - Diode model with visual feedback
+  - Color-coded LED symbols
+  - Forward voltage drop modeling
+  - Current limiting resistance calculations
+
+#### Educational Features
+
+- [ ] **DC Analysis Enhancement**
+
+  - **Mixed Source Circuit Analysis:** Full support for voltage + current source combinations
+  - Thevenin/Norton equivalent circuit calculations and transformations
+  - Superposition principle demonstration with mixed sources
+  - Maximum power transfer analysis
+  - Operating point visualization
+  - **Circuit Validation:** Detect invalid configurations (current source in series with open, etc.)
+
+- [ ] **Interactive Circuit Analysis**
+  - Parameter sweep for resistance/current values
+  - Load line analysis for non-linear devices
+  - Current/voltage divider calculations
+  - Circuit behavior prediction tools
+
+**SUCCESS CRITERIA:**
+
+- [ ] **Mixed Source Support:** Voltage and current sources working together in same circuit
+- [ ] **Linear Foundation:** Current sources, switches, and variable resistors working seamlessly
+- [ ] **Non-Linear Capability:** Diodes functioning with iterative solver
+- [ ] **Educational Value:** Enhanced circuit analysis problems including superposition and source transformations
+- [ ] **Robust Solving:** Reliable convergence for common non-linear circuits with proper error handling
+
+### Phase 1.98: 📋 PLANNED - Basic Transistor Implementation
+
+**Goal:** Implement fundamental transistor models to enable amplifier and switching circuits
+
+**Status:** Requires completion of Phase 1.97 non-linear foundation
+
+#### BJT Transistor Implementation
+
+- [ ] **Basic BJT Model (NPN/PNP)**
+
+  - Simplified Ebers-Moll model
+  - Current-controlled operation (β-based)
+  - Saturation, active, and cutoff regions
+  - Temperature-independent model
+
+- [ ] **BJT Component Interface**
+
+  - Three-terminal symbol (collector, base, emitter)
+  - Configurable β (current gain) parameter
+  - Saturation voltage settings
+  - Visual orientation indicators
+
+- [ ] **BJT Circuit Support**
+  - Common emitter amplifier configurations
+  - Switch mode operation
+  - Current mirror circuits
+  - Darlington pair configurations
+
+#### FET Transistor Implementation
+
+- [ ] **Basic MOSFET Model (NMOS/PMOS)**
+
+  - Simplified square-law model
+  - Voltage-controlled operation
+  - Triode and saturation regions
+  - Threshold voltage modeling
+
+- [ ] **MOSFET Component Interface**
+
+  - Three-terminal symbol (drain, gate, source)
+  - Configurable threshold voltage and transconductance
+  - Enhancement/depletion mode support
+  - Body connection handling
+
+- [ ] **MOSFET Circuit Support**
+  - Common source amplifier configurations
+  - Digital logic gate foundations
+  - Current source circuits
+  - Complementary CMOS pairs
+
+#### Advanced Transistor Features
+
+- [ ] **Operating Point Analysis**
+
+  - Automatic Q-point calculation
+  - Bias point stability analysis
+  - Small-signal parameter extraction
+  - Operating region identification
+
+- [ ] **Transistor Modeling Enhancements**
+  - Early effect modeling (finite output resistance)
+  - Temperature coefficient support
+  - Parasitic capacitance modeling (AC preparation)
+  - Power dissipation calculations
+
+#### Educational Applications
+
+- [ ] **Amplifier Design Tools**
+
+  - Gain calculation and visualization
+  - Frequency response preparation
+  - Bias network design assistance
+  - Load line analysis
+
+- [ ] **Digital Logic Foundations**
+  - Inverter circuit analysis
+  - Logic gate implementation
+  - Switching time analysis
+  - Power consumption calculations
+
+**SUCCESS CRITERIA:**
+
+- [ ] **Transistor Functionality:** Basic NPN/PNP BJT and NMOS/PMOS MOSFET models working
+- [ ] **Circuit Applications:** Common amplifier and switch circuits operational
+- [ ] **Educational Value:** Students can design and analyze transistor circuits
+- [ ] **Foundation for Advanced Features:** Solid base for AC analysis and complex models
 
 ### Phase 2: 📋 PLANNED - AC Analysis & Reactive Components
 
@@ -573,7 +737,7 @@ PrecisionTest.runAnalysis()
   - Filter response characterization
   - Stability analysis for feedback circuits
 
-### Phase 3: 📋 PLANNED - Enhanced Plotting & Visualization
+### Phase 4: 📋 PLANNED - Enhanced Plotting & Visualization
 
 **Goal:** Professional-grade measurement and visualization capabilities
 
@@ -632,19 +796,128 @@ PrecisionTest.runAnalysis()
   - [ ] Wave generators
   - [ ] Mixed AC / DC analysis
 
-### Phase 4: 📋 PLANNED - Advanced Components
+### Phase 5: 📋 PLANNED - Advanced Components & Time-Domain Analysis
 
-- **Passive Components:** Capacitors, inductors, transformers
-- **Semiconductor Devices:** Diodes, LEDs, basic transistors
-- **Advanced Models:** Op-amps, MOSFETs with realistic characteristics
-- **Time-Domain Analysis:** Transient response, settling time
+**Goal:** Add complex components and time-domain simulation capabilities
 
-### Phase 5: 📋 FUTURE - Professional Features
+**Status:** Builds on Phase 2 AC analysis and Phase 1.98 transistor foundation
 
-- **Digital Components:** Logic gates, flip-flops, counters
-- **Mixed-Signal Analysis:** Combined analog/digital simulation
-- **Educational Content:** Tutorials, guided exercises, explanations
-- **Advanced Simulation:** Monte Carlo analysis, worst-case scenarios
+#### Advanced Passive Components
+
+- [ ] **Transformers & Coupled Inductors**
+
+  - Mutual inductance modeling
+  - Ideal and realistic transformer models
+  - Turns ratio configuration
+  - Core saturation effects
+
+- [ ] **Advanced Capacitor Models**
+  - Parasitic series resistance (ESR)
+  - Dielectric absorption effects
+  - Voltage coefficient modeling
+  - Frequency-dependent behavior
+
+#### Advanced Semiconductor Models
+
+- [ ] **Enhanced Transistor Models**
+
+  - Gummel-Poon BJT model with temperature effects
+  - BSIM MOSFET models with short-channel effects
+  - Parasitic capacitance modeling
+  - Noise analysis support
+
+- [ ] **Operational Amplifiers**
+
+  - Ideal op-amp model
+  - Realistic op-amp with slew rate, bandwidth
+  - Input/output impedance modeling
+  - Common-mode rejection ratio (CMRR)
+
+- [ ] **Advanced Diode Models**
+  - Zener diode voltage regulation
+  - Schottky diode high-frequency behavior
+  - Temperature coefficient modeling
+  - Reverse recovery time effects
+
+#### Time-Domain Analysis
+
+- [ ] **Transient Analysis Engine**
+
+  - Numerical integration methods (Trapezoidal, Backward Euler)
+  - Automatic timestep control
+  - Initial condition handling
+  - Convergence monitoring
+
+- [ ] **Time-Domain Measurements**
+  - Rise time, fall time, settling time
+  - Overshoot and ringing analysis
+  - Propagation delay measurements
+  - Slew rate calculations
+
+**SUCCESS CRITERIA:**
+
+- [ ] **Advanced Models:** Realistic component behavior with parasitics
+- [ ] **Time-Domain Capability:** Transient analysis with proper convergence
+- [ ] **Educational Value:** Complex circuit analysis matching textbook problems
+- [ ] **Professional Features:** Industry-standard component models
+
+### Phase 6: 📋 FUTURE - Professional Features & Digital Integration
+
+**Goal:** Complete professional-grade circuit simulation with digital components and advanced analysis
+
+**Status:** Long-term vision for comprehensive circuit simulation platform
+
+#### Digital Components & Mixed-Signal
+
+- [ ] **Digital Logic Components**
+
+  - Basic logic gates (AND, OR, NOT, NAND, NOR, XOR)
+  - Flip-flops (D, JK, T, SR) with timing models
+  - Counters, shift registers, multiplexers
+  - Memory elements (latches, SRAM cells)
+
+- [ ] **Mixed-Signal Analysis**
+  - Combined analog/digital simulation
+  - Logic threshold detection
+  - Digital timing analysis
+  - Interface between analog and digital domains
+
+#### Advanced Simulation Capabilities
+
+- [ ] **Statistical Analysis**
+
+  - Monte Carlo simulation with component tolerances
+  - Worst-case analysis
+  - Yield analysis for manufacturing
+  - Design centering and optimization
+
+- [ ] **Advanced Measurement & Analysis**
+  - Noise analysis (thermal, shot, flicker)
+  - Distortion analysis (THD, IMD)
+  - Stability analysis (phase/gain margins)
+  - Sensitivity analysis
+
+#### Educational & Professional Features
+
+- [ ] **Educational Content Integration**
+
+  - Interactive tutorials and guided exercises
+  - Circuit analysis explanations and theory
+  - Problem-solving assistance
+  - Performance benchmarking
+
+- [ ] **Collaboration & Sharing**
+  - Cloud-based circuit storage and sharing
+  - Team collaboration features
+  - Circuit library and component sharing
+  - Educational institution integration
+
+**SUCCESS CRITERIA:**
+
+- [ ] **Complete Simulation Suite:** Analog, digital, and mixed-signal capabilities
+- [ ] **Professional Quality:** Industry-standard analysis and measurement tools
+- [ ] **Educational Platform:** Comprehensive learning and teaching support
+- [ ] **Collaboration Features:** Team-based circuit design and sharing
 
 ## Technical Architecture
 
@@ -698,32 +971,33 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 
 ## Immediate Next Steps
 
-### 1. Complete Phase 1.9 UX Improvements (Priority: High)
+### 1. Begin Phase 1.97 - Non-Linear DC Foundation (Priority: High)
 
-- **Copy/Paste Functionality:** Single and multiple component duplication
-- **Improved Current Probe Rendering:** Better visual design and positioning
-- **Reusable Circuit Fragments:** Save component groups as building blocks
+- **Independent Current Sources:** Add DC current source component with MNA stamping
+- **Basic Switches:** Interactive open/closed switch components
+- **Simple Diode Model:** Basic exponential I-V characteristic with Newton-Raphson solver
+- **Iterative Solver Implementation:** Non-linear circuit solving capability
 
-### 2. AC Analysis Foundation (Phase 2)
+### 2. Complete Phase 1.98 - Basic Transistor Implementation
+
+- **BJT Transistor Models:** Simple NPN/PNP models with Ebers-Moll equations
+- **MOSFET Models:** Basic NMOS/PMOS square-law models
+- **Operating Point Analysis:** Q-point calculation and visualization
+- **Amplifier Circuit Support:** Common emitter/source configurations
+
+### 3. Phase 2 - AC Analysis Foundation
 
 - **Reactive Components:** Add capacitor and inductor components
 - **Complex Number MNA:** Extend simulation for frequency domain
 - **AC Source Components:** Voltage/current sources with phase support
 - **Basic Bode Plots:** Magnitude and phase response visualization
 
-### 3. Enhanced Plotting System (Phase 3)
+### 4. Phase 4 - Enhanced Plotting System
 
 - **Chart.js Integration:** Professional plotting library integration
 - **Oscilloscope Interface:** Multi-channel waveform visualization
 - **Advanced Measurements:** RMS, peak, power, and phase measurements
 - **Interactive Analysis:** Parameter sweeps and what-if scenarios
-
-### 4. Component Library Expansion (Phase 4)
-
-- **Semiconductor Devices:** Diodes, LEDs, basic transistors
-- **Op-Amp Models:** Ideal and realistic operational amplifier models
-- **Advanced Passives:** Transformers, coupled inductors
-- **Digital Components:** Basic logic gates for mixed-signal analysis
 
 ## Success Metrics
 
