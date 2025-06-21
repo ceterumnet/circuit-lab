@@ -152,11 +152,11 @@ const voltageLabel = computed(() => {
   const definition = componentDefinition.value?.properties.find((p) => p.key === 'voltage')
   const unit = definition?.unit || 'V'
 
-  if (typeof voltage === 'number' && voltage >= 1000) {
-    return `${voltage / 1000}k${unit}`
+  if (typeof voltage === 'number' && Math.abs(voltage) >= 1000) {
+    return `${voltage / 1000}${unit}`
   }
-  if (typeof voltage === 'number' && voltage < 1) {
-    return `${voltage * 1000}m${unit}`
+  if (typeof voltage === 'number' && Math.abs(voltage) < 1) {
+    return `${voltage * 1000}${unit}`
   }
   return `${voltage}${unit}`
 })

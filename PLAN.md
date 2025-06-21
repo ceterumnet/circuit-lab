@@ -260,41 +260,84 @@ else if (startComp?.type === 'ground') {
 
 ### Phase 1.93: 🔥 CRITICAL - Wire Current Calculation Overhaul
 
-**Goal:** Fix fundamental wire current calculation flaws that violate KCL and physical accuracy
+**Goal:** Eliminate all heuristics and make simulation electrically correct with unambiguous multimeter-equivalent probe behavior
+
+**FUNDAMENTAL PRINCIPLE:** Circuit analysis and multimeter measurements must be completely compatible - no ambiguity between KVL/KCL and what a real multimeter reads.
 
 **CRITICAL ISSUES TO RESOLVE:**
 
 - [ ] **KCL Violation:** Multiple wires to same node show different currents (physically impossible)
-- [ ] **Multimeter Test Failure:** Wire currents don't represent actual measurable branch currents
-- [ ] **Heuristic Algorithm Flaw:** `calculateBranchCurrentByKCL()` guesses currents instead of calculating them
-- [ ] **Educational Impact:** Students learn incorrect current flow concepts
+- [ ] **Heuristic Algorithm Elimination:** `calculateBranchCurrentByKCL()` uses guessing instead of proper physics
+- [ ] **Ground Override Violation:** Ground symbols artificially change current direction (violates physics)
+- [ ] **Multimeter Test Failure:** Wire currents don't match what real multimeters would measure
 
-**PROPOSED SOLUTION APPROACHES:**
+**SOLUTION: Extended MNA with Full Branch Current Variables**
 
-**Option 1: Branch Current Stamping**
+**Core Approach:** Every wire gets a branch current variable in the MNA matrix - no special cases, no heuristics, no overrides.
 
-- [ ] Extend MNA system to explicitly solve for wire branch currents
-- [ ] Add wire current variables to the MNA matrix
-- [ ] Stamp wire KCL equations explicitly
+**Implementation Steps:**
 
-**Option 2: Post-Processing Current Calculation**
+- [ ] **Extended MNA Matrix:** Add branch current variable for every wire component
+- [ ] **Proper Wire Stamping:** All wires participate in MNA with explicit branch current equations
+- [ ] **Remove All Heuristics:** Delete `calculateBranchCurrentByKCL()` and fallback calculations entirely
+- [ ] **Eliminate Ground Override:** Remove artificial current direction forcing in probe components
+- [ ] **Multimeter-Equivalent Probes:** Probe readings = direct MNA branch current (what real multimeter reads)
 
-- [ ] After MNA solution, calculate wire currents using proper KCL at each node
-- [ ] Ensure current conservation at every electrical node
-- [ ] Validate against multimeter test for each wire
+**Wire Resistance Implications:**
 
-**Option 3: Series Component Analysis**
+- [ ] **Configurable Wire Resistance:** Support user-defined wire resistance values
+- [ ] **Real-World Probe Behavior:** Probe placement along resistive wire affects reading (like real multimeters)
+- [ ] **Current Conservation:** Series current maintained regardless of wire resistance
 
-- [ ] Identify series current paths through circuit topology
-- [ ] Assign same current to all elements in series path
-- [ ] Handle parallel branches with proper current division
+**Technical Implementation:**
 
-**VALIDATION REQUIREMENTS:**
+```typescript
+// Every wire gets branch current variable - no exceptions
+class WireStamper extends ResistiveStamper {
+  stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex) {
+    const [n1, n2] = this.getNodeIndices(nodeMap)
+    this.branchIndex = nextBranchIndex
 
-- [ ] **KCL Compliance:** All currents into each node must sum to zero
-- [ ] **Multimeter Test:** Wire current equals what would be measured in series
-- [ ] **Educational Accuracy:** Current directions and magnitudes make physical sense
-- [ ] **Regression Testing:** Ensure fix doesn't break existing circuit analysis
+    // Standard resistor stamp + branch current equation
+    // V1 - V2 = I_wire * R_wire
+    // KCL automatically satisfied by MNA system
+
+    return { branchCurrents: [this.branchIndex] }
+  }
+
+  calculateCurrent(solution) {
+    // Direct MNA solution - no heuristics
+    return solution.get([this.branchIndex, 0])
+  }
+}
+```
+
+**Probe System Overhaul:**
+
+- [ ] **Remove Ground Override:** Delete artificial direction forcing logic
+- [ ] **Direct MNA Reading:** `probeReading = dcSolution.currents[wireId]`
+- [ ] **Current Animation:** Flow direction from MNA current sign, eliminates polarity ambiguity
+- [ ] **Real Multimeter Behavior:** Probe measures exactly what multimeter in series would read
+
+**VALIDATION: The Multimeter Test**
+
+Every implementation must pass: _"If I cut this wire and insert a real multimeter in series, does the simulation match what the multimeter reads?"_
+
+**Success Criteria:**
+
+- [ ] **Zero Heuristics:** All current calculations from direct MNA solution
+- [ ] **KCL Compliance:** ∑I_into_node = 0 for every electrical node
+- [ ] **Ground Independence:** Ground symbol placement doesn't affect branch currents
+- [ ] **Multimeter Equivalence:** Simulation currents = real multimeter readings
+- [ ] **Wire Resistance Support:** Configurable resistance with proper current conservation
+- [ ] **Educational Accuracy:** Students learn correct circuit analysis principles
+
+**Files to Modify:**
+
+- [ ] `src/services/simulation.ts`: Implement extended MNA wire stamping
+- [ ] `src/components/circuit/probes/ProbeComponent.vue`: Remove ground override, use direct MNA current
+- [ ] `src/components/circuit/probes/ProbeProperties.vue`: Remove ground override, use direct MNA current
+- [ ] Wire component properties: Add configurable resistance UI
 
 ### Phase 1.94: 📋 NEXT - Current Direction Testing & UX Polish
 
