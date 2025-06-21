@@ -591,6 +591,19 @@ function handleKeyDown(e: KeyboardEvent) {
     interactionStore.setCtrlKeyHeld(true)
   }
 
+  // Check if user is currently focused on an input element to avoid conflicts
+  const activeElement = document.activeElement
+  const isTypingInInput =
+    activeElement &&
+    (activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
+      (activeElement as HTMLElement).contentEditable === 'true')
+
+  // Skip keyboard shortcuts if typing in an input field
+  if (isTypingInInput) {
+    return
+  }
+
   if (e.key === 'Escape') {
     if (interactionStore.wireCreationState.isActive) {
       interactionStore.cancelWireCreation()
@@ -606,24 +619,47 @@ function handleKeyDown(e: KeyboardEvent) {
     historyActions.deleteSelectedComponentWithHistory()
   }
 
-  // NEW: Handle 'r' key for rotating components during placement
+  // NEW: Enhanced keyboard shortcuts for component placement and rotation
   if (e.key === 'r' || e.key === 'R') {
     if (interactionStore.componentToPlace) {
+      // During placement: Handle rotation (clockwise or counter-clockwise)
       e.preventDefault()
-      interactionStore.rotatePlacementComponent()
+      if (e.shiftKey) {
+        interactionStore.rotatePlacementComponentCounterClockwise()
+      } else {
+        interactionStore.rotatePlacementComponent()
+      }
+    } else {
+      // Not in placement mode: Start placing Resistor
+      e.preventDefault()
+      interactionStore.setComponentToPlace('resistor')
+    }
+  }
+
+  // NEW: Quick component placement shortcuts
+  if (e.key === 'v' || e.key === 'V') {
+    if (!interactionStore.componentToPlace) {
+      e.preventDefault()
+      interactionStore.setComponentToPlace('voltage_source')
+    }
+  }
+
+  if (e.key === 'g' || e.key === 'G') {
+    if (!interactionStore.componentToPlace) {
+      e.preventDefault()
+      interactionStore.setComponentToPlace('ground')
+    }
+  }
+
+  if (e.key === 'n' || e.key === 'N') {
+    if (!interactionStore.componentToPlace) {
+      e.preventDefault()
+      interactionStore.setComponentToPlace('node')
     }
   }
 
   // Track spacebar as modifier for panning - but only if not typing in an input field
   if (e.code === 'Space' && !e.repeat) {
-    // Check if user is currently focused on an input element
-    const activeElement = document.activeElement
-    const isTypingInInput =
-      activeElement &&
-      (activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        (activeElement as HTMLElement).contentEditable === 'true')
-
     // Only prevent default and enable panning if not typing in an input
     if (!isTypingInInput) {
       e.preventDefault()

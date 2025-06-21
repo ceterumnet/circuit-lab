@@ -304,11 +304,23 @@ export const useInteractionStore = defineStore('interaction', () => {
     componentPlacementPreview.value = { position: null, rotation: 0, intersections: [] }
   }
 
-  // NEW: Rotate component placement by 90 degrees
+  // NEW: Rotate component placement by 90 degrees clockwise
   function rotatePlacementComponent() {
     if (componentToPlace.value) {
       const currentRotation = componentPlacementPreview.value.rotation
       const newRotation = (currentRotation + 90) % 360
+      componentPlacementPreview.value = {
+        ...componentPlacementPreview.value,
+        rotation: newRotation,
+      }
+    }
+  }
+
+  // NEW: Rotate component placement by 90 degrees counter-clockwise
+  function rotatePlacementComponentCounterClockwise() {
+    if (componentToPlace.value) {
+      const currentRotation = componentPlacementPreview.value.rotation
+      const newRotation = (currentRotation - 90 + 360) % 360
       componentPlacementPreview.value = {
         ...componentPlacementPreview.value,
         rotation: newRotation,
@@ -343,6 +355,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     updateComponentPlacementPreview,
     clearComponentPlacementPreview,
     rotatePlacementComponent,
+    rotatePlacementComponentCounterClockwise,
     selectComponent,
     addToSelection,
     removeFromSelection,

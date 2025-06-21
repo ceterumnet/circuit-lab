@@ -111,10 +111,43 @@ Building a web-based circuit simulation application focused on educational purpo
   - [x] have some canned circuits (only basic tests)
   - [x] implement a save feature so that I don't have to keep redoing circuits
 - [ ] Component placement
+
   - [x] I have to select a component and then place the component, and then if I want to place another component I need to click that component on the left hand side again. We should consider making the selection persistent and entering a component placement mode.
   - [x] What about when I place a component and the pin intersects a wire or a terminal? I believe it should automatically connect. This would work well for NodeComponents as well as the other types. Currently it is cumbersome to place a component on an existing circuit because you have to delete a wire and then rebuild the connections
   - [x] When placing a component, I want to be able to hit the 'r' key to rotate it 90 degrees before placement
   - [ ] Keyboard shortcuts to component placement. I'm thinking we should bind the '/' key which brings up an inline component selector with quick search so you can hit '/' -> type "r" or "re" and components starting with r or re (such as resistor) will be in the list. Then it becomes super easy to not have to leave the circuit context
+
+    **Proposed Implementation:**
+
+    **Primary Shortcuts (Direct Access):**
+
+    - **`/`** - Opens inline component selector with fuzzy search overlay
+    - **`R`** - Quick place Resistor (most common component)
+    - **`V`** - Quick place Voltage source
+    - **`G`** - Quick place Ground
+    - **`N`** - Quick place Node
+
+    **Component Selector (`/` key) Features:**
+
+    - Fuzzy search: Type "r" → shows Resistor, "res" → Resistor, "v" → Voltage source
+    - Persistent placement mode: After selection, enters placement mode like current palette behavior
+    - **Escape** to close selector and return to normal mode
+    - **Enter** to confirm first match, **Arrow keys** to navigate results
+    - **Tab** to cycle through available components
+    - Semi-transparent overlay positioned at cursor/center of canvas
+
+    **Integration with Existing System:**
+
+    - Reuses current `interactionStore.setComponentToPlace()` system
+    - Maintains existing placement behavior (rotation with R, persistent mode, auto-connect)
+    - Works alongside existing component palette (both methods available)
+    - Respects current escape handling and mode management
+
+    **Enhanced Rotation Controls (during placement):**
+
+    - **`R`** - Rotate clockwise (current behavior)
+    - **`Shift+R`** - Rotate counter-clockwise (new enhancement)
+
 - [ ] Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
 - [ ] Add the ability to select a group of items in the canvas and save them as a reusable fragment / building block. This will eventually allow us to have user created components and logical sub-components where we don't necessarily need to represent everything on the circuit all the time visually if that makes sense.
 
