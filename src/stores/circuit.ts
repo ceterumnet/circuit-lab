@@ -31,6 +31,7 @@ export const useCircuitStore = defineStore('circuit', () => {
   const dcSolution = ref<DC_Result | null>(null)
   const lastDcSolution = ref<DC_Result | null>(null)
   const simulationErrors = ref<string[]>([])
+  const simulationWarnings = ref<string[]>([])
   const hasValidSimulation = ref(false)
 
   // Real-time simulation toggle
@@ -219,6 +220,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     // Clear previous simulation state
     isSimulating.value = true
     simulationErrors.value = []
+    simulationWarnings.value = []
     hasValidSimulation.value = false
 
     try {
@@ -238,6 +240,12 @@ export const useCircuitStore = defineStore('circuit', () => {
         dcSolution.value = solution
         lastDcSolution.value = dcSolution.value
         hasValidSimulation.value = true
+
+        // Capture floating node warnings if present
+        if (solution.floatingNodeWarnings && solution.floatingNodeWarnings.length > 0) {
+          simulationWarnings.value = solution.floatingNodeWarnings
+        }
+
         console.log('DC simulation completed successfully')
       } else {
         simulationErrors.value = [
@@ -1020,6 +1028,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     dcSolution,
     lastDcSolution,
     simulationErrors,
+    simulationWarnings,
     hasValidSimulation,
 
     // Real-time simulation state

@@ -366,6 +366,18 @@ circuitStore.setSimulationThrottleMs(150) // Adjust throttling delay
   - ✅ **Test Suite:** Comprehensive validation with both open and closed switch scenarios
   - ✅ **Foundation for Advanced Components:** Ready for relay circuits, logic gates, and complex switching
 
+- [x] **Professional Floating Node Detection System** ✅ **COMPLETED**
+
+  - ✅ **GMIN Stabilization:** Professional SPICE-standard approach using 1e-12 S conductance to ground
+  - ✅ **Graph-Based Detection:** BFS algorithm finds nodes unreachable from ground references
+  - ✅ **Incomplete Circuit Detection:** Advanced algorithm detects missing return paths in current loops
+  - ✅ **Switch-Aware Logic:** Distinguishes between expected floating (open switches) vs circuit errors
+  - ✅ **Educational Warnings:** Clear UI warnings with yellow info icons and hover tooltips
+  - ✅ **Dual-Phase Analysis:** Basic floating nodes + incomplete current loop detection
+  - ✅ **SPICE Compliance:** Matches professional simulator behavior for floating node handling
+  - ✅ **UI Integration:** Warnings displayed alongside simulation errors in circuit editor
+  - ✅ **Realistic Physics:** Floating nodes settle near ground potential instead of arbitrary voltages
+
 - [ ] **Potentiometers/Variable Resistors**
   - Adjustable resistance with slider interface
   - Real-time resistance modification

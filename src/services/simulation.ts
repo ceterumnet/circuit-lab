@@ -11,6 +11,8 @@ export interface DC_Result {
   voltages: Record<number, number>
   currents: Record<string, number>
   termToNodeIndex: Map<string, number>
+  /** Floating node warnings for UI display */
+  floatingNodeWarnings?: string[]
   /** Enhanced solver metrics for precision analysis */
   solverMetrics?: {
     conditionNumber?: number
@@ -462,6 +464,268 @@ class ComponentStamperFactory {
 }
 
 /**
+ * Detect potential floating nodes and provide educational warnings
+ * Special handling for switches: open switches create expected floating nodes
+ */
+function detectFloatingNodes(
+  components: CircuitComponent[],
+  termToNodeIndex: Map<string, number>,
+  groundNodeIndices: number[],
+): { floatingNodes: number[]; warnings: string[]; switchCausedFloating: boolean } {
+  const floatingNodes: number[] = []
+  const warnings: string[] = []
+  let switchCausedFloating = false
+
+  // Build a set of all node indices
+  const allNodes = new Set<number>()
+  for (const nodeIndex of termToNodeIndex.values()) {
+    allNodes.add(nodeIndex)
+  }
+
+  console.log(`🔍 Building circuit connectivity graph for floating node detection`)
+  console.log(`🔍 Total nodes: ${allNodes.size}, Ground nodes: [${groundNodeIndices.join(', ')}]`)
+
+  // Build connectivity graph: node -> Set of directly connected nodes
+  const connectivity = new Map<number, Set<number>>()
+  for (const nodeIndex of allNodes) {
+    connectivity.set(nodeIndex, new Set<number>())
+  }
+
+  // Add edges for each component that provides DC connectivity
+  for (const component of components) {
+    let node1: number | undefined
+    let node2: number | undefined
+
+    if (component.type === 'voltage_source' || component.type === 'current_source') {
+      // Sources provide strong DC connectivity
+      const definition = getComponentDefinition(component.type)!
+      const term1Id = `${component.id}:${definition.terminals[0].id}`
+      const term2Id = `${component.id}:${definition.terminals[1].id}`
+      node1 = termToNodeIndex.get(term1Id)
+      node2 = termToNodeIndex.get(term2Id)
+      console.log(`🔍 ${component.type} ${component.id}: nodes ${node1} ↔ ${node2}`)
+    } else if (component.type === 'resistor') {
+      // Resistors provide DC connectivity
+      const definition = getComponentDefinition(component.type)!
+      const term1Id = `${component.id}:${definition.terminals[0].id}`
+      const term2Id = `${component.id}:${definition.terminals[1].id}`
+      node1 = termToNodeIndex.get(term1Id)
+      node2 = termToNodeIndex.get(term2Id)
+      console.log(`🔍 ${component.type} ${component.id}: nodes ${node1} ↔ ${node2}`)
+    } else if (component.type === 'wire') {
+      // Wires provide DC connectivity
+      if (component.properties) {
+        const startCompId = component.properties.startComponentId as string
+        const startTermId = component.properties.startTerminal as string
+        const endCompId = component.properties.endComponentId as string
+        const endTermId = component.properties.endTerminal as string
+        const term1Id = `${startCompId}:${startTermId}`
+        const term2Id = `${endCompId}:${endTermId}`
+        node1 = termToNodeIndex.get(term1Id)
+        node2 = termToNodeIndex.get(term2Id)
+        console.log(`🔍 ${component.type} ${component.id}: nodes ${node1} ↔ ${node2}`)
+      }
+    } else if (component.type === 'switch') {
+      // Only closed switches provide DC connectivity
+      const isOpen = component.properties?.isOpen === true
+      if (!isOpen) {
+        const definition = getComponentDefinition(component.type)!
+        const term1Id = `${component.id}:${definition.terminals[0].id}`
+        const term2Id = `${component.id}:${definition.terminals[1].id}`
+        node1 = termToNodeIndex.get(term1Id)
+        node2 = termToNodeIndex.get(term2Id)
+        console.log(`🔍 ${component.type} ${component.id} (CLOSED): nodes ${node1} ↔ ${node2}`)
+      } else {
+        console.log(`🔍 ${component.type} ${component.id} (OPEN): no connectivity`)
+        switchCausedFloating = true
+      }
+    }
+
+    // Add bidirectional connectivity
+    if (node1 !== undefined && node2 !== undefined) {
+      connectivity.get(node1)!.add(node2)
+      connectivity.get(node2)!.add(node1)
+    }
+  }
+
+  // Use graph traversal (BFS) from ground nodes to find all reachable nodes
+  const reachableFromGround = new Set<number>()
+  const queue: number[] = [...groundNodeIndices]
+
+  // Initialize with ground nodes
+  for (const groundNode of groundNodeIndices) {
+    reachableFromGround.add(groundNode)
+  }
+
+  console.log(`🔍 Starting BFS traversal from ground nodes: [${groundNodeIndices.join(', ')}]`)
+
+  // BFS traversal
+  while (queue.length > 0) {
+    const currentNode = queue.shift()!
+    const neighbors = connectivity.get(currentNode)!
+
+    for (const neighbor of neighbors) {
+      if (!reachableFromGround.has(neighbor)) {
+        console.log(`🔍 BFS: ${currentNode} → ${neighbor}`)
+        reachableFromGround.add(neighbor)
+        queue.push(neighbor)
+      }
+    }
+  }
+
+  console.log(
+    `🔍 Nodes reachable from ground: [${Array.from(reachableFromGround).sort().join(', ')}]`,
+  )
+
+  // Find floating nodes (nodes not reachable from ground)
+  for (const nodeIndex of allNodes) {
+    if (!reachableFromGround.has(nodeIndex)) {
+      floatingNodes.push(nodeIndex)
+
+      // Find which component terminals are on this floating node
+      const floatingTerminals: string[] = []
+      for (const [terminalId, termNodeIndex] of termToNodeIndex.entries()) {
+        if (termNodeIndex === nodeIndex) {
+          floatingTerminals.push(terminalId)
+        }
+      }
+
+      console.log(
+        `🔍 FLOATING NODE DETECTED: ${nodeIndex} with terminals: [${floatingTerminals.join(', ')}]`,
+      )
+
+      if (switchCausedFloating) {
+        warnings.push(
+          `ℹ️  Open switch created floating node ${nodeIndex} with terminals: [${floatingTerminals.join(', ')}]`,
+        )
+        warnings.push(
+          `   This is expected behavior when switches are open. GMIN stabilization applied.`,
+        )
+      } else {
+        warnings.push(
+          `⚠️  Potential floating node ${nodeIndex} with terminals: [${floatingTerminals.join(', ')}]`,
+        )
+        warnings.push(
+          `   Floating nodes have undefined voltage in real circuits. GMIN stabilization applied.`,
+        )
+      }
+    }
+  }
+
+  // ADDITIONAL CHECK: Detect incomplete current loops (educational warning)
+  // This finds nodes that are electrically connected but lack complete current paths
+  console.log(`🔍 Checking for incomplete current loops...`)
+
+  // For each voltage/current source, verify all reachable nodes have return paths
+  for (const component of components) {
+    if (component.type === 'voltage_source' || component.type === 'current_source') {
+      const definition = getComponentDefinition(component.type)!
+      const posTermId = `${component.id}:${definition.terminals[0].id}`
+      const negTermId = `${component.id}:${definition.terminals[1].id}`
+      const posNode = termToNodeIndex.get(posTermId)
+      const negNode = termToNodeIndex.get(negTermId)
+
+      if (posNode !== undefined && negNode !== undefined) {
+        // Check if there are multiple independent paths between source terminals
+        // If we remove the direct source connection, can we still reach from pos to neg?
+        const tempConnectivity = new Map<number, Set<number>>()
+        for (const [node, neighbors] of connectivity.entries()) {
+          tempConnectivity.set(node, new Set(neighbors))
+        }
+
+        // Remove the direct source connection temporarily
+        tempConnectivity.get(posNode)!.delete(negNode)
+        tempConnectivity.get(negNode)!.delete(posNode)
+
+        // Try to find alternative path from pos to neg (excluding direct source connection)
+        const visited = new Set<number>()
+        const queue = [posNode]
+        visited.add(posNode)
+        let hasAlternatePath = false
+
+        while (queue.length > 0 && !hasAlternatePath) {
+          const currentNode = queue.shift()!
+          const neighbors = tempConnectivity.get(currentNode)!
+
+          for (const neighbor of neighbors) {
+            if (neighbor === negNode) {
+              hasAlternatePath = true
+              console.log(
+                `🔍 Found complete circuit path: ${component.type} ${component.id} has return path`,
+              )
+              break
+            }
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor)
+              queue.push(neighbor)
+            }
+          }
+        }
+
+        if (!hasAlternatePath) {
+          console.log(
+            `🔍 INCOMPLETE CIRCUIT DETECTED: ${component.type} ${component.id} has no return path`,
+          )
+
+          // Find the dead-end nodes (nodes reachable from positive but not returning to negative)
+          const deadEndNodes = new Set<number>()
+          const reachableFromPos = new Set<number>()
+          const posQueue = [posNode]
+          reachableFromPos.add(posNode)
+
+          while (posQueue.length > 0) {
+            const currentNode = posQueue.shift()!
+            const neighbors = tempConnectivity.get(currentNode)!
+
+            for (const neighbor of neighbors) {
+              if (!reachableFromPos.has(neighbor)) {
+                reachableFromPos.add(neighbor)
+                posQueue.push(neighbor)
+              }
+            }
+          }
+
+          // Nodes reachable from positive but not connected back to negative are dead-ends
+          for (const node of reachableFromPos) {
+            if (node !== posNode && node !== negNode) {
+              deadEndNodes.add(node)
+            }
+          }
+
+          for (const deadEndNode of deadEndNodes) {
+            // Find terminals on this dead-end node
+            const deadEndTerminals: string[] = []
+            for (const [terminalId, termNodeIndex] of termToNodeIndex.entries()) {
+              if (termNodeIndex === deadEndNode) {
+                deadEndTerminals.push(terminalId)
+              }
+            }
+
+            console.log(
+              `🔍 DEAD-END NODE: ${deadEndNode} with terminals: [${deadEndTerminals.join(', ')}]`,
+            )
+
+            floatingNodes.push(deadEndNode)
+            warnings.push(
+              `⚠️  Incomplete circuit: Node ${deadEndNode} with terminals [${deadEndTerminals.join(', ')}] has no return path to ${component.type} ${component.id}`,
+            )
+            warnings.push(
+              `   This creates an incomplete current loop. GMIN stabilization applied for DC analysis.`,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  if (floatingNodes.length === 0) {
+    console.log('✅ No floating nodes detected - all nodes have DC paths to ground')
+  }
+
+  return { floatingNodes, warnings, switchCausedFloating }
+}
+
+/**
  * New unified DC analysis using component stamping approach with enhanced numerical solver
  */
 export async function solveDC(
@@ -485,7 +749,19 @@ export async function solveDC(
     console.log('Electrical Nodes:', electricalNodes)
     console.log('Ground Node Index:', groundNodeIndex)
 
+    // Step 1.5: Detect floating nodes and provide educational warnings
+    const floatingAnalysis = detectFloatingNodes(components, termToNodeIndex, groundNodeIndices)
+    if (floatingAnalysis.floatingNodes.length > 0) {
+      console.warn('🔍 Floating Node Analysis:')
+      for (const warning of floatingAnalysis.warnings) {
+        console.warn(warning)
+      }
+    } else {
+      console.log('✅ No floating nodes detected - all nodes have DC paths to ground')
+    }
+
     // Step 2: Create component stampers
+
     const stampers: ComponentStamper[] = []
     for (const component of components) {
       try {
@@ -534,6 +810,31 @@ export async function solveDC(
       allBranchCurrents.push(...result.branchCurrents)
       nextBranchIndex += result.branchCurrents.length
     }
+
+    // Step 5.5: Add GMIN conductance for floating node stability (Professional SPICE approach)
+    // This prevents floating nodes from having arbitrary voltages by adding tiny conductance to ground
+    const GMIN = 1e-12 // 1 TΩ resistance to ground (1 pS conductance) - professional SPICE standard
+    let floatingNodeCount = 0
+
+    for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+      // Skip ground nodes - they're already constrained to 0V
+      if (!groundNodeIndices.includes(nodeIndex)) {
+        // Add tiny conductance from this node to ground
+        // This ensures all floating nodes settle near ground potential (realistic physics)
+        mnaMatrix.set(
+          [nodeIndex, nodeIndex],
+          (mnaMatrix.get([nodeIndex, nodeIndex]) as number) + GMIN,
+        )
+        floatingNodeCount++
+      }
+    }
+
+    console.log(
+      `🔧 Applied GMIN stabilization: Added ${GMIN.toExponential(1)}S conductance to ${floatingNodeCount} non-ground nodes`,
+    )
+    console.log(
+      '   This ensures floating nodes behave realistically (settle near ground potential)',
+    )
 
     // Step 6: Apply ground constraints - Enhanced or Standard method
     console.log('Applying ground constraints for nodes:', groundNodeIndices)
@@ -618,6 +919,7 @@ export async function solveDC(
       voltages: voltageResults,
       currents: currentResults,
       termToNodeIndex,
+      floatingNodeWarnings: floatingAnalysis.warnings,
       solverMetrics,
     }
   } catch (error) {

@@ -105,6 +105,17 @@
                 </ul>
               </div>
             </div>
+
+            <div v-if="circuitStore.simulationWarnings.length > 0" class="simulation-warnings">
+              <Info class="warning-icon" />
+              <div class="warning-tooltip">
+                <ul>
+                  <li v-for="warning in circuitStore.simulationWarnings" :key="warning">
+                    {{ warning }}
+                  </li>
+                </ul>
+              </div>
+            </div>
             <span class="component-count">Components: {{ circuitStore.componentCount }}</span>
             <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
               🔌 Click to complete wire
@@ -159,6 +170,7 @@ import {
   CheckCircle,
   Loader2,
   AlertTriangle,
+  Info,
   Zap,
   ZapOff,
 } from 'lucide-vue-next'
@@ -477,6 +489,52 @@ async function runSimulation() {
 }
 
 .error-tooltip li {
+  margin-bottom: 0.25rem;
+}
+
+.simulation-warnings {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+.warning-icon {
+  width: 20px;
+  height: 20px;
+  color: #ffc107;
+  cursor: pointer;
+}
+
+.warning-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  background: #fff;
+  border: 2px solid #ffc107;
+  border-radius: 6px;
+  padding: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 250px;
+  z-index: 1000;
+  display: none;
+}
+
+.simulation-warnings:hover .warning-tooltip {
+  display: block;
+}
+
+.warning-tooltip ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.875rem;
+  color: #856404;
+  line-height: 1.4;
+}
+
+.warning-tooltip li {
   margin-bottom: 0.25rem;
 }
 
