@@ -1043,39 +1043,51 @@ const previewComponent = computed(() => {
 })
 
 // Computed properties for paste placement preview
-const pastePreviewComponents = computed(() => {
+const pastePreviewData = computed(() => {
   if (
     !interactionStore.pastePlacementPreview.isActive ||
     !interactionStore.pastePlacementPreview.position
   ) {
-    return []
+    return { components: [], wires: [], probes: [] }
   }
 
   if (!circuitStore.hasClipboardContent()) {
-    return []
+    return { components: [], wires: [], probes: [] }
   }
 
-  const clipboardComponents = circuitStore.getClipboardComponents()
+  const clipboardData = circuitStore.getClipboardData()
   const targetPosition = interactionStore.pastePlacementPreview.position
   const rotation = interactionStore.pastePlacementPreview.rotation
 
-  // Find the bounding box center of clipboard components
+  // Find the bounding box center of clipboard items
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
     maxY = -Infinity
-  clipboardComponents.forEach((component: CircuitComponentType) => {
+
+  clipboardData.components.forEach((component) => {
     minX = Math.min(minX, component.position.x)
     minY = Math.min(minY, component.position.y)
     maxX = Math.max(maxX, component.position.x)
     maxY = Math.max(maxY, component.position.y)
   })
 
+  clipboardData.probes.forEach((probe) => {
+    minX = Math.min(minX, probe.position.x)
+    minY = Math.min(minY, probe.position.y)
+    maxX = Math.max(maxX, probe.position.x)
+    maxY = Math.max(maxY, probe.position.y)
+  })
+
   const centerX = (minX + maxX) / 2
   const centerY = (minY + maxY) / 2
+  const idMapping = new Map<string, string>()
 
-  // Create preview components positioned relative to target
-  return clipboardComponents.map((originalComponent: CircuitComponentType) => {
+  // Create preview components
+  const previewComponents = clipboardData.components.map((originalComponent) => {
+    const previewId = `preview-${originalComponent.id}`
+    idMapping.set(originalComponent.id, previewId)
+
     // Calculate relative position from center
     let relativeX = originalComponent.position.x - centerX
     let relativeY = originalComponent.position.y - centerY
@@ -1100,16 +1112,89 @@ const pastePreviewComponents = computed(() => {
     // Calculate new component rotation
     const newComponentRotation = (originalComponent.rotation + rotation) % 360
 
-    // Create preview component
     return {
       ...originalComponent,
-      id: `preview-${originalComponent.id}`, // Unique preview ID
+      id: previewId,
       position: newPosition,
       rotation: newComponentRotation,
       selected: false,
     }
   })
+
+  // Create preview wires with updated component references
+  const previewWires = clipboardData.wires
+    .filter((originalWire) => {
+      if (!originalWire.properties) return false
+      const oldStartComponentId = originalWire.properties.startComponentId as string
+      const oldEndComponentId = originalWire.properties.endComponentId as string
+      return idMapping.has(oldStartComponentId) && idMapping.has(oldEndComponentId)
+    })
+    .map((originalWire) => {
+      const previewId = `preview-${originalWire.id}`
+      const oldStartComponentId = originalWire.properties!.startComponentId as string
+      const oldEndComponentId = originalWire.properties!.endComponentId as string
+      const newStartComponentId = idMapping.get(oldStartComponentId)!
+      const newEndComponentId = idMapping.get(oldEndComponentId)!
+
+      return {
+        ...originalWire,
+        id: previewId,
+        selected: false,
+        properties: {
+          ...originalWire.properties!,
+          startComponentId: newStartComponentId,
+          endComponentId: newEndComponentId,
+        },
+      }
+    })
+
+  // Create preview probes
+  const previewProbes = clipboardData.probes
+    .filter((originalProbe) => idMapping.has(originalProbe.targetId))
+    .map((originalProbe) => {
+      const previewId = `preview-${originalProbe.id}`
+
+      // Calculate relative position from center
+      let relativeX = originalProbe.position.x - centerX
+      let relativeY = originalProbe.position.y - centerY
+
+      // Apply rotation if specified
+      if (rotation !== 0) {
+        const rad = (rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        const newRelativeX = relativeX * cos - relativeY * sin
+        const newRelativeY = relativeX * sin + relativeY * cos
+        relativeX = newRelativeX
+        relativeY = newRelativeY
+      }
+
+      // Position relative to target position
+      const newPosition = {
+        x: targetPosition.x + relativeX,
+        y: targetPosition.y + relativeY,
+      }
+
+      // Update target reference for preview
+      const newTargetId = idMapping.get(originalProbe.targetId)!
+
+      return {
+        ...originalProbe,
+        id: previewId,
+        position: newPosition,
+        targetId: newTargetId,
+      }
+    })
+
+  return {
+    components: previewComponents,
+    wires: previewWires,
+    probes: previewProbes,
+  }
 })
+
+// Backward compatibility
+const pastePreviewComponents = computed(() => pastePreviewData.value.components)
 
 const wireIntersectionIndicators = computed(() => {
   return interactionStore.componentPlacementPreview.intersections
@@ -1467,22 +1552,42 @@ watch(
         <!-- Paste placement preview -->
         <v-group
           v-if="
-            interactionStore.pastePlacementPreview.isActive && pastePreviewComponents.length > 0
+            interactionStore.pastePlacementPreview.isActive &&
+            (pastePreviewData.components.length > 0 ||
+              pastePreviewData.wires.length > 0 ||
+              pastePreviewData.probes.length > 0)
           "
         >
-          <!-- Ghost/preview components -->
+          <!-- Ghost/preview items -->
           <v-group
             :config="{
               opacity: 0.6,
               listening: false,
             }"
           >
-            <!-- Render each component in the clipboard as a ghost -->
+            <!-- Preview wires (render first) -->
             <circuit-component
-              v-for="previewComponent in pastePreviewComponents"
+              v-for="previewWire in pastePreviewData.wires"
+              :key="previewWire.id"
+              :component="previewWire"
+              :listening="false"
+            />
+
+            <!-- Preview components -->
+            <circuit-component
+              v-for="previewComponent in pastePreviewData.components"
               :key="previewComponent.id"
               :component="previewComponent"
               :listening="false"
+            />
+
+            <!-- Preview probes -->
+            <probe-component
+              v-for="previewProbe in pastePreviewData.probes"
+              :key="previewProbe.id"
+              :probe="previewProbe"
+              @select="() => {}"
+              @dragend="() => {}"
             />
           </v-group>
         </v-group>

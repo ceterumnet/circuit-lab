@@ -33,7 +33,18 @@ export const useCircuitStore = defineStore('circuit', () => {
   const simulationErrors = ref<string[]>([])
   const hasValidSimulation = ref(false)
 
-  // Clipboard functionality
+  // Clipboard functionality - expanded to include wires and probes
+  const clipboardData = ref<{
+    components: CircuitComponent[]
+    wires: CircuitComponent[]
+    probes: Probe[]
+  }>({
+    components: [],
+    wires: [],
+    probes: [],
+  })
+
+  // Legacy clipboard for backward compatibility
   const clipboardComponents = ref<CircuitComponent[]>([])
 
   // Getters
@@ -641,55 +652,103 @@ export const useCircuitStore = defineStore('circuit', () => {
       return false
     }
 
-    // Get selected components (excluding wires for now - they're more complex)
+    // Get selected components (excluding wires - they'll be handled separately)
     const componentsToCopy = currentCircuit.value.components.filter(
       (c) => selectedIds.includes(c.id) && c.type !== 'wire',
     )
 
-    if (componentsToCopy.length === 0) {
-      console.log('No copyable components selected')
+    // Get selected probes
+    const probesToCopy = currentCircuit.value.probes.filter((p) => selectedIds.includes(p.id))
+
+    // Auto-collect wires where BOTH endpoints are selected components
+    const selectedComponentIds = componentsToCopy.map((c) => c.id)
+    const wiresToCopy = currentCircuit.value.components.filter((c) => {
+      if (c.type !== 'wire' || !c.properties) return false
+
+      const startComponentId = c.properties.startComponentId as string
+      const endComponentId = c.properties.endComponentId as string
+
+      return (
+        selectedComponentIds.includes(startComponentId) &&
+        selectedComponentIds.includes(endComponentId)
+      )
+    })
+
+    if (componentsToCopy.length === 0 && probesToCopy.length === 0 && wiresToCopy.length === 0) {
+      console.log('No copyable items selected')
       return false
     }
 
-    // Deep copy the components to avoid reference issues
-    clipboardComponents.value = componentsToCopy.map((component) => ({
-      ...component,
-      properties: component.properties ? { ...component.properties } : undefined,
-    }))
+    // Deep copy all items to avoid reference issues
+    clipboardData.value = {
+      components: componentsToCopy.map((component) => ({
+        ...component,
+        properties: component.properties ? { ...component.properties } : undefined,
+      })),
+      wires: wiresToCopy.map((wire) => ({
+        ...wire,
+        properties: wire.properties ? { ...wire.properties } : undefined,
+      })),
+      probes: probesToCopy.map((probe) => ({ ...probe })),
+    }
 
-    console.log(`Copied ${clipboardComponents.value.length} components to clipboard`)
+    // Maintain backward compatibility
+    clipboardComponents.value = clipboardData.value.components
+
+    const totalItems =
+      clipboardData.value.components.length +
+      clipboardData.value.wires.length +
+      clipboardData.value.probes.length
+    console.log(
+      `Copied ${totalItems} items to clipboard (${clipboardData.value.components.length} components, ${clipboardData.value.wires.length} wires, ${clipboardData.value.probes.length} probes)`,
+    )
     return true
   }
 
   // Paste components from clipboard at a specific position
   function pasteComponentsAtPosition(targetPosition: Position, rotation: number = 0) {
-    if (clipboardComponents.value.length === 0) {
-      console.log('No components in clipboard to paste')
+    const totalItems =
+      clipboardData.value.components.length +
+      clipboardData.value.wires.length +
+      clipboardData.value.probes.length
+
+    if (totalItems === 0) {
+      console.log('No items in clipboard to paste')
       return false
     }
 
     const interactionStore = useInteractionStore()
     const pastedIds: string[] = []
+    const idMapping = new Map<string, string>() // oldId -> newId
 
-    // Find the bounding box center of clipboard components
+    // Find the bounding box center of all clipboard items
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
       maxY = -Infinity
-    clipboardComponents.value.forEach((component) => {
+
+    // Include components and probes in bounding box calculation
+    clipboardData.value.components.forEach((component) => {
       minX = Math.min(minX, component.position.x)
       minY = Math.min(minY, component.position.y)
       maxX = Math.max(maxX, component.position.x)
       maxY = Math.max(maxY, component.position.y)
     })
 
+    clipboardData.value.probes.forEach((probe) => {
+      minX = Math.min(minX, probe.position.x)
+      minY = Math.min(minY, probe.position.y)
+      maxX = Math.max(maxX, probe.position.x)
+      maxY = Math.max(maxY, probe.position.y)
+    })
+
     const centerX = (minX + maxX) / 2
     const centerY = (minY + maxY) / 2
 
-    // Paste each component with new ID and positioned relative to target
-    clipboardComponents.value.forEach((originalComponent) => {
-      // Generate new unique ID
+    // First pass: Paste components and create ID mapping
+    clipboardData.value.components.forEach((originalComponent) => {
       const newId = generateComponentId(currentCircuit.value, originalComponent.type)
+      idMapping.set(originalComponent.id, newId)
 
       // Calculate relative position from center
       let relativeX = originalComponent.position.x - centerX
@@ -721,21 +780,97 @@ export const useCircuitStore = defineStore('circuit', () => {
         id: newId,
         position: newPosition,
         rotation: newComponentRotation,
-        selected: false, // Don't select pasted components initially
+        selected: false,
         properties: originalComponent.properties ? { ...originalComponent.properties } : undefined,
       }
 
-      // Add to circuit
       addComponent(newComponent)
       pastedIds.push(newId)
     })
 
-    // Select the pasted components
+    // Second pass: Paste wires with updated component references
+    clipboardData.value.wires.forEach((originalWire) => {
+      const newId = generateComponentId(currentCircuit.value, 'wire')
+      idMapping.set(originalWire.id, newId)
+
+      if (!originalWire.properties) return
+
+      // Update component references in wire properties
+      const oldStartComponentId = originalWire.properties.startComponentId as string
+      const oldEndComponentId = originalWire.properties.endComponentId as string
+
+      const newStartComponentId = idMapping.get(oldStartComponentId)
+      const newEndComponentId = idMapping.get(oldEndComponentId)
+
+      if (!newStartComponentId || !newEndComponentId) {
+        console.warn(`Cannot paste wire ${originalWire.id}: missing component references`)
+        return
+      }
+
+      const newWire: CircuitComponent = {
+        ...originalWire,
+        id: newId,
+        selected: false,
+        properties: {
+          ...originalWire.properties,
+          startComponentId: newStartComponentId,
+          endComponentId: newEndComponentId,
+        },
+      }
+
+      addComponent(newWire)
+      pastedIds.push(newId)
+    })
+
+    // Third pass: Paste probes with updated target references
+    clipboardData.value.probes.forEach((originalProbe) => {
+      const newId = generateComponentId(currentCircuit.value, 'probe')
+
+      // Calculate relative position from center
+      let relativeX = originalProbe.position.x - centerX
+      let relativeY = originalProbe.position.y - centerY
+
+      // Apply rotation if specified
+      if (rotation !== 0) {
+        const rad = (rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        const newRelativeX = relativeX * cos - relativeY * sin
+        const newRelativeY = relativeX * sin + relativeY * cos
+        relativeX = newRelativeX
+        relativeY = newRelativeY
+      }
+
+      // Position relative to target position
+      const newPosition = {
+        x: targetPosition.x + relativeX,
+        y: targetPosition.y + relativeY,
+      }
+
+      // Update target reference
+      const newTargetId = idMapping.get(originalProbe.targetId)
+      if (!newTargetId) {
+        console.warn(`Cannot paste probe ${originalProbe.id}: missing target reference`)
+        return
+      }
+
+      const newProbe: Probe = {
+        ...originalProbe,
+        id: newId,
+        position: newPosition,
+        targetId: newTargetId,
+      }
+
+      currentCircuit.value.probes.push(newProbe)
+      pastedIds.push(newId)
+    })
+
+    // Select all pasted items
     interactionStore.clearSelection()
     pastedIds.forEach((id) => interactionStore.addToSelection(id))
 
     console.log(
-      `Pasted ${pastedIds.length} components at position ${targetPosition.x}, ${targetPosition.y}`,
+      `Pasted ${pastedIds.length} items at position ${targetPosition.x}, ${targetPosition.y} (${clipboardData.value.components.length} components, ${clipboardData.value.wires.length} wires, ${clipboardData.value.probes.length} probes)`,
     )
     return true
   }
@@ -766,14 +901,23 @@ export const useCircuitStore = defineStore('circuit', () => {
     return pasteComponentsAtPosition(offsetPosition, 0)
   }
 
-  // Check if clipboard has components
+  // Check if clipboard has content
   function hasClipboardContent() {
-    return clipboardComponents.value.length > 0
+    return (
+      clipboardData.value.components.length > 0 ||
+      clipboardData.value.wires.length > 0 ||
+      clipboardData.value.probes.length > 0
+    )
   }
 
-  // Get clipboard components (for preview)
+  // Get clipboard components (for preview - backward compatibility)
   function getClipboardComponents() {
     return clipboardComponents.value
+  }
+
+  // Get full clipboard data (for advanced preview)
+  function getClipboardData() {
+    return clipboardData.value
   }
 
   return {
@@ -825,5 +969,6 @@ export const useCircuitStore = defineStore('circuit', () => {
     pasteComponentsAtPosition,
     hasClipboardContent,
     getClipboardComponents,
+    getClipboardData,
   }
 })
