@@ -33,6 +33,10 @@ export const useCircuitStore = defineStore('circuit', () => {
   const simulationErrors = ref<string[]>([])
   const hasValidSimulation = ref(false)
 
+  // Real-time simulation toggle
+  const isRealTimeSimulation = ref(false)
+  const simulationThrottleMs = ref(100) // Throttle automatic simulations to 100ms
+
   // Clipboard functionality - expanded to include wires and probes
   const clipboardData = ref<{
     components: CircuitComponent[]
@@ -64,6 +68,19 @@ export const useCircuitStore = defineStore('circuit', () => {
 
   const componentCount = computed(() => currentCircuit.value.components.length)
   const probeCount = computed(() => currentCircuit.value.probes.length)
+
+  // Computed for circuit changes that should trigger real-time simulation
+  const circuitForRealTimeSimulation = computed(() => ({
+    components: currentCircuit.value.components.map((c) => ({
+      id: c.id,
+      type: c.type,
+      properties: c.properties,
+      position: c.position,
+      rotation: c.rotation,
+    })),
+    wires: currentCircuit.value.wires,
+    probes: currentCircuit.value.probes,
+  }))
 
   // Actions
   function addComponent(component: CircuitComponent) {
@@ -241,7 +258,63 @@ export const useCircuitStore = defineStore('circuit', () => {
     return hasValidSimulation.value
   }
 
-  // Removed automatic simulation watcher - simulation is now explicit
+  // Real-time simulation watcher (throttled)
+  let simulationThrottleTimeout: number | null = null
+
+  function scheduleRealTimeSimulation() {
+    if (!isRealTimeSimulation.value) return
+
+    if (simulationThrottleTimeout) {
+      clearTimeout(simulationThrottleTimeout)
+    }
+
+    simulationThrottleTimeout = window.setTimeout(async () => {
+      console.log('[Real-time] Auto-running simulation...')
+      await runDCSimulation()
+      simulationThrottleTimeout = null
+    }, simulationThrottleMs.value)
+  }
+
+  // Watch for circuit changes when real-time simulation is enabled
+  watch(
+    circuitForRealTimeSimulation,
+    () => {
+      if (isRealTimeSimulation.value) {
+        scheduleRealTimeSimulation()
+      }
+    },
+    { deep: true },
+  )
+
+  // Real-time simulation control functions
+  function enableRealTimeSimulation() {
+    console.log('[Real-time] Enabling real-time simulation')
+    isRealTimeSimulation.value = true
+    // Run immediate simulation when enabling
+    scheduleRealTimeSimulation()
+  }
+
+  function disableRealTimeSimulation() {
+    console.log('[Real-time] Disabling real-time simulation')
+    isRealTimeSimulation.value = false
+    // Clear any pending simulation
+    if (simulationThrottleTimeout) {
+      clearTimeout(simulationThrottleTimeout)
+      simulationThrottleTimeout = null
+    }
+  }
+
+  function toggleRealTimeSimulation() {
+    if (isRealTimeSimulation.value) {
+      disableRealTimeSimulation()
+    } else {
+      enableRealTimeSimulation()
+    }
+  }
+
+  function setSimulationThrottleMs(ms: number) {
+    simulationThrottleMs.value = Math.max(50, Math.min(1000, ms)) // Clamp between 50ms and 1000ms
+  }
 
   // Main simulation function - now used as the explicit simulation trigger
   async function startSimulation() {
@@ -949,6 +1022,10 @@ export const useCircuitStore = defineStore('circuit', () => {
     simulationErrors,
     hasValidSimulation,
 
+    // Real-time simulation state
+    isRealTimeSimulation,
+    simulationThrottleMs,
+
     // Getters
     singleSelectedItem,
     componentCount,
@@ -990,5 +1067,11 @@ export const useCircuitStore = defineStore('circuit', () => {
     hasClipboardContent,
     getClipboardComponents,
     getClipboardData,
+
+    // Real-time simulation controls
+    enableRealTimeSimulation,
+    disableRealTimeSimulation,
+    toggleRealTimeSimulation,
+    setSimulationThrottleMs,
   }
 })

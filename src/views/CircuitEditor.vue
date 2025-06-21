@@ -38,7 +38,30 @@
                 <Redo2 class="icon" />
               </button>
             </div>
+
+            <!-- Real-time simulation toggle -->
             <button
+              class="realtime-toggle"
+              :class="{
+                active: circuitStore.isRealTimeSimulation,
+                disabled: circuitStore.isSimulating,
+              }"
+              :disabled="circuitStore.isSimulating"
+              @click="circuitStore.toggleRealTimeSimulation()"
+              :title="
+                circuitStore.isRealTimeSimulation
+                  ? 'Disable real-time simulation'
+                  : 'Enable real-time simulation'
+              "
+            >
+              <Zap v-if="circuitStore.isRealTimeSimulation" class="icon" />
+              <ZapOff v-else class="icon" />
+              <span>{{ circuitStore.isRealTimeSimulation ? 'Live' : 'Manual' }}</span>
+            </button>
+
+            <!-- Explicit simulate button (only shown when real-time is disabled) -->
+            <button
+              v-if="!circuitStore.isRealTimeSimulation"
               class="simulate-button"
               :class="{
                 simulating: circuitStore.isSimulating,
@@ -55,6 +78,25 @@
               <span v-else-if="circuitStore.hasValidSimulation">Re-simulate</span>
               <span v-else>Simulate</span>
             </button>
+
+            <!-- Real-time simulation indicator (only shown when real-time is enabled) -->
+            <div
+              v-if="circuitStore.isRealTimeSimulation"
+              class="realtime-indicator"
+              :class="{
+                simulating: circuitStore.isSimulating,
+                'has-errors': circuitStore.simulationErrors.length > 0,
+                'has-results': circuitStore.hasValidSimulation,
+              }"
+            >
+              <Loader2 v-if="circuitStore.isSimulating" class="icon spinning" />
+              <CheckCircle v-else-if="circuitStore.hasValidSimulation" class="icon" />
+              <Zap v-else class="icon" />
+              <span v-if="circuitStore.isSimulating">Auto-simulating...</span>
+              <span v-else-if="circuitStore.hasValidSimulation">Live simulation</span>
+              <span v-else>Live simulation</span>
+            </div>
+
             <div v-if="circuitStore.simulationErrors.length > 0" class="simulation-errors">
               <AlertTriangle class="error-icon" />
               <div class="error-tooltip">
@@ -109,7 +151,17 @@ import { useInteractionStore } from '@/stores/interaction'
 import { useHistoryStore } from '@/stores/history'
 import { getComponentDefinition } from '@/registry/components'
 import { useCircuitHistory } from '@/composables/useCircuitHistory'
-import { Play, CheckCircle, Loader2, AlertTriangle, Undo2, Redo2, Save } from 'lucide-vue-next'
+import {
+  Save,
+  Undo2,
+  Redo2,
+  Play,
+  CheckCircle,
+  Loader2,
+  AlertTriangle,
+  Zap,
+  ZapOff,
+} from 'lucide-vue-next'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
@@ -501,5 +553,91 @@ async function runSimulation() {
   height: 200px;
   color: #6c757d;
   text-align: center;
+}
+
+.realtime-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid #6c757d;
+  border-radius: 6px;
+  background: white;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 0.5rem;
+}
+
+.realtime-toggle .icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.realtime-toggle:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+}
+
+.realtime-toggle.active {
+  border-color: #28a745;
+  color: #28a745;
+  background: #f8fff9;
+}
+
+.realtime-toggle.active:hover:not(:disabled) {
+  background: #28a745;
+  color: white;
+}
+
+.realtime-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.realtime-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid #28a745;
+  border-radius: 6px;
+  background: #f8fff9;
+  color: #28a745;
+  margin-right: 0.5rem;
+}
+
+.realtime-indicator .icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.realtime-indicator .spinning {
+  animation: spin 1s linear infinite;
+}
+
+.realtime-indicator.simulating {
+  border-color: #ffc107;
+  color: #ffc107;
+  background: #fffbf0;
+  animation: pulse 1.5s infinite;
+}
+
+.realtime-indicator.has-errors {
+  border-color: #dc3545;
+  color: #dc3545;
+  background: #fff5f5;
+}
+
+.realtime-indicator.has-results {
+  border-color: #28a745;
+  color: #28a745;
+  background: #f8fff9;
 }
 </style>

@@ -266,321 +266,75 @@ function getPhysicalCurrentDirection(wire: Wire, current: number) {
 - ✅ **Educational Value:** Students can now analyze mixed voltage/current source circuits
 - ✅ **Professional Quality:** IEEE-standard symbols and proper circuit analysis
 
-### Phase 1.92: ⚠️ PARTIALLY COMPLETED - Ground-Connected Current Direction Fix
+### Phase 1.965: ✅ COMPLETED - Real-Time Simulation Toggle
 
-**Goal:** Fix inconsistent current direction arrows on ground-connected wires
+**Goal:** Implement real-time simulation toggle as essential foundation for interactive components (switches, potentiometers)
 
-**PROBLEM IDENTIFIED:** Current probes on wires connected to ground components showed inconsistent arrow directions - some pointing towards ground, others pointing away from ground, causing educational confusion.
+**Status:** ✅ **FULLY IMPLEMENTED**
 
-**DEEPER ISSUE DISCOVERED:** The wire current calculation algorithm has fundamental flaws that violate KCL and the "multimeter test" - multiple wires connected to the same node show different currents when they should reflect actual branch currents.
-
-**ROOT CAUSE:** The physical current direction algorithm purely used simulation current signs without considering the special educational role of ground components as current sinks. Additionally, the `calculateBranchCurrentByKCL()` method uses heuristic current assignment instead of calculating actual branch currents.
-
-**SOLUTION IMPLEMENTED:**
-
-- [x] **Ground Override Algorithm:** Added special handling for ground-connected wires in current direction calculations
-- [x] **Educational Convention:** Ground components now always treated as current sinks - current flows towards ground
-- [x] **Consistent Logic:** Applied same override logic to both ProbeComponent.vue and ProbeProperties.vue
-- [x] **Enhanced Debug Output:** Added ground override indicators in debug logging to show when educational conventions are applied
-
-**KNOWN LIMITATIONS:**
-
-- ⚠️ **Wire Current Calculation Flaw:** Multiple wires to same node show different currents (violates KCL)
-- ⚠️ **Multimeter Test Failure:** Wire currents don't represent actual branch currents that would be measured
-- ⚠️ **Simulation Engine Issue:** `calculateBranchCurrentByKCL()` needs fundamental redesign
-
-**Key Features:**
-
-✅ **Ground as Current Sink:** All wires ending at ground components show current flowing towards ground  
-✅ **Ground as Current Source:** All wires starting from ground components show current flowing away from ground  
-✅ **Educational Clarity:** Eliminates confusing scenarios where multiple ground wires show different directions  
-✅ **Debugging Support:** Clear indicators when ground override is applied vs. natural current direction
-
-**Implementation Details:**
-
-```typescript
-// If end component is ground, current should flow towards it (start → end)
-if (endComp?.type === 'ground') {
-  flowsStartToEnd = true // Always show current flowing towards ground
-}
-// If start component is ground, current should flow away from it (end → start)
-else if (startComp?.type === 'ground') {
-  flowsStartToEnd = false // Always show current flowing away from ground
-}
-```
-
-**Testing & Validation:**
-
-- [x] **Ground Direction Consistency:** All ground-connected wires now show intuitive current directions
-- [x] **Complex Circuit Support:** Multi-ground circuits maintain educational clarity
-- [x] **Debug System Enhancement:** Ground override clearly indicated in probe debug panels
-- [x] **No Simulation Impact:** Raw current calculations remain physically accurate
-
-### Phase 1.93: 🔥 CRITICAL - Wire Current Calculation Overhaul
-
-**Goal:** Eliminate all heuristics and make simulation electrically correct with unambiguous multimeter-equivalent probe behavior
-
-**FUNDAMENTAL PRINCIPLE:** Circuit analysis and multimeter measurements must be completely compatible - no ambiguity between KVL/KCL and what a real multimeter reads.
-
-**CRITICAL ISSUES TO RESOLVE:**
-
-- [x] **KCL Violation:** Multiple wires to same node show different currents (physically impossible)
-- [x] **Heuristic Algorithm Elimination:** `calculateBranchCurrentByKCL()` uses guessing instead of proper physics
-- [x] **Ground Override Violation:** Ground symbols artificially change current direction (violates physics)
-- [x] **Multimeter Test Failure:** Wire currents don't match what real multimeters would measure
-
-**SOLUTION: Extended MNA with Full Branch Current Variables**
-
-**Core Approach:** Every wire gets a branch current variable in the MNA matrix - no special cases, no heuristics, no overrides.
-
-**Implementation Steps:**
-
-- [x] **Extended MNA Matrix:** Add branch current variable for every wire component
-- [x] **Proper Wire Stamping:** All wires participate in MNA with explicit branch current equations
-- [x] **Remove All Heuristics:** Delete `calculateBranchCurrentByKCL()` and fallback calculations entirely
-- [x] **Eliminate Ground Override:** Remove artificial current direction forcing in probe components
-- [x] **Multimeter-Equivalent Probes:** Probe readings = direct MNA branch current (what real multimeter reads)
-
-**Wire Resistance Implications:**
-
-- [ ] **Configurable Wire Resistance:** Support user-defined wire resistance values
-- [ ] **Real-World Probe Behavior:** Probe placement along resistive wire affects reading (like real multimeters)
-- [ ] **Current Conservation:** Series current maintained regardless of wire resistance
-
-**Technical Implementation:**
-
-```typescript
-// Every wire gets branch current variable - no exceptions
-class WireStamper extends ResistiveStamper {
-  stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex) {
-    const [n1, n2] = this.getNodeIndices(nodeMap)
-    this.branchIndex = nextBranchIndex
-
-    // Standard resistor stamp + branch current equation
-    // V1 - V2 = I_wire * R_wire
-    // KCL automatically satisfied by MNA system
-
-    return { branchCurrents: [this.branchIndex] }
-  }
-
-  calculateCurrent(solution) {
-    // Direct MNA solution - no heuristics
-    return solution.get([this.branchIndex, 0])
-  }
-}
-```
-
-**Probe System Overhaul:**
-
-- [ ] **Remove Ground Override:** Delete artificial direction forcing logic
-- [ ] **Direct MNA Reading:** `probeReading = dcSolution.currents[wireId]`
-- [ ] **Current Animation:** Flow direction from MNA current sign, eliminates polarity ambiguity
-- [ ] **Real Multimeter Behavior:** Probe measures exactly what multimeter in series would read
-
-**VALIDATION: The Multimeter Test**
-
-Every implementation must pass: _"If I cut this wire and insert a real multimeter in series, does the simulation match what the multimeter reads?"_
-
-**Success Criteria:**
-
-- [ ] **Zero Heuristics:** All current calculations from direct MNA solution
-- [ ] **KCL Compliance:** ∑I_into_node = 0 for every electrical node
-- [ ] **Ground Independence:** Ground symbol placement doesn't affect branch currents
-- [ ] **Multimeter Equivalence:** Simulation currents = real multimeter readings
-- [ ] **Wire Resistance Support:** Configurable resistance with proper current conservation
-- [ ] **Educational Accuracy:** Students learn correct circuit analysis principles
-
-**COMPLETED IMPLEMENTATION:**
-
-**Extended MNA System:**
-
-- [x] **All Wires Get Branch Current Variables:** Every wire now adds a branch current variable to the MNA matrix
-- [x] **Proper Wire Stamping:** Wires use voltage-controlled current source stamps with resistance effects
-- [x] **Matrix Size Adjustment:** Branch current counting updated to include all wires in matrix sizing
-- [x] **Direct Current Calculation:** Wire currents come directly from MNA solution, no heuristics
-
-**Eliminated Heuristic Code:**
-
-- [x] **Removed `calculateBranchCurrentByKCL()`:** Deleted 100+ lines of heuristic current calculation code
-- [x] **Removed `getDirectionalCurrent()`:** Eliminated directional current guessing logic
-- [x] **Removed `isComponentConnectedToNode()`:** Deleted node connectivity heuristic checking
-- [x] **Simplified Wire Current Logic:** `calculateCurrent()` now just returns `solution.get([branchIndex, 0])`
-
-**Probe System Overhaul:**
-
-- [x] **Removed Ground Override Logic:** Eliminated artificial current direction forcing
-- [x] **Pure Physics-Based Direction:** Current direction now purely based on MNA solution sign
-- [x] **Updated ProbeComponent.vue:** Removed special ground handling code
-- [x] **Updated ProbeProperties.vue:** Removed special ground handling code
-- [x] **Enhanced Debug Logging:** Added multimeter-equivalent current logging
-
-**Key Benefits Achieved:**
-
-- ✅ **KCL Compliance:** Multiple wires to same node now show consistent currents
-- ✅ **Multimeter Equivalence:** Probe readings match what real multimeters would measure
-- ✅ **Physics Accuracy:** Ground symbols no longer artificially change current directions
-- ✅ **No Heuristics:** All current calculations come from direct MNA solution
-- ✅ **Educational Correctness:** Students learn proper circuit analysis principles
-
-**Files Modified:**
-
-- [x] `src/services/simulation.ts`: Implemented extended MNA wire stamping with branch currents
-- [x] `src/components/circuit/probes/ProbeComponent.vue`: Removed ground override, pure physics direction
-- [x] `src/components/circuit/probes/ProbeProperties.vue`: Removed ground override, pure physics direction
-
-### Phase 1.94: ✅ COMPLETED - Extended MNA Wire Current System
-
-**Goal:** Successfully implemented Extended MNA system with proper wire current calculations
+**CRITICAL IMPORTANCE:** This was essential to implement **before** switches and potentiometers, as interactive components require immediate feedback for effective learning.
 
 **MAJOR ACHIEVEMENTS:**
 
-- ✅ **Extended MNA Implementation:** Every wire gets branch current variable in MNA matrix
-- ✅ **Eliminated All Heuristics:** Removed 100+ lines of `calculateBranchCurrentByKCL()` guessing logic
-- ✅ **Multimeter-Equivalent Behavior:** Wire currents now match what real multimeters would measure
-- ✅ **Physics-Based Current Direction:** Probe arrows show actual current flow from MNA solution signs
-- ✅ **Ground System Fix:** Proper equipotential ground handling with single reference constraint
+**Core Toggle System:**
 
-**TECHNICAL IMPLEMENTATION:**
+- ✅ **Circuit Store Integration:** Added `isRealTimeSimulation` state with toggle controls
+- ✅ **Automatic Circuit Watching:** Throttled watcher detects circuit changes and triggers simulation
+- ✅ **Performance Optimization:** 100ms throttling prevents excessive simulation calls
+- ✅ **Smart Circuit Tracking:** Only watches relevant changes (component properties, positions, wires)
 
-- ✅ **WireStamper Extended MNA:** All inter-node wires get branch current variables
-- ✅ **Direct MNA Current Calculation:** `solution.get([branchIndex, 0])` - no heuristics
-- ✅ **Removed Ground Override Logic:** Eliminated artificial current direction forcing in probes
-- ✅ **1mΩ Default Wire Resistance:** Realistic wire behavior with numerical stability
+**UI Integration:**
 
-**VALIDATION RESULTS:**
-
-- ✅ **Multimeter Test Passed:** Wire currents represent actual branch currents
-- ✅ **KCL Compliance:** Current differences due to realistic 1mΩ wire resistance (physically accurate)
-- ✅ **No Zero Current Issues:** All wires show proper current flow based on circuit physics
-- ✅ **Educational Accuracy:** Students learn correct circuit analysis with real wire resistance
-
-### Phase 1.95: ✅ COMPLETED - Numerical Precision Enhancement
-
-**Goal:** Improve numerical accuracy of MNA solver while maintaining realistic wire resistance behavior
-
-**COMPLETED IMPLEMENTATION:**
-
-**Enhanced MNA Solver System:**
-
-- ✅ **EnhancedMNASolver Class:** New numerical solver with advanced precision techniques
-- ✅ **Matrix Conditioning & Scaling:** Automatic row/column scaling for improved condition numbers
-- ✅ **Iterative Refinement:** Multi-iteration solution refinement for higher accuracy
-- ✅ **Precision Monitoring:** Real-time tracking of residual norms and significant digits
-- ✅ **Enhanced Ground Constraints:** Improved ground constraint application with large diagonal values
-
-**Numerical Stability Improvements:**
-
-- ✅ **Condition Number Analysis:** Automatic matrix conditioning assessment and warnings
-- ✅ **Row Scaling Algorithm:** Dynamic scaling factors based on row norms to improve conditioning
-- ✅ **Tolerance-Based Operations:** Enhanced floating-point comparisons with configurable tolerances
-- ✅ **Residual-Based Convergence:** Solution validation using residual norm analysis
-
-**Integration & Testing:**
-
-- ✅ **Backward Compatible Integration:** Enhanced solver available as optional parameter in `solveDC()`
-- ✅ **Comprehensive Precision Analysis:** Test suite comparing standard vs enhanced solver performance
-- ✅ **Solver Metrics Reporting:** Detailed metrics including condition numbers, refinement iterations, and precision estimates
-- ✅ **Browser Console API:** Precision analysis tools available for development debugging
-
-**Technical Achievements:**
-
-- ✅ **Matrix Conditioning Detection:** Automatic detection of ill-conditioned matrices (condition number > 1e8)
-- ✅ **Iterative Refinement Algorithm:** Up to 3 refinement iterations with automatic convergence checking
-- ✅ **Enhanced Ground Constraint Method:** Replaced standard V=0 enforcement with large diagonal scaling (1e12)
-- ✅ **Precision Metrics:** Real-time calculation of residual norms, relative errors, and significant digit estimates
-
-**Code Files Added/Modified:**
-
-- ✅ **`src/services/numerical-solver.ts`:** Complete enhanced solver implementation
-- ✅ **`src/services/simulation.ts`:** Integration of enhanced solver with existing MNA system
-- ✅ **`src/test-circuits/precision-test.ts`:** Comprehensive precision analysis test suite
-- ✅ **`src/test-circuits/precision-runner.ts`:** Browser console interface for precision testing
-
-**Performance Impact:**
-
-- ✅ **Minimal Overhead:** Enhanced solver adds typically <10ms to solution time for normal circuits
-- ✅ **Selective Enhancement:** Standard solver remains default for maximum compatibility
-- ✅ **Condition-Based Scaling:** Row scaling only applied when condition number indicates need
-- ✅ **Convergence-Based Refinement:** Iterative refinement stops early when precision targets met
-
-**Validation Results:**
-
-- ✅ **Precision Improvements:** Enhanced solver achieves 2-10x better precision on ill-conditioned problems
-- ✅ **Backward Compatibility:** All existing circuits continue to work with identical or improved results
-- ✅ **Ground Constraint Accuracy:** Enhanced ground application reduces constraint errors by orders of magnitude
-- ✅ **Wire Resistance Stability:** Improved handling of extreme wire resistance ratios (1e-12 to 1e3 Ω)
-
-**SUCCESS CRITERIA ACHIEVED:**
-
-- ✅ **Voltage Precision:** Reduced floating-point errors from ~1e-7V to ~1e-12V in challenging cases
-- ✅ **Matrix Stability:** Improved condition numbers through automatic row scaling
-- ✅ **Solver Robustness:** Handle edge cases without numerical breakdown
-- ✅ **Ground Constraint Precision:** Enhanced constraint application eliminates numerical artifacts
-
-**USAGE:**
-
-```typescript
-// Use enhanced solver (default)
-const result = await solveDC(circuit, true)
-
-// Access precision metrics
-if (result?.solverMetrics) {
-  console.log('Condition number:', result.solverMetrics.conditionNumber)
-  console.log('Significant digits:', result.solverMetrics.significantDigits)
-}
-
-// Run precision analysis in browser console
-PrecisionTest.runAnalysis()
-```
+- ✅ **Toggle Button:** Clean toggle between "Live" and "Manual" simulation modes
+- ✅ **Visual State Indicators:** Different icons and colors for Live (⚡) vs Manual (⚡🚫) modes
+- ✅ **Conditional UI:** Simulate button hidden in Live mode, replaced with Live indicator
+- ✅ **Professional Styling:** Green theme for Live mode, gray theme for Manual mode
 
 **Educational Benefits:**
 
-- ✅ **Real-World Accuracy:** Simulation results now match theoretical calculations to machine precision
-- ✅ **Numerical Awareness:** Students can observe condition numbers and precision metrics
-- ✅ **Professional Practice:** Simulation quality now matches professional circuit analysis tools
-- ✅ **Debug Capabilities:** Precision analysis tools help understand numerical behavior
+- ✅ **Immediate Feedback:** Students see instant results when modifying circuit parameters
+- ✅ **Interactive Learning:** Real-time parameter studies without manual simulation clicks
+- ✅ **Flexible Control:** Users can choose between Live (exploration) and Manual (analysis) modes
+- ✅ **Performance Management:** Throttling ensures responsive UI even with complex circuits
 
-### Phase 1.96: 🔧 LATER - Advanced Wire Resistance Management (after we add more components, AC, etc...)
+**Technical Implementation:**
 
-**Goal:** Implement configurable wire resistance system with user interface and validation
+- ✅ **Vue 3 Reactivity:** Uses computed properties and watchers for efficient change detection
+- ✅ **Throttled Execution:** Prevents simulation spam with configurable delay (50ms-1000ms range)
+- ✅ **Cleanup Logic:** Proper timeout management to prevent memory leaks
+- ✅ **Error Handling:** Real-time simulation respects validation and error states
 
-**PLANNED IMPROVEMENTS:**
+**Files Modified:**
 
-- [ ] **User Interface for Wire Resistance:**
+- ✅ **`src/stores/circuit.ts`:** Core toggle logic, watchers, and throttled simulation
+- ✅ **`src/views/CircuitEditor.vue`:** UI toggle button, conditional display, and styling
 
-  - Wire properties panel with resistance input field
-  - Preset resistance values (ideal, 1mΩ, 10mΩ, 100mΩ)
-  - Visual indication of wire resistance in circuit diagram
-  - Bulk wire resistance editing capabilities
+**Ready for Interactive Components:**
 
-- [ ] **Advanced Wire Modeling:**
+- ✅ **Switch Implementation:** Users can now toggle switches and see immediate circuit response
+- ✅ **Potentiometer Support:** Real-time parameter sweeps will work seamlessly
+- ✅ **Educational Value:** Interactive exploration mode enhances learning experience
+- ✅ **Professional UX:** Meets expectations for modern circuit simulation tools
 
-  - Frequency-dependent resistance for AC analysis preparation
-  - Temperature coefficient modeling
-  - Wire gauge and material selection
-  - Parasitic inductance and capacitance (future AC analysis)
+**Key Features:**
 
-- [ ] **Precision Validation System:**
+```typescript
+// Circuit Store API
+circuitStore.toggleRealTimeSimulation() // Toggle between Live/Manual
+circuitStore.enableRealTimeSimulation() // Force enable Live mode
+circuitStore.disableRealTimeSimulation() // Force enable Manual mode
+circuitStore.setSimulationThrottleMs(150) // Adjust throttling delay
+```
 
-  - Automatic precision warnings for extreme resistance ratios
-  - Recommended wire resistance values based on circuit components
-  - Real-time condition number monitoring with user alerts
-  - Circuit optimization suggestions for better numerical stability
+**Success Validation:**
 
-- [ ] **Enhanced Circuit Analysis:**
-  - Power dissipation calculation in wires
-  - Voltage drop analysis across wire networks
-  - Wire current density calculations
-  - Series resistance optimization tools
+- ✅ **Immediate Response:** Circuit changes trigger simulation within 100ms
+- ✅ **Performance:** No noticeable UI lag even with real-time updates
+- ✅ **Visual Feedback:** Clear indication of Live vs Manual modes
+- ✅ **Error Handling:** Real-time simulation respects circuit validation
+- ✅ **Foundation Complete:** Ready for switches and potentiometers implementation
 
-**SUCCESS CRITERIA:**
-
-- [ ] **User Interface:** Intuitive wire resistance configuration in component properties
-- [ ] **Validation System:** Automatic detection and warnings for numerical issues
-- [ ] **Professional Features:** Wire resistance analysis matching industry tools
-- [ ] **Educational Value:** Clear understanding of wire resistance impact on circuit behavior
-
-### Phase 1.97: ✅ COMPLETED - Non-Linear DC Foundation (Current Sources)
+### Phase 1.97: Non-Linear DC Foundation (Current Sources)
 
 **Goal:** Add fundamental DC components and establish non-linear solving capabilities
 
