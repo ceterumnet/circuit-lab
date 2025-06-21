@@ -150,6 +150,9 @@ function handleKeyDown(event: KeyboardEvent) {
     } else if (event.key === 'c') {
       event.preventDefault()
       handleCopy()
+    } else if (event.key === 'x') {
+      event.preventDefault()
+      handleCut()
     } else if (event.key === 'v') {
       event.preventDefault()
       handlePaste()
@@ -162,6 +165,15 @@ function handleCopy() {
   const success = circuitStore.copySelectedComponents()
   if (success) {
     console.log('Components copied to clipboard')
+    // TODO: Show toast notification
+  }
+}
+
+// Cut functionality
+function handleCut() {
+  const success = historyActions.cutComponentsWithHistory()
+  if (success) {
+    console.log('Components cut to clipboard')
     // TODO: Show toast notification
   }
 }

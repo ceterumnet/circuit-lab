@@ -19,3 +19,9 @@
 
 - **`R`** - Rotate clockwise (current behavior)
 - **`Shift+R`** - Rotate counter-clockwise (new enhancement)
+
+**Complete Copy/Cut/Paste System:**
+
+- **`Ctrl+C`** - Copy selected components + auto-wires + selected probes
+- **`Ctrl+X`** - Cut selected components + auto-wires + selected probes
+- **`Ctrl+V`** - Paste with visual preview and proper ID remapping

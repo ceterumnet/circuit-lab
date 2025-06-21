@@ -160,6 +160,14 @@ export function useCircuitHistory() {
     return success
   }
 
+  function cutComponentsWithHistory(description?: string) {
+    const success = circuitStore.cutSelectedComponents()
+    if (success) {
+      historyStore.saveState(circuitStore.currentCircuit, description || 'Cut components')
+    }
+    return success
+  }
+
   // NEW: Add component with auto-connect functionality
   function addComponentWithAutoConnectHistory(
     component: CircuitComponent,
@@ -269,6 +277,7 @@ export function useCircuitHistory() {
     clearCircuitWithHistory,
     pasteComponentsWithHistory,
     pasteComponentsAtPositionWithHistory,
+    cutComponentsWithHistory,
 
     // Undo/Redo
     undo,

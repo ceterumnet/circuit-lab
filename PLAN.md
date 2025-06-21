@@ -96,15 +96,15 @@ Building a web-based circuit simulation application focused on educational purpo
 - [x] **Educational Error Feedback**: Detailed validation helps users understand circuit design requirements
 - [x] **Simulation State Management**: Clear success/error/loading states with visual feedback
 
-### Phase 1.9: UX improvements
+### Phase 1.9: ✅ COMPLETED - UX improvements
 
 - [x] Add basic save / load circuits from browser store
 - [x] Add rotation handle to components when selected so they can be directly rotated
-- [ ] Implement Copy and Paste for single and multiple selected components. We will have to deal with things like labels and IDs.
+- [x] Implement Copy and Paste for single and multiple selected components. We will have to deal with things like labels and IDs.
 - [x] Undo / Redo
+- [x] Copy, Cut, and Paste for components, wires, and probes with proper ID remapping
 - [x] It is a pain every time I need to create a bunch of components to do regression and validation. We either need:
 
-  - [ ] an E2E test for things (skipped for this phase. will address later)
   - [x] have some canned circuits (only basic tests)
   - [x] implement a save feature so that I don't have to keep redoing circuits
 
@@ -114,9 +114,6 @@ Building a web-based circuit simulation application focused on educational purpo
   - [x] What about when I place a component and the pin intersects a wire or a terminal? I believe it should automatically connect. This would work well for NodeComponents as well as the other types. Currently it is cumbersome to place a component on an existing circuit because you have to delete a wire and then rebuild the connections
   - [x] When placing a component, I want to be able to hit the 'r' key to rotate it 90 degrees before placement
   - [x] Keyboard shortcuts to component placement. I'm thinking we should bind the '/' key which brings up an inline component selector with quick search so you can hit '/' -> type "r" or "re" and components starting with r or re (such as resistor) will be in the list. Then it becomes super easy to not have to leave the circuit context
-
-- [ ] Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
-- [ ] Add the ability to select a group of items in the canvas and save them as a reusable fragment / building block. This will eventually allow us to have user created components and logical sub-components where we don't necessarily need to represent everything on the circuit all the time visually if that makes sense.
 
 ### Phase 2: 📋 NEXT - AC Analysis & Reactive Components
 
@@ -213,10 +210,16 @@ Building a web-based circuit simulation application focused on educational purpo
   - Power dissipation visualization
 
 - [ ] **Interactive Analysis**
+
   - Parameter sweep with real-time plot updates
   - What-if analysis with component value sliders
   - Comparison mode for multiple circuit configurations
   - Performance optimization suggestions
+
+- [ ] **Future UX enhancements**
+  - [ ] Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
+  - [ ] Add the ability to select a group of items in the canvas and save them as a reusable fragment / building block. This will eventually allow us to have user created components and logical sub-components where we don't necessarily need to represent everything on the circuit all the time visually if that makes sense.
+  - [ ] Better wire routing / avoidance of components?
 
 ### Phase 4: 📋 PLANNED - Advanced Components
 

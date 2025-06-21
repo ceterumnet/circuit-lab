@@ -705,6 +705,17 @@ export const useCircuitStore = defineStore('circuit', () => {
     return true
   }
 
+  // Cut selected components to clipboard (copy + delete)
+  function cutSelectedComponents() {
+    const success = copySelectedComponents()
+    if (success) {
+      // Delete the selected components after successful copy
+      deleteSelectedComponent()
+      console.log('Cut operation completed - items moved to clipboard')
+    }
+    return success
+  }
+
   // Paste components from clipboard at a specific position
   function pasteComponentsAtPosition(targetPosition: Position, rotation: number = 0) {
     const totalItems =
@@ -965,6 +976,7 @@ export const useCircuitStore = defineStore('circuit', () => {
     importCircuitFromJSON,
     initializeHistory,
     copySelectedComponents,
+    cutSelectedComponents,
     pasteComponents,
     pasteComponentsAtPosition,
     hasClipboardContent,
