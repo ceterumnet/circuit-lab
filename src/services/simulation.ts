@@ -1,6 +1,7 @@
 import type { Circuit, CircuitComponent, Wire } from '@/types/components'
 import { zeros, lusolve, matrix, Matrix } from 'mathjs'
 import { getComponentDefinition } from '@/registry/components'
+import { EnhancedMNASolver } from './numerical-solver'
 
 /**
  * Represents the result of a DC simulation.
@@ -10,6 +11,13 @@ export interface DC_Result {
   voltages: Record<number, number>
   currents: Record<string, number>
   termToNodeIndex: Map<string, number>
+  /** Enhanced solver metrics for precision analysis */
+  solverMetrics?: {
+    conditionNumber?: number
+    refinementIterations?: number
+    significantDigits?: number
+    solveTime?: number
+  }
 }
 
 /**
@@ -376,9 +384,12 @@ class ComponentStamperFactory {
 }
 
 /**
- * New unified DC analysis using component stamping approach
+ * New unified DC analysis using component stamping approach with enhanced numerical solver
  */
-export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
+export async function solveDC(
+  circuit: Circuit,
+  useEnhancedSolver: boolean = true,
+): Promise<DC_Result | null> {
   console.log('Starting Unified DC Analysis for circuit:', circuit.id)
 
   try {
@@ -446,21 +457,58 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
       nextBranchIndex += result.branchCurrents.length
     }
 
-    // Step 6: Apply ground constraints for all isolated circuits
+    // Step 6: Apply ground constraints - Enhanced or Standard method
     console.log('Applying ground constraints for nodes:', groundNodeIndices)
-    for (const groundIndex of groundNodeIndices) {
-      // Zero out ground node row and column
-      for (let i = 0; i < matrixSize; i++) {
-        mnaMatrix.set([groundIndex, i], 0)
-        mnaMatrix.set([i, groundIndex], 0)
+
+    if (useEnhancedSolver) {
+      // Use enhanced ground constraint application for better numerical stability
+      EnhancedMNASolver.applyGroundConstraintsEnhanced(mnaMatrix, rhsVector, groundNodeIndices)
+    } else {
+      // Standard ground constraint application
+      for (const groundIndex of groundNodeIndices) {
+        // Zero out ground node row and column
+        for (let i = 0; i < matrixSize; i++) {
+          mnaMatrix.set([groundIndex, i], 0)
+          mnaMatrix.set([i, groundIndex], 0)
+        }
+        // Set ground node equation: V_ground = 0
+        mnaMatrix.set([groundIndex, groundIndex], 1)
+        rhsVector.set([groundIndex, 0], 0)
       }
-      // Set ground node equation: V_ground = 0
-      mnaMatrix.set([groundIndex, groundIndex], 1)
-      rhsVector.set([groundIndex, 0], 0)
     }
 
-    // Step 7: Solve the system
-    const solution = lusolve(mnaMatrix, rhsVector) as Matrix
+    // Step 7: Solve the system with enhanced numerical solver
+    let solution: Matrix
+    let solverMetrics: DC_Result['solverMetrics']
+
+    const solveStartTime = performance.now()
+
+    if (useEnhancedSolver) {
+      console.log('🔍 Using Enhanced MNA Solver for improved precision...')
+      const enhancedSolver = new EnhancedMNASolver({
+        tolerance: 1e-12,
+        useMatrixConditioning: true,
+        useIterativeRefinement: true,
+        enablePrecisionMonitoring: true,
+      })
+
+      const solverResult = enhancedSolver.solve(mnaMatrix, rhsVector)
+      solution = solverResult.solution
+
+      solverMetrics = {
+        conditionNumber: solverResult.conditionNumber,
+        refinementIterations: solverResult.refinementIterations,
+        significantDigits: solverResult.precisionMetrics?.significantDigits,
+        solveTime: performance.now() - solveStartTime,
+      }
+
+      console.log('✅ Enhanced solver completed successfully')
+    } else {
+      solution = lusolve(mnaMatrix, rhsVector) as Matrix
+      solverMetrics = {
+        solveTime: performance.now() - solveStartTime,
+      }
+    }
 
     // Step 8: Extract results
     const voltageResults: Record<number, number> = {}
@@ -484,10 +532,15 @@ export async function solveDC(circuit: Circuit): Promise<DC_Result | null> {
     console.log('Final Voltage Results:', voltageResults)
     console.log('Final Current Results:', currentResults)
 
+    if (useEnhancedSolver && solverMetrics) {
+      console.log('Enhanced Solver Metrics:', solverMetrics)
+    }
+
     return {
       voltages: voltageResults,
       currents: currentResults,
       termToNodeIndex,
+      solverMetrics,
     }
   } catch (error) {
     console.error('Unified DC analysis failed:', error)

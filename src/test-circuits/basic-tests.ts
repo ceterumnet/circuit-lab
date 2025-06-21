@@ -105,10 +105,11 @@ export const voltageDivider: TestCircuit = {
   } as Circuit,
   expected: {
     voltages: {
-      // Corrected node indices based on actual simulation results
-      '0': 5.0, // V+ terminal
-      '1': 0.0, // Ground node
-      '2': 2.5, // Between R1 and R2
+      // Fixed node indices based on Extended MNA implementation
+      '0': 5.0, // V1:positive terminal
+      '1': 0.0, // V1:negative terminal (near ground)
+      '3': 2.5, // R1:terminal2 ↔ R2:terminal1 junction (actual voltage divider point)
+      '6': 0.0, // Ground node
     },
     currents: {
       V1: -0.0025, // 2.5mA flowing out of voltage source

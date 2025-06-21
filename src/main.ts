@@ -13,6 +13,9 @@ import '@/registry/components'
 // Load test circuit system (provides browser console API)
 import '@/test-circuits'
 
+// Import precision test runner for development
+import './test-circuits/precision-runner'
+
 const app = createApp(App)
 
 app.use(createPinia())
