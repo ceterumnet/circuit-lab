@@ -488,10 +488,21 @@ function handleKeyDown(e: KeyboardEvent) {
     historyActions.deleteSelectedComponentWithHistory()
   }
 
-  // Track spacebar as modifier for panning
+  // Track spacebar as modifier for panning - but only if not typing in an input field
   if (e.code === 'Space' && !e.repeat) {
-    e.preventDefault()
-    isSpacebarHeld.value = true
+    // Check if user is currently focused on an input element
+    const activeElement = document.activeElement
+    const isTypingInInput =
+      activeElement &&
+      (activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        (activeElement as HTMLElement).contentEditable === 'true')
+
+    // Only prevent default and enable panning if not typing in an input
+    if (!isTypingInInput) {
+      e.preventDefault()
+      isSpacebarHeld.value = true
+    }
   }
 }
 
@@ -615,14 +626,25 @@ function handleKeyUp(e: KeyboardEvent) {
   }
 
   if (e.code === 'Space') {
-    e.preventDefault()
-    isSpacebarHeld.value = false
-    // Stop spacebar panning if it was active
-    if (isPanning.value) {
-      isPanning.value = false
-      const stage = stageRef.value?.getStage()
-      if (stage) {
-        stage.container().style.cursor = 'default'
+    // Check if user is currently focused on an input element
+    const activeElement = document.activeElement
+    const isTypingInInput =
+      activeElement &&
+      (activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        (activeElement as HTMLElement).contentEditable === 'true')
+
+    // Only handle spacebar release for panning if not typing in an input
+    if (!isTypingInInput) {
+      e.preventDefault()
+      isSpacebarHeld.value = false
+      // Stop spacebar panning if it was active
+      if (isPanning.value) {
+        isPanning.value = false
+        const stage = stageRef.value?.getStage()
+        if (stage) {
+          stage.container().style.cursor = 'default'
+        }
       }
     }
   }
