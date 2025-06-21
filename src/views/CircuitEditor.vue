@@ -489,7 +489,7 @@ async function runSimulation() {
   background: #f8f9fa;
   border-left: 1px solid #dee2e6;
   padding: 1rem;
-  overflow: visible;
+  overflow: auto;
   position: relative;
   z-index: 10;
 }

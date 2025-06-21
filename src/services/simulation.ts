@@ -205,7 +205,8 @@ class WireStamper extends ResistiveStamper {
       const current = startComponent.calculateCurrent(solution, nodeMap, [], allStampers)
       if (Math.abs(current) > 1e-12) {
         // Avoid numerical noise
-        return Math.abs(current) // Use magnitude for current measurement
+        // IMPORTANT: Preserve sign for direction analysis - the UI layer will handle magnitude display
+        return current
       }
     }
 
@@ -217,7 +218,8 @@ class WireStamper extends ResistiveStamper {
     ) {
       const current = endComponent.calculateCurrent(solution, nodeMap, [], allStampers)
       if (Math.abs(current) > 1e-12) {
-        return Math.abs(current)
+        // IMPORTANT: Preserve sign for direction analysis
+        return current
       }
     }
 
@@ -235,7 +237,8 @@ class WireStamper extends ResistiveStamper {
         if (stamper.type === 'resistor' || stamper.type === 'voltage_source') {
           const current = stamper.calculateCurrent(solution, nodeMap, [], allStampers)
           if (Math.abs(current) > 1e-12) {
-            return Math.abs(current)
+            // IMPORTANT: Preserve sign for direction analysis
+            return current
           }
         }
       }

@@ -115,7 +115,119 @@ Building a web-based circuit simulation application focused on educational purpo
   - [x] When placing a component, I want to be able to hit the 'r' key to rotate it 90 degrees before placement
   - [x] Keyboard shortcuts to component placement. I'm thinking we should bind the '/' key which brings up an inline component selector with quick search so you can hit '/' -> type "r" or "re" and components starting with r or re (such as resistor) will be in the list. Then it becomes super easy to not have to leave the circuit context
 
-### Phase 2: 📋 NEXT - AC Analysis & Reactive Components
+### Phase 1.91: ✅ COMPLETED - Multi-Ground Circuit Support & Physical Current Direction
+
+**Problem Identified:** The simulation system incorrectly handled multiple isolated circuits by applying only one ground reference, causing the second circuit's ground to float at non-zero potential (e.g., -2.5V instead of 0V).
+
+**Critical Fix - Multi-Ground Support:**
+
+- [x] **Root Cause:** `buildElectricalNodes()` only identified single ground node for entire circuit
+- [x] **Solution:** Extended ground detection to find all ground nodes and reference nodes for isolated circuits
+- [x] **Implementation:** Modified MNA matrix to apply multiple ground constraints (V = 0) for each isolated circuit
+- [x] **Validation:** Tested with interconnected circuits showing proper 0V ground references
+
+**Current Probe Direction Enhancement:**
+
+- [x] **Problem:** Current probe arrows show arbitrary reference directions instead of actual current flow
+- [x] **Educational Goal:** Probes should behave like real multimeters, showing physical current direction
+- [x] **Solution Approach:** Physical Current Direction Algorithm
+- [x] **CRITICAL BUG DISCOVERED & FIXED:** Simulation engine was stripping current signs in wire calculations
+
+#### Physical Current Direction Specification
+
+**Core Principle:** Current probe arrows always point in actual current flow direction, displaying positive magnitudes (like watching electrons move).
+
+**Implementation Algorithm:**
+
+```typescript
+function getPhysicalCurrentDirection(wire: Wire, current: number) {
+  // Step 1: Determine actual flow direction from current sign
+  const flowsStartToEnd = current >= 0
+
+  // Step 2: Analyze wire topology
+  const { startComp, startTerminal, endComp, endTerminal } = getWireComponents(wire)
+
+  // Step 3: Return physical direction and positive magnitude
+  return {
+    direction: flowsStartToEnd ? 'start-to-end' : 'end-to-start',
+    magnitude: Math.abs(current),
+    arrowDirection: flowsStartToEnd ? 'forward' : 'reverse',
+  }
+}
+```
+
+**Key Features:**
+
+- **Topology-Aware:** Recognizes current sources (voltage_source:positive) vs sinks (voltage_source:negative, ground:terminal)
+- **Sign-Based Direction:** Uses simulation current sign to determine actual flow direction
+- **Always Positive Display:** Shows magnitude only, direction indicated by arrow
+- **Educational Intuition:** Matches physical understanding of electron flow
+
+**Benefits:**
+
+- ✅ Eliminates confusing arbitrary reference directions
+- ✅ Shows actual current flow like real circuit behavior
+- ✅ Removes need for manual direction toggling
+- ✅ Improves educational value for circuit analysis learning
+
+**Current Status:** ✅ **IMPLEMENTATION COMPLETE & BUG FIXED**
+
+**Critical Simulation Engine Bug Fix:**
+
+- [x] **Root Cause Discovered:** `WireStamper.calculateBranchCurrentByKCL()` was using `Math.abs(current)`
+- [x] **Impact:** Wire current signs were stripped, breaking physical direction algorithm
+- [x] **Example:** W4 (`V1:negative → GND1`) should show negative current (flows GND→V1) but showed positive
+- [x] **Fix Applied:** Preserve raw signed current from voltage source calculations
+- [x] **Result:** Current direction arrows now correctly show actual current flow direction
+
+**Implementation Details:**
+
+- [x] **ProbeComponent.vue**: Updated to use `physicalCurrentInfo` for arrow direction
+- [x] **Physical Direction Algorithm**: Current sign determines actual flow direction (+ = start→end, - = end→start)
+- [x] **Arrow Visualization**: Arrows now point in actual current flow direction
+- [x] **Magnitude Display**: Always show positive values (direction shown by arrow)
+- [x] **ProbeProperties.vue**: Updated to match ProbeComponent logic
+- [x] **UI Simplification**: Removed manual direction toggle, added automatic direction indicator
+- [x] **Color Coding**: Simplified to always green (positive magnitude with directional arrow)
+- [x] **Simulation Fix**: Modified wire current calculation to preserve signs for direction analysis
+
+**Debug System Implementation:**
+
+- [x] **Comprehensive Debug Panels**: Added detailed debugging information to component and probe properties
+- [x] **Wire Connection Analysis**: Shows start/end connections with component types and terminals
+- [x] **Current Flow Debugging**: Displays simulation current, raw sign, and computed physical direction
+- [x] **Node Mapping**: Shows internal simulation node indices for voltage measurements
+- [x] **Topology Visualization**: Complete connection graph for debugging wire routing
+
+**Educational Benefits Achieved:**
+
+- ✅ Current probes now behave like real multimeters inserted in series
+- ✅ Arrow direction matches actual electron flow in the circuit
+- ✅ No more confusion about arbitrary reference directions
+- ✅ Positive magnitude display is intuitive and clear
+- ✅ Users can immediately see current flow patterns
+- ✅ Debug system helps understand circuit topology and simulation internals
+
+### Phase 1.92: 📋 NEXT - Current Direction Validation & Testing
+
+**Goal:** Verify the current direction fix works correctly across all circuit scenarios
+
+**Testing & Validation:**
+
+- [ ] **Multi-Direction Wire Test:** Create circuit with wires drawn in different directions to verify arrows adapt correctly
+- [ ] **Complex Circuit Validation:** Test current directions in multi-branch circuits with various component types
+- [ ] **Regression Testing:** Run existing test circuits to ensure no side effects from simulation changes
+- [ ] **User Experience Testing:** Verify the debug panels provide helpful information without cluttering the UI
+- [ ] **Documentation Update:** Update user guides to explain the new physical current direction behavior
+
+**Potential Future Enhancements:**
+
+- [ ] **Current Magnitude Scaling:** Add visual thickness or color intensity based on current magnitude
+- [ ] **Flow Animation:** Consider animated current flow visualization for educational purposes
+- [ ] **Advanced Debug Mode:** Toggle between simple and detailed debug information
+- [ ] **Export Debug Data:** Allow exporting circuit analysis data for external tools
+
+### Phase 2: 📋 PLANNED - AC Analysis & Reactive Components
 
 **Goal:** Extend simulation capabilities beyond DC to support frequency-domain analysis
 
@@ -216,10 +328,14 @@ Building a web-based circuit simulation application focused on educational purpo
   - Comparison mode for multiple circuit configurations
   - Performance optimization suggestions
 
-- [ ] **Future UX enhancements**
-  - [ ] Current probe rendering isn't super intuitive (arrows positioned above readout boxes, complex positioning). Consider redesigning probe visualization for better user experience - perhaps inline arrows, cleaner layout, or probe-specific UI patterns.
+- [ ] **Future enhancements**
+  - [x] ~~Current probe rendering isn't super intuitive~~ → **COMPLETED in Phase 1.91**: Implemented Physical Current Direction with intuitive arrow visualization
   - [ ] Add the ability to select a group of items in the canvas and save them as a reusable fragment / building block. This will eventually allow us to have user created components and logical sub-components where we don't necessarily need to represent everything on the circuit all the time visually if that makes sense.
   - [ ] Better wire routing / avoidance of components?
+  - [ ] Live simulation toggle
+  - [ ] Button components
+  - [ ] Wave generators
+  - [ ] Mixed AC / DC analysis
 
 ### Phase 4: 📋 PLANNED - Advanced Components
 

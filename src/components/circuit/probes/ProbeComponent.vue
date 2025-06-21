@@ -159,22 +159,22 @@ const leadEndPoint = computed(() => {
   }
 })
 
-// Computed property for current direction and color
-const currentInfo = computed(() => {
-  if (props.probe.type !== 'current') return { value: 0, isPositive: true }
+// Physical current direction computation following the new specification
+const physicalCurrentInfo = computed(() => {
+  if (props.probe.type !== 'current') return { magnitude: 0, flowsStartToEnd: true }
 
   const dcSolution = circuitStore.dcSolution
-  if (!dcSolution) return { value: 0, isPositive: true }
+  if (!dcSolution) return { magnitude: 0, flowsStartToEnd: true }
 
   const { currents } = dcSolution
   const targetId = props.probe.targetId
   const wire = circuitStore.currentCircuit.components.find((c) => c.id === targetId)
-  if (wire?.type !== 'wire' || !wire.properties) return { value: 0, isPositive: true }
+  if (wire?.type !== 'wire' || !wire.properties) return { magnitude: 0, flowsStartToEnd: true }
 
   // Get the wire's current directly from the simulation results
-  let wireCurrent = currents[targetId]
+  let rawCurrent = currents[targetId]
 
-  if (wireCurrent === undefined) {
+  if (rawCurrent === undefined) {
     // Fallback: try to find current from connected components (for backward compatibility)
     const startCompId = wire.properties.startComponentId as string
     const endCompId = wire.properties.endComponentId as string
@@ -195,46 +195,78 @@ const currentInfo = computed(() => {
       componentCurrent = currents[endCompId]
     }
 
-    if (componentCurrent === undefined) return { value: 0, isPositive: true }
+    if (componentCurrent === undefined) return { magnitude: 0, flowsStartToEnd: true }
 
     // Fix sign convention for voltage sources - flip the sign so current flowing out of positive terminal is positive
-    wireCurrent = componentCurrent
+    rawCurrent = componentCurrent
     if (isVoltageSource) {
-      wireCurrent = -componentCurrent
+      rawCurrent = -componentCurrent
     }
   }
 
-  let adjustedCurrent = wireCurrent
+  // Physical Current Direction Algorithm:
+  // - Positive current: flows from startComponent to endComponent
+  // - Negative current: flows from endComponent to startComponent
+  // - Always display positive magnitude with arrow showing direction
 
-  // Apply probe direction setting
-  if (props.probe.direction === false) {
-    adjustedCurrent = -adjustedCurrent
+  const flowsStartToEnd = rawCurrent >= 0
+
+  // Debug logging for current direction analysis
+  if (wire?.properties && Math.abs(rawCurrent) > 1e-12) {
+    const startCompId = wire.properties.startComponentId as string
+    const endCompId = wire.properties.endComponentId as string
+    const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
+    const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
+
+    console.log(`🔍 Current Probe Debug for ${targetId}:`)
+    console.log(`  Raw Current: ${rawCurrent.toFixed(6)}A`)
+    console.log(
+      `  Wire: ${startCompId}:${wire.properties.startTerminal} → ${endCompId}:${wire.properties.endTerminal}`,
+    )
+    console.log(`  Start Component: ${startComp?.type} (${startCompId})`)
+    console.log(`  End Component: ${endComp?.type} (${endCompId})`)
+    console.log(`  Flow Direction: ${flowsStartToEnd ? 'Start→End' : 'End→Start'}`)
+    console.log(`  Arrow will point: ${flowsStartToEnd ? 'RIGHT (→)' : 'LEFT (←)'}`)
+    console.log(
+      `  Physical meaning: Current flows FROM ${flowsStartToEnd ? startCompId : endCompId} TO ${flowsStartToEnd ? endCompId : startCompId}`,
+    )
   }
 
   return {
-    value: adjustedCurrent,
-    isPositive: adjustedCurrent >= 0,
+    magnitude: Math.abs(rawCurrent),
+    flowsStartToEnd: flowsStartToEnd,
+  }
+})
+
+// Legacy currentInfo for backward compatibility (now uses physicalCurrentInfo)
+const currentInfo = computed(() => {
+  const physical = physicalCurrentInfo.value
+  return {
+    value: physical.magnitude, // Always positive now
+    isPositive: true, // Always true since we show magnitude only
   }
 })
 
 const currentColor = computed(() => {
   if (props.probe.type !== 'current') return 'lightseagreen'
-  return currentInfo.value.isPositive ? '#28a745' : '#dc3545' // Green for positive, red for negative
+  // Always green now since we always show positive magnitude with directional arrow
+  return '#28a745'
 })
 
-// Arrow components for current direction indicator
+// Physical direction arrow components - always point in actual current flow direction
 const arrowLinePoints = computed(() => {
   if (props.probe.type !== 'current') return []
 
-  const direction = props.probe.direction !== false ? 1 : -1 // Default to forward (true)
+  // Use physical current direction instead of user-defined direction
+  const flowsStartToEnd = physicalCurrentInfo.value.flowsStartToEnd
   const lineLength = 12
   const yPos = -18 // Position above the readout box
 
-  if (direction > 0) {
-    // Right-pointing arrow line
+  if (flowsStartToEnd) {
+    // Right-pointing arrow line (current flows start → end)
     return [8, yPos, 8 + lineLength, yPos]
   } else {
-    // Left-pointing arrow line
+    // Left-pointing arrow line (current flows end → start)
     return [-8, yPos, -8 - lineLength, yPos]
   }
 })
@@ -242,16 +274,17 @@ const arrowLinePoints = computed(() => {
 const arrowHeadPath = computed(() => {
   if (props.probe.type !== 'current') return ''
 
-  const direction = props.probe.direction !== false ? 1 : -1 // Default to forward (true)
+  // Use physical current direction instead of user-defined direction
+  const flowsStartToEnd = physicalCurrentInfo.value.flowsStartToEnd
   const arrowSize = 4
   const yPos = -18 // Position above the readout box
 
-  if (direction > 0) {
-    // Right-pointing arrow head
+  if (flowsStartToEnd) {
+    // Right-pointing arrow head (current flows start → end)
     const tipX = 8 + 12
     return `M${tipX},${yPos} L${tipX - arrowSize},${yPos - arrowSize / 2} L${tipX - arrowSize},${yPos + arrowSize / 2} Z`
   } else {
-    // Left-pointing arrow head
+    // Left-pointing arrow head (current flows end → start)
     const tipX = -8 - 12
     return `M${tipX},${yPos} L${tipX + arrowSize},${yPos - arrowSize / 2} L${tipX + arrowSize},${yPos + arrowSize / 2} Z`
   }
@@ -288,32 +321,32 @@ const probeValue = computed(() => {
       }
     }
   } else if (props.probe.type === 'current') {
-    const current = currentInfo.value.value
+    // Use physical current magnitude (always positive)
+    const currentMagnitude = physicalCurrentInfo.value.magnitude
 
-    if (Math.abs(current) < 1e-12) return '0A'
+    if (currentMagnitude < 1e-12) return '0A'
 
-    const sign = current >= 0 ? '' : '-'
-    const absCurrent = Math.abs(current)
+    // Always positive display - direction shown by arrow
     let value: string
     let unit: string
 
-    if (absCurrent >= 1) {
-      value = absCurrent.toPrecision(3)
+    if (currentMagnitude >= 1) {
+      value = currentMagnitude.toPrecision(3)
       unit = 'A'
-    } else if (absCurrent >= 1e-3) {
-      value = (absCurrent * 1e3).toPrecision(3)
+    } else if (currentMagnitude >= 1e-3) {
+      value = (currentMagnitude * 1e3).toPrecision(3)
       unit = 'mA'
-    } else if (absCurrent >= 1e-6) {
-      value = (absCurrent * 1e6).toPrecision(3)
+    } else if (currentMagnitude >= 1e-6) {
+      value = (currentMagnitude * 1e6).toPrecision(3)
       unit = 'µA'
-    } else if (absCurrent >= 1e-9) {
-      value = (absCurrent * 1e9).toPrecision(3)
+    } else if (currentMagnitude >= 1e-9) {
+      value = (currentMagnitude * 1e9).toPrecision(3)
       unit = 'nA'
     } else {
-      value = (absCurrent * 1e12).toPrecision(3)
+      value = (currentMagnitude * 1e12).toPrecision(3)
       unit = 'pA'
     }
-    return `${sign}${value}${unit}`
+    return `${value}${unit}`
   }
 
   return 'N/A'

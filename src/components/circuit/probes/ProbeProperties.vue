@@ -17,30 +17,91 @@
       <span class="property-value">{{ probe.targetId }}</span>
     </div>
 
-    <!-- Direction toggle for current probes -->
+    <!-- Current direction info (read-only, automatically determined) -->
     <div v-if="probe.type === 'current'" class="property-item">
-      <label>Direction:</label>
-      <div class="direction-toggle">
-        <button
-          :class="['direction-btn', { active: probe.direction !== false }]"
-          @click="toggleDirection(true)"
-          title="Forward direction"
-        >
-          → Forward
-        </button>
-        <button
-          :class="['direction-btn', { active: probe.direction === false }]"
-          @click="toggleDirection(false)"
-          title="Reverse direction"
-        >
-          ← Reverse
-        </button>
-      </div>
+      <label>Flow Direction:</label>
+      <span class="property-value direction-indicator">
+        {{ physicalCurrentInfo.flowsStartToEnd ? '→ Start to End' : '← End to Start' }}
+        <small class="direction-note">(Automatically determined)</small>
+      </span>
     </div>
 
     <div class="property-item">
       <label>Value:</label>
       <span class="property-value">{{ probeValue }}</span>
+    </div>
+
+    <!-- Probe Debug Information -->
+    <div class="debug-section">
+      <h4 class="debug-title">🔍 Debug Information</h4>
+
+      <!-- Basic Probe Info -->
+      <div class="debug-table">
+        <div class="debug-row">
+          <span class="debug-label">Position:</span>
+          <span class="debug-value"
+            >{{ probe.position.x.toFixed(1) }}, {{ probe.position.y.toFixed(1) }}</span
+          >
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Target Type:</span>
+          <span class="debug-value">{{ targetComponent?.type || 'Unknown' }}</span>
+        </div>
+        <div class="debug-row">
+          <span class="debug-label">Measurement:</span>
+          <span class="debug-value">{{
+            probe.type === 'voltage' ? 'Node Voltage' : 'Branch Current'
+          }}</span>
+        </div>
+      </div>
+
+      <!-- Current Probe Specific Debug -->
+      <div v-if="probe.type === 'current'" class="debug-subsection">
+        <h5 class="debug-subtitle">Current Probe Details</h5>
+        <div class="debug-table">
+          <div class="debug-row">
+            <span class="debug-label">Wire Start:</span>
+            <span class="debug-value">{{ wireDebugInfo.startConnection }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Wire End:</span>
+            <span class="debug-value">{{ wireDebugInfo.endConnection }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Sim Current:</span>
+            <span class="debug-value"
+              >{{ wireDebugInfo.simulationCurrent?.toFixed(6) || 'N/A' }}A</span
+            >
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Raw Sign:</span>
+            <span class="debug-value">{{
+              wireDebugInfo.simulationCurrent && wireDebugInfo.simulationCurrent >= 0 ? '+' : '-'
+            }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Physical Dir:</span>
+            <span class="debug-value">{{
+              physicalCurrentInfo.flowsStartToEnd ? 'Start→End' : 'End→Start'
+            }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voltage Probe Specific Debug -->
+      <div v-if="probe.type === 'voltage'" class="debug-subsection">
+        <h5 class="debug-subtitle">Voltage Probe Details</h5>
+        <div class="debug-table">
+          <div class="debug-row">
+            <span class="debug-label">Node Index:</span>
+            <span class="debug-value">{{ voltageDebugInfo.nodeIndex || 'N/A' }}</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Reference:</span>
+            <span class="debug-value">Ground (0V)</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="property-item">
@@ -63,22 +124,22 @@ interface Props {
 const props = defineProps<Props>()
 const circuitStore = useCircuitStore()
 
-// Computed property for current direction and value (matching ProbeComponent logic)
-const currentInfo = computed(() => {
-  if (props.probe.type !== 'current') return { value: 0, isPositive: true }
+// Physical current direction computation (matching ProbeComponent logic)
+const physicalCurrentInfo = computed(() => {
+  if (props.probe.type !== 'current') return { magnitude: 0, flowsStartToEnd: true }
 
   const dcSolution = circuitStore.dcSolution
-  if (!dcSolution) return { value: 0, isPositive: true }
+  if (!dcSolution) return { magnitude: 0, flowsStartToEnd: true }
 
   const { currents } = dcSolution
   const targetId = props.probe.targetId
   const wire = circuitStore.currentCircuit.components.find((c) => c.id === targetId)
-  if (wire?.type !== 'wire' || !wire.properties) return { value: 0, isPositive: true }
+  if (wire?.type !== 'wire' || !wire.properties) return { magnitude: 0, flowsStartToEnd: true }
 
   // Get the wire's current directly from the simulation results
-  let wireCurrent = currents[targetId]
+  let rawCurrent = currents[targetId]
 
-  if (wireCurrent === undefined) {
+  if (rawCurrent === undefined) {
     // Fallback: try to find current from connected components (for backward compatibility)
     const startCompId = wire.properties.startComponentId as string
     const endCompId = wire.properties.endComponentId as string
@@ -99,25 +160,32 @@ const currentInfo = computed(() => {
       componentCurrent = currents[endCompId]
     }
 
-    if (componentCurrent === undefined) return { value: 0, isPositive: true }
+    if (componentCurrent === undefined) return { magnitude: 0, flowsStartToEnd: true }
 
     // Fix sign convention for voltage sources - flip the sign so current flowing out of positive terminal is positive
-    wireCurrent = componentCurrent
+    rawCurrent = componentCurrent
     if (isVoltageSource) {
-      wireCurrent = -componentCurrent
+      rawCurrent = -componentCurrent
     }
   }
 
-  let adjustedCurrent = wireCurrent
-
-  // Apply probe direction setting
-  if (props.probe.direction === false) {
-    adjustedCurrent = -adjustedCurrent
-  }
+  // Physical Current Direction Algorithm:
+  // - Positive current: flows from startComponent to endComponent
+  // - Negative current: flows from endComponent to startComponent
+  // - Always display positive magnitude with arrow showing direction
 
   return {
-    value: adjustedCurrent,
-    isPositive: adjustedCurrent >= 0,
+    magnitude: Math.abs(rawCurrent),
+    flowsStartToEnd: rawCurrent >= 0,
+  }
+})
+
+// Legacy currentInfo for backward compatibility (now uses physicalCurrentInfo)
+const currentInfo = computed(() => {
+  const physical = physicalCurrentInfo.value
+  return {
+    value: physical.magnitude, // Always positive now
+    isPositive: true, // Always true since we show magnitude only
   }
 })
 
@@ -152,40 +220,104 @@ const probeValue = computed(() => {
       }
     }
   } else if (props.probe.type === 'current') {
-    const current = currentInfo.value.value
+    // Use physical current magnitude (always positive)
+    const currentMagnitude = physicalCurrentInfo.value.magnitude
 
-    if (Math.abs(current) < 1e-12) return '0A'
+    if (currentMagnitude < 1e-12) return '0A'
 
-    const sign = current >= 0 ? '' : '-'
-    const absCurrent = Math.abs(current)
+    // Always positive display - direction shown by arrow
     let value: string
     let unit: string
 
-    if (absCurrent >= 1) {
-      value = absCurrent.toPrecision(3)
+    if (currentMagnitude >= 1) {
+      value = currentMagnitude.toPrecision(3)
       unit = 'A'
-    } else if (absCurrent >= 1e-3) {
-      value = (absCurrent * 1e3).toPrecision(3)
+    } else if (currentMagnitude >= 1e-3) {
+      value = (currentMagnitude * 1e3).toPrecision(3)
       unit = 'mA'
-    } else if (absCurrent >= 1e-6) {
-      value = (absCurrent * 1e6).toPrecision(3)
+    } else if (currentMagnitude >= 1e-6) {
+      value = (currentMagnitude * 1e6).toPrecision(3)
       unit = 'µA'
-    } else if (absCurrent >= 1e-9) {
-      value = (absCurrent * 1e9).toPrecision(3)
+    } else if (currentMagnitude >= 1e-9) {
+      value = (currentMagnitude * 1e9).toPrecision(3)
       unit = 'nA'
     } else {
-      value = (absCurrent * 1e12).toPrecision(3)
+      value = (currentMagnitude * 1e12).toPrecision(3)
       unit = 'pA'
     }
-    return `${sign}${value}${unit}`
+    return `${value}${unit}`
   }
 
   return 'N/A'
 })
 
-function toggleDirection(direction: boolean) {
-  circuitStore.updateProbeDirection(props.probe.id, direction)
-}
+// Direction toggle removed - now automatically determined by physical current flow
+
+// Debug information computed properties
+const targetComponent = computed(() => {
+  return circuitStore.currentCircuit.components.find((c) => c.id === props.probe.targetId)
+})
+
+const wireDebugInfo = computed(() => {
+  if (props.probe.type !== 'current') {
+    return { startConnection: 'N/A', endConnection: 'N/A', simulationCurrent: undefined }
+  }
+
+  const targetWire = circuitStore.currentCircuit.components.find(
+    (c) => c.id === props.probe.targetId,
+  )
+  if (!targetWire || targetWire.type !== 'wire' || !targetWire.properties) {
+    return { startConnection: 'N/A', endConnection: 'N/A', simulationCurrent: undefined }
+  }
+
+  const wireProps = targetWire.properties
+  const startComp = circuitStore.currentCircuit.components.find(
+    (c) => c.id === wireProps.startComponentId,
+  )
+  const endComp = circuitStore.currentCircuit.components.find(
+    (c) => c.id === wireProps.endComponentId,
+  )
+
+  const startConnection = startComp
+    ? `${startComp.type}(${startComp.id}):${wireProps.startTerminal}`
+    : 'Disconnected'
+  const endConnection = endComp
+    ? `${endComp.type}(${endComp.id}):${wireProps.endTerminal}`
+    : 'Disconnected'
+
+  // Get simulation current for this wire
+  const simulationCurrent = circuitStore.dcSolution?.currents[props.probe.targetId]
+
+  return { startConnection, endConnection, simulationCurrent }
+})
+
+const voltageDebugInfo = computed(() => {
+  if (props.probe.type !== 'voltage') {
+    return { nodeIndex: undefined }
+  }
+
+  const dcSolution = circuitStore.dcSolution
+  if (!dcSolution) return { nodeIndex: undefined }
+
+  const { termToNodeIndex } = dcSolution
+
+  // For voltage probes, try to find the node index
+  let nodeIndex: number | undefined
+
+  // If probing a component terminal
+  const targetComp = circuitStore.currentCircuit.components.find(
+    (c) => c.id === props.probe.targetId,
+  )
+  if (targetComp) {
+    const compDef = getComponentDefinition(targetComp.type)
+    if (compDef?.terminals?.[0]) {
+      const terminalId = `${targetComp.id}:${compDef.terminals[0].id}`
+      nodeIndex = termToNodeIndex.get(terminalId)
+    }
+  }
+
+  return { nodeIndex }
+})
 
 function deleteProbe() {
   const historyActions = useCircuitHistory()
@@ -269,5 +401,77 @@ function deleteProbe() {
 
 .delete-button:hover {
   background: #c82333;
+}
+
+.direction-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.direction-note {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Debug section styles */
+.debug-section {
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.375rem;
+}
+
+.debug-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.debug-subtitle {
+  margin: 0.75rem 0 0.5rem 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.debug-subsection {
+  margin-top: 0.75rem;
+}
+
+.debug-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.debug-row:last-child {
+  border-bottom: none;
+}
+
+.debug-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  flex-shrink: 0;
+  min-width: 4rem;
+}
+
+.debug-value {
+  font-size: 0.75rem;
+  color: #495057;
+  font-family: monospace;
+  text-align: right;
+  word-break: break-all;
 }
 </style>

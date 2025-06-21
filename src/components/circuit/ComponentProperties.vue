@@ -81,6 +81,101 @@
         />
       </div>
 
+      <!-- Component Debug Information -->
+      <div class="debug-section">
+        <h4 class="debug-title">🔍 Debug Information</h4>
+
+        <!-- Basic Component Info -->
+        <div class="debug-table">
+          <div class="debug-row">
+            <span class="debug-label">Position:</span>
+            <span class="debug-value"
+              >{{ component.position.x.toFixed(1) }}, {{ component.position.y.toFixed(1) }}</span
+            >
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Rotation:</span>
+            <span class="debug-value">{{ component.rotation }}°</span>
+          </div>
+          <div class="debug-row">
+            <span class="debug-label">Selected:</span>
+            <span class="debug-value">{{ component.selected ? 'Yes' : 'No' }}</span>
+          </div>
+        </div>
+
+        <!-- Terminal Information -->
+        <div v-if="componentDefinition?.terminals" class="debug-subsection">
+          <h5 class="debug-subtitle">Terminals</h5>
+          <div class="debug-table">
+            <div
+              v-for="terminal in componentDefinition.terminals"
+              :key="terminal.id"
+              class="debug-row"
+            >
+              <span class="debug-label">{{ terminal.id }}:</span>
+              <span class="debug-value"
+                >{{ terminal.type }} at {{ terminal.position.x }}, {{ terminal.position.y }}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Wire-specific Debug Info -->
+        <div v-if="component.type === 'wire'" class="debug-subsection">
+          <h5 class="debug-subtitle">Wire Connections</h5>
+          <div class="debug-table">
+            <div class="debug-row">
+              <span class="debug-label">Start:</span>
+              <span class="debug-value">{{ wireDebugInfo.startConnection }}</span>
+            </div>
+            <div class="debug-row">
+              <span class="debug-label">End:</span>
+              <span class="debug-value">{{ wireDebugInfo.endConnection }}</span>
+            </div>
+            <div class="debug-row">
+              <span class="debug-label">Length:</span>
+              <span class="debug-value">{{ wireDebugInfo.length.toFixed(2) }}px</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulation Data -->
+        <div v-if="simulationDebugInfo" class="debug-subsection">
+          <h5 class="debug-subtitle">Simulation Data</h5>
+          <div class="debug-table">
+            <div v-if="simulationDebugInfo.nodeIndex !== undefined" class="debug-row">
+              <span class="debug-label">Node Index:</span>
+              <span class="debug-value">{{ simulationDebugInfo.nodeIndex }}</span>
+            </div>
+            <div v-if="simulationDebugInfo.voltage !== undefined" class="debug-row">
+              <span class="debug-label">Node Voltage:</span>
+              <span class="debug-value">{{ simulationDebugInfo.voltage.toFixed(6) }}V</span>
+            </div>
+            <div v-if="simulationDebugInfo.current !== undefined" class="debug-row">
+              <span class="debug-label">Current:</span>
+              <span class="debug-value">{{ simulationDebugInfo.current.toFixed(6) }}A</span>
+            </div>
+            <div v-if="simulationDebugInfo.powerDissipation !== undefined" class="debug-row">
+              <span class="debug-label">Power:</span>
+              <span class="debug-value"
+                >{{ simulationDebugInfo.powerDissipation.toFixed(6) }}W</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Connected Components -->
+        <div v-if="connectedComponents.length > 0" class="debug-subsection">
+          <h5 class="debug-subtitle">Connected To</h5>
+          <div class="debug-table">
+            <div v-for="connection in connectedComponents" :key="connection.id" class="debug-row">
+              <span class="debug-label">{{ connection.id }}:</span>
+              <span class="debug-value">{{ connection.type }} via {{ connection.via }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Delete button for all components -->
       <div class="property-item">
         <button class="delete-button" @click="deleteComponent">
@@ -162,6 +257,130 @@ function deleteComponent() {
   circuitStore.removeComponent(props.component.id)
   historyStore.saveState(circuitStore.currentCircuit, 'Delete component')
 }
+
+// Debug information computed properties
+const wireDebugInfo = computed(() => {
+  if (props.component.type !== 'wire' || !props.component.properties) {
+    return { startConnection: 'N/A', endConnection: 'N/A', length: 0 }
+  }
+
+  const wireProps = props.component.properties
+  const startComp = circuitStore.currentCircuit.components.find(
+    (c) => c.id === wireProps.startComponentId,
+  )
+  const endComp = circuitStore.currentCircuit.components.find(
+    (c) => c.id === wireProps.endComponentId,
+  )
+
+  const startConnection = startComp
+    ? `${startComp.type}(${startComp.id}):${wireProps.startTerminal}`
+    : 'Disconnected'
+  const endConnection = endComp
+    ? `${endComp.type}(${endComp.id}):${wireProps.endTerminal}`
+    : 'Disconnected'
+
+  // Calculate wire length (rough estimate based on component positions)
+  let length = 0
+  if (startComp && endComp) {
+    const dx = endComp.position.x - startComp.position.x
+    const dy = endComp.position.y - startComp.position.y
+    length = Math.sqrt(dx * dx + dy * dy)
+  }
+
+  return { startConnection, endConnection, length }
+})
+
+const simulationDebugInfo = computed(() => {
+  const dcSolution = circuitStore.dcSolution
+  if (!dcSolution) return null
+
+  const { voltages, currents, termToNodeIndex } = dcSolution
+
+  // Get node information for the component
+  let nodeIndex: number | undefined
+  let voltage: number | undefined
+  let current: number | undefined
+  let powerDissipation: number | undefined
+
+  // For wire components, get the current directly
+  if (props.component.type === 'wire') {
+    current = currents[props.component.id]
+
+    // Try to get voltage from start terminal
+    if (props.component.properties) {
+      const startTerminalId = `${props.component.properties.startComponentId}:${props.component.properties.startTerminal}`
+      nodeIndex = termToNodeIndex.get(startTerminalId)
+      if (nodeIndex !== undefined) {
+        voltage = voltages[nodeIndex]
+      }
+    }
+  } else {
+    // For other components, get current and try to find voltage
+    current = currents[props.component.id]
+
+    // Try to get voltage from first terminal
+    const componentDef = getComponentDefinition(props.component.type)
+    if (componentDef?.terminals?.[0]) {
+      const terminalId = `${props.component.id}:${componentDef.terminals[0].id}`
+      nodeIndex = termToNodeIndex.get(terminalId)
+      if (nodeIndex !== undefined) {
+        voltage = voltages[nodeIndex]
+      }
+    }
+  }
+
+  // Calculate power dissipation for resistive components
+  if (current !== undefined && voltage !== undefined && props.component.properties?.resistance) {
+    const resistance = props.component.properties.resistance as number
+    powerDissipation = current * current * resistance
+  }
+
+  return {
+    nodeIndex,
+    voltage,
+    current,
+    powerDissipation,
+  }
+})
+
+const connectedComponents = computed(() => {
+  const connections: Array<{ id: string; type: string; via: string }> = []
+
+  // Find all wires connected to this component
+  const wires = circuitStore.currentCircuit.components.filter((c) => c.type === 'wire')
+
+  for (const wire of wires) {
+    if (!wire.properties) continue
+
+    const wireProps = wire.properties
+    const startCompId = wireProps.startComponentId as string
+    const endCompId = wireProps.endComponentId as string
+
+    if (startCompId === props.component.id) {
+      // This component is the start of the wire
+      const endComp = circuitStore.currentCircuit.components.find((c) => c.id === endCompId)
+      if (endComp) {
+        connections.push({
+          id: endComp.id,
+          type: endComp.type,
+          via: `${wireProps.startTerminal} → ${wire.id} → ${wireProps.endTerminal}`,
+        })
+      }
+    } else if (endCompId === props.component.id) {
+      // This component is the end of the wire
+      const startComp = circuitStore.currentCircuit.components.find((c) => c.id === startCompId)
+      if (startComp) {
+        connections.push({
+          id: startComp.id,
+          type: startComp.type,
+          via: `${wireProps.endTerminal} ← ${wire.id} ← ${wireProps.startTerminal}`,
+        })
+      }
+    }
+  }
+
+  return connections
+})
 </script>
 
 <style scoped>
@@ -244,5 +463,66 @@ function deleteComponent() {
   transition: border-color 0.15s ease-in-out;
   position: relative;
   z-index: 20;
+}
+
+/* Debug section styles */
+.debug-section {
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.375rem;
+}
+
+.debug-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.debug-subtitle {
+  margin: 0.75rem 0 0.5rem 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.debug-subsection {
+  margin-top: 0.75rem;
+}
+
+.debug-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.debug-row:last-child {
+  border-bottom: none;
+}
+
+.debug-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  flex-shrink: 0;
+  min-width: 4rem;
+}
+
+.debug-value {
+  font-size: 0.75rem;
+  color: #495057;
+  font-family: monospace;
+  text-align: right;
+  word-break: break-all;
 }
 </style>
