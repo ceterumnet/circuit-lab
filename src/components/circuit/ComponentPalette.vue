@@ -53,6 +53,8 @@ import CurrentSourceSymbol from './symbols/CurrentSourceSymbol.vue'
 import SwitchSymbol from './symbols/SwitchSymbol.vue'
 import VariableResistorSymbol from './symbols/VariableResistorSymbol.vue'
 import PotentiometerSymbol from './symbols/PotentiometerSymbol.vue'
+import DiodeSymbol from './symbols/DiodeSymbol.vue'
+import LEDSymbol from './symbols/LEDSymbol.vue'
 import GroundSymbol from './symbols/GroundSymbol.vue'
 import NodeSymbol from './symbols/NodeSymbol.vue'
 import WireSymbol from './symbols/WireSymbol.vue'
@@ -99,6 +101,8 @@ function getIconComponent(iconName?: string) {
     SwitchSymbol: SwitchSymbol,
     VariableResistorSymbol: VariableResistorSymbol,
     PotentiometerSymbol: PotentiometerSymbol,
+    DiodeSymbol: DiodeSymbol,
+    LEDSymbol: LEDSymbol,
     GroundSymbol: GroundSymbol,
     NodeSymbol: NodeSymbol,
     WireSymbol: WireSymbol,

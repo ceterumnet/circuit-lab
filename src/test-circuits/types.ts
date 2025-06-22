@@ -26,7 +26,7 @@ export interface TestCircuit {
   }
 
   /** Test category for organization */
-  category: 'basic' | 'regression' | 'edge-case' | 'performance'
+  category: 'basic' | 'regression' | 'edge-case' | 'performance' | 'non-linear'
 
   /** Tags for filtering tests */
   tags?: string[]

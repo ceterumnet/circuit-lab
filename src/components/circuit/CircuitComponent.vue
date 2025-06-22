@@ -78,6 +78,32 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- Diode component -->
+    <DiodeComponent
+      v-else-if="component.type === 'diode'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
+    <!-- LED component -->
+    <LEDComponent
+      v-else-if="component.type === 'led'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Ground component -->
     <ground-component
       v-else-if="component.type === 'ground'"
@@ -128,6 +154,8 @@ import CurrentSourceComponent from '@/components/circuit/components/CurrentSourc
 import SwitchComponent from '@/components/circuit/components/SwitchComponent.vue'
 import VariableResistorComponent from '@/components/circuit/components/VariableResistorComponent.vue'
 import PotentiometerComponent from '@/components/circuit/components/PotentiometerComponent.vue'
+import DiodeComponent from '@/components/circuit/components/DiodeComponent.vue'
+import LEDComponent from '@/components/circuit/components/LEDComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
 import NodeComponent from '@/components/circuit/components/NodeComponent.vue'

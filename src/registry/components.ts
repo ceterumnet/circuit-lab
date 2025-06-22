@@ -130,6 +130,55 @@ const potentiometerDefinition: ComponentDefinition = {
   icon: 'PotentiometerSymbol', // Potentiometer with wiper arrow
 }
 
+const diodeDefinition: ComponentDefinition = {
+  type: 'diode',
+  name: 'Diode',
+  category: 'active',
+  complexity: 'moderate',
+  terminals: [
+    { id: 'anode', position: { x: -25, y: 0 }, type: 'io', label: 'A' },
+    { id: 'cathode', position: { x: 25, y: 0 }, type: 'io', label: 'K' },
+  ],
+  properties: [
+    {
+      key: 'saturationCurrent',
+      type: 'number',
+      label: 'Saturation Current',
+      unit: 'A',
+      default: 1e-12,
+    },
+  ],
+  icon: 'DiodeSymbol', // Professional IEEE-standard diode symbol
+}
+
+const ledDefinition: ComponentDefinition = {
+  type: 'led',
+  name: 'LED',
+  category: 'active',
+  complexity: 'moderate',
+  terminals: [
+    { id: 'anode', position: { x: -25, y: 0 }, type: 'io', label: 'A' },
+    { id: 'cathode', position: { x: 25, y: 0 }, type: 'io', label: 'K' },
+  ],
+  properties: [
+    {
+      key: 'color',
+      type: 'string',
+      label: 'LED Color',
+      unit: '',
+      default: 'red',
+    },
+    {
+      key: 'saturationCurrent',
+      type: 'number',
+      label: 'Saturation Current',
+      unit: 'A',
+      default: 1e-9,
+    },
+  ],
+  icon: 'LEDSymbol', // Professional LED symbol with light rays
+}
+
 // Register all components
 ComponentRegistry.set('resistor', resistorDefinition)
 ComponentRegistry.set('voltage_source', voltageSourceDefinition)
@@ -139,6 +188,8 @@ ComponentRegistry.set('ground', groundDefinition)
 ComponentRegistry.set('node', nodeDefinition)
 ComponentRegistry.set('variable_resistor', variableResistorDefinition)
 ComponentRegistry.set('potentiometer', potentiometerDefinition)
+ComponentRegistry.set('diode', diodeDefinition)
+ComponentRegistry.set('led', ledDefinition)
 ComponentRegistry.set('wire', wireDefinition)
 
 // Export definitions for backwards compatibility
@@ -152,6 +203,8 @@ export {
   wireDefinition,
   variableResistorDefinition,
   potentiometerDefinition,
+  diodeDefinition,
+  ledDefinition,
 }
 
 // Utility functions

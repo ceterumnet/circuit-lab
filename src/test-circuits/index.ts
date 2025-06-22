@@ -211,6 +211,7 @@ export * from './basic-tests'
 export * from './demo'
 export * from './current-source-test'
 export * from './current-source-runner'
+export * from './led-test'
 
 // New function to seed saved circuits with test circuits
 export async function seedSavedCircuitsWithTests(): Promise<number> {

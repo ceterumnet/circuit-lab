@@ -821,12 +821,193 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 - **Interactive Controls:** Real-time resistance adjustment with immediate simulation feedback
 - **Parameter Study Tools:** Circuit sensitivity analysis and resistance sweep capabilities
 
-### 2. Begin Phase 1.99 - Simple Diode Models & Non-Linear Solving
+### 2. Phase 1.99 - Simple Diode Models & Non-Linear Solving
 
-- **Basic Diode Implementation:** Simple exponential I-V characteristic model
-- **Newton-Raphson Solver:** Iterative solving for non-linear circuits
-- **LED Components:** Visual diode models with forward voltage characteristics
-- **Rectifier Circuit Support:** Basic diode applications and analysis
+**Goal:** Implement fundamental non-linear DC components with robust iterative solving capabilities
+
+**Status:** 🎯 **READY TO IMPLEMENT** - Foundation established with complete linear DC simulation engine
+
+#### Core Non-Linear Simulation Engine
+
+- [ ] **Newton-Raphson Solver Implementation**
+
+  - **Architecture:** Extend existing MNA system with iterative non-linear solving
+  - **Algorithm:** Newton-Raphson method with Jacobian matrix calculation
+  - **Convergence:** Configurable tolerance (1e-6 default) with maximum iteration limits (50 iterations)
+  - **Robustness:** Automatic step size reduction and initial guess optimization
+  - **Integration:** Seamless fallback to linear solver for purely resistive circuits
+
+- [ ] **Non-Linear Component Infrastructure**
+
+  - **Base Class:** `NonLinearStamper` abstract class extending current stamper system
+  - **Linearization:** Companion model approach with conductance + current source equivalent circuits
+  - **Convergence Monitoring:** Per-component convergence tracking and diagnostic reporting
+  - **Error Handling:** Graceful handling of non-convergent circuits with educational error messages
+
+#### Diode Component Implementation
+
+- [ ] **Basic Diode Model**
+
+  - **I-V Characteristic:** Shockley diode equation: `I = Is * (exp(V/Vt) - 1)`
+  - **Parameters:** Saturation current Is = 1e-12 A, thermal voltage Vt = 26mV (room temperature)
+  - **Temperature Independence:** Simplified model without temperature effects (educational focus)
+  - **Reverse Breakdown:** Basic reverse saturation current modeling (no avalanche breakdown)
+
+- [ ] **Professional Diode Component**
+
+  - **DiodeSymbol.vue:** IEEE-standard diode symbol with triangle and bar, clear anode/cathode orientation
+  - **DiodeComponent.vue:** Interactive placement with forward/reverse bias visual indication
+  - **Property Interface:** Configurable saturation current (Is) with engineering notation (pA, nA, µA)
+  - **Visual Feedback:** Color-coded component based on bias state (green=forward, red=reverse)
+
+- [ ] **LED Component Implementation**
+
+  - **LED Model:** Diode model with higher forward voltage (1.7V red, 2.1V blue, 3.3V white)
+  - **Visual Feedback:** Color-coded LED symbols that illuminate when forward biased
+  - **LEDSymbol.vue:** Professional LED symbol with light rays and color indication
+  - **LEDComponent.vue:** Interactive LED with realistic forward voltage characteristics
+
+#### Simulation Engine Integration
+
+- [ ] **DiodeStamper Implementation**
+
+  ```typescript
+  class DiodeStamper extends NonLinearStamper {
+    // Diode equation: I = Is * (exp(V/Vt) - 1)
+    calculateCurrent(voltage: number): number {
+      const Is = this.component.properties.saturationCurrent || 1e-12
+      const Vt = 0.026 // 26mV at room temperature
+
+      if (voltage < -5 * Vt) {
+        return -Is // Reverse saturation
+      }
+
+      return Is * (Math.exp(voltage / Vt) - 1)
+    }
+
+    calculateConductance(voltage: number): number {
+      // dI/dV for Newton-Raphson linearization
+      const Is = this.component.properties.saturationCurrent || 1e-12
+      const Vt = 0.026
+
+      if (voltage < -5 * Vt) {
+        return 1e-12 // Small conductance for numerical stability
+      }
+
+      return (Is / Vt) * Math.exp(voltage / Vt)
+    }
+  }
+  ```
+
+- [ ] **Newton-Raphson Integration**
+
+  - **Jacobian Calculation:** Automatic conductance matrix assembly from non-linear components
+  - **RHS Vector:** Current source equivalent circuit injection for linearization
+  - **Convergence Test:** Voltage and current tolerance checking across all non-linear devices
+  - **Damping Factor:** Adaptive damping for difficult convergence cases
+
+#### Educational Applications & Test Circuits
+
+- [ ] **Rectifier Circuit Suite**
+
+  - **Half-Wave Rectifier:** Single diode with AC source and load resistor
+  - **Full-Wave Rectifier:** Center-tap and bridge rectifier configurations
+  - **Smoothing Capacitors:** RC filtering demonstration (requires AC implementation)
+  - **Voltage Regulation:** Basic Zener diode voltage regulation circuits
+
+- [ ] **LED Driver Circuits**
+
+  - **Current Limiting:** LED with series resistance calculation tools
+  - **Multiple LED Strings:** Series and parallel LED configurations
+  - **Forward Voltage Analysis:** Educational comparison of different LED colors
+  - **Power Dissipation:** LED power calculations and thermal considerations
+
+- [ ] **Diode Characteristic Analysis**
+
+  - **I-V Curve Tracing:** Parametric analysis with voltage sweep capability
+  - **Forward/Reverse Bias:** Educational demonstration of diode behavior regions
+  - **Temperature Effects:** Future expansion for temperature coefficient modeling
+  - **Breakdown Analysis:** Foundation for Zener diode implementation
+
+#### Advanced Features
+
+- [ ] **Zener Diode Implementation** (Stretch Goal)
+
+  - **Breakdown Modeling:** Reverse breakdown voltage with sharp knee characteristic
+  - **Voltage Regulation:** Zener diode voltage regulator circuits
+  - **ZenerSymbol.vue:** Professional Zener symbol with breakdown indication
+  - **Educational Applications:** Voltage reference and regulation demonstration
+
+- [ ] **Diode Parameter Extraction** (Educational Tool)
+
+  - **Curve Fitting:** Extract Is and Vt from measured I-V data
+  - **Model Validation:** Compare simulated vs theoretical diode behavior
+  - **Educational Interface:** Interactive parameter adjustment with real-time I-V curve updates
+
+#### Technical Implementation Plan
+
+- [ ] **Files to Create:**
+
+  ```
+  src/components/circuit/components/DiodeComponent.vue
+  src/components/circuit/components/LEDComponent.vue
+  src/components/circuit/symbols/DiodeSymbol.vue
+  src/components/circuit/symbols/LEDSymbol.vue
+  src/services/non-linear-solver.ts
+  src/test-circuits/diode-test.ts
+  src/test-circuits/rectifier-test.ts
+  src/test-circuits/led-test.ts
+  ```
+
+- [ ] **Files to Modify:**
+
+  ```
+  src/services/simulation.ts - Add DiodeStamper, LEDStamper, Newton-Raphson integration
+  src/registry/components.ts - Register diode and LED components
+  src/components/circuit/ComponentPalette.vue - Add diode/LED icons and categories
+  src/components/circuit/ComponentProperties.vue - Add diode-specific property controls
+  src/stores/circuit.ts - Integrate non-linear solver with simulation pipeline
+  ```
+
+#### Success Criteria & Validation
+
+- [ ] **Convergence Reliability**
+
+  - **Robust Solving:** 95%+ convergence rate for common diode circuits
+  - **Performance:** Non-linear solving within 200ms for typical circuits
+  - **Stability:** Graceful handling of poorly-conditioned circuits
+  - **Educational Feedback:** Clear error messages for non-convergent cases
+
+- [ ] **Educational Value**
+
+  - **Intuitive Behavior:** Diode components behave exactly like real diodes
+  - **Visual Feedback:** Clear indication of forward/reverse bias states
+  - **Circuit Analysis:** Students can analyze rectifier and LED circuits
+  - **Parameter Studies:** Interactive exploration of diode characteristics
+
+- [ ] **Test Suite Validation**
+
+  - **Basic Diode Test:** Forward bias I-V characteristic validation
+  - **Reverse Bias Test:** Saturation current behavior verification
+  - **LED Test:** Forward voltage and color-specific characteristics
+  - **Rectifier Test:** Half-wave rectifier with resistive load
+  - **Mixed Circuit Test:** Diodes + resistors + voltage sources working together
+
+- [ ] **Professional Integration**
+
+  - **Component Library:** Diodes integrate seamlessly with existing components
+  - **Real-Time Simulation:** Non-linear solving works with live simulation toggle
+  - **Performance:** No noticeable UI lag during iterative solving
+  - **Error Handling:** Professional error reporting for convergence failures
+
+#### Implementation Timeline (Estimated)
+
+- **Week 1:** Newton-Raphson solver infrastructure and DiodeStamper implementation
+- **Week 2:** Diode and LED component creation with professional symbols
+- **Week 3:** UI integration, property controls, and component palette updates
+- **Week 4:** Test suite development, validation, and educational circuit examples
+
+**FOUNDATION FOR FUTURE:** This implementation creates the architectural foundation for all future non-linear components including BJT/MOSFET transistors, op-amps, and advanced semiconductor devices.
 
 ### 3. Phase 2.0 - Basic Transistor Implementation
 
