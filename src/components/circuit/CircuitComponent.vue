@@ -52,6 +52,32 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- Variable resistor component -->
+    <variable-resistor-component
+      v-else-if="component.type === 'variable_resistor'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
+    <!-- Potentiometer component -->
+    <potentiometer-component
+      v-else-if="component.type === 'potentiometer'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Ground component -->
     <ground-component
       v-else-if="component.type === 'ground'"
@@ -100,6 +126,8 @@ import ResistorComponent from '@/components/circuit/components/ResistorComponent
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import CurrentSourceComponent from '@/components/circuit/components/CurrentSourceComponent.vue'
 import SwitchComponent from '@/components/circuit/components/SwitchComponent.vue'
+import VariableResistorComponent from '@/components/circuit/components/VariableResistorComponent.vue'
+import PotentiometerComponent from '@/components/circuit/components/PotentiometerComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
 import NodeComponent from '@/components/circuit/components/NodeComponent.vue'

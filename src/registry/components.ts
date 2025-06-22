@@ -90,6 +90,46 @@ const wireDefinition: ComponentDefinition = {
   icon: 'WireSymbol', // Line with connection points to show wire connectivity
 }
 
+const variableResistorDefinition: ComponentDefinition = {
+  type: 'variable_resistor',
+  name: 'Variable Resistor',
+  category: 'passive',
+  complexity: 'simple',
+  terminals: [
+    { id: 'terminal1', position: { x: -30, y: 0 }, type: 'io' },
+    { id: 'terminal2', position: { x: 30, y: 0 }, type: 'io' },
+  ],
+  properties: [
+    { key: 'resistance', type: 'number', label: 'Resistance', unit: 'Ω', default: 5000 },
+    { key: 'minResistance', type: 'number', label: 'Min Resistance', unit: 'Ω', default: 0 },
+    { key: 'maxResistance', type: 'number', label: 'Max Resistance', unit: 'Ω', default: 10000 },
+  ],
+  icon: 'VariableResistorSymbol', // Variable resistor with diagonal arrow
+}
+
+const potentiometerDefinition: ComponentDefinition = {
+  type: 'potentiometer',
+  name: 'Potentiometer',
+  category: 'passive',
+  complexity: 'moderate',
+  terminals: [
+    { id: 'terminal1', position: { x: -30, y: 0 }, type: 'io', label: 'A' },
+    { id: 'terminal2', position: { x: 30, y: 0 }, type: 'io', label: 'B' },
+    { id: 'wiper', position: { x: 0, y: -20 }, type: 'io', label: 'W' },
+  ],
+  properties: [
+    {
+      key: 'totalResistance',
+      type: 'number',
+      label: 'Total Resistance',
+      unit: 'Ω',
+      default: 10000,
+    },
+    { key: 'wiperPosition', type: 'number', label: 'Wiper Position', unit: '%', default: 50 },
+  ],
+  icon: 'PotentiometerSymbol', // Potentiometer with wiper arrow
+}
+
 // Register all components
 ComponentRegistry.set('resistor', resistorDefinition)
 ComponentRegistry.set('voltage_source', voltageSourceDefinition)
@@ -97,6 +137,8 @@ ComponentRegistry.set('current_source', currentSourceDefinition)
 ComponentRegistry.set('switch', switchDefinition)
 ComponentRegistry.set('ground', groundDefinition)
 ComponentRegistry.set('node', nodeDefinition)
+ComponentRegistry.set('variable_resistor', variableResistorDefinition)
+ComponentRegistry.set('potentiometer', potentiometerDefinition)
 ComponentRegistry.set('wire', wireDefinition)
 
 // Export definitions for backwards compatibility
@@ -108,6 +150,8 @@ export {
   groundDefinition,
   nodeDefinition,
   wireDefinition,
+  variableResistorDefinition,
+  potentiometerDefinition,
 }
 
 // Utility functions

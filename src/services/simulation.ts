@@ -434,6 +434,110 @@ class SwitchStamper extends ResistiveStamper {
 }
 
 /**
+ * Variable resistor component stamper - Models as adjustable resistance
+ */
+class VariableResistorStamper extends ResistiveStamper {
+  constructor(component: CircuitComponent) {
+    // Use the current resistance value, with bounds checking
+    const resistance = (component.properties?.resistance as number) || 5000
+    const minResistance = (component.properties?.minResistance as number) || 0
+    const maxResistance = (component.properties?.maxResistance as number) || 10000
+
+    // Clamp resistance within bounds
+    const clampedResistance = Math.max(minResistance, Math.min(maxResistance, resistance))
+
+    super(component.id, component.type, component, clampedResistance)
+    console.log(
+      `VariableResistor ${component.id}: R=${clampedResistance}Ω (${minResistance}-${maxResistance}Ω range)`,
+    )
+  }
+}
+
+/**
+ * Potentiometer component stamper - Models as two resistors in series with wiper tap
+ */
+class PotentiometerStamper implements ComponentStamper {
+  public id: string
+  public type: string
+  private totalResistance: number
+  private wiperPosition: number // 0-100%
+  private r1: number // Resistance from terminal1 to wiper
+  private r2: number // Resistance from wiper to terminal2
+
+  constructor(private component: CircuitComponent) {
+    this.id = component.id
+    this.type = component.type
+    this.totalResistance = (component.properties?.totalResistance as number) || 10000
+    this.wiperPosition = (component.properties?.wiperPosition as number) || 50 // Default to center
+
+    // Calculate resistances: R1 = wiperPosition% of total, R2 = remaining
+    this.r1 = (this.wiperPosition / 100) * this.totalResistance
+    this.r2 = this.totalResistance - this.r1
+
+    // Ensure minimum resistance to avoid numerical issues
+    this.r1 = Math.max(this.r1, 1e-6)
+    this.r2 = Math.max(this.r2, 1e-6)
+
+    console.log(
+      `Potentiometer ${this.id}: R1=${this.r1.toFixed(1)}Ω, R2=${this.r2.toFixed(1)}Ω (${this.wiperPosition}% position)`,
+    )
+  }
+
+  private getTerminalId = (c: CircuitComponent, t: string) => `${c.id}:${t}`
+
+  private getNodeIndices(nodeMap: Map<string, number>): [number, number, number] {
+    const definition = getComponentDefinition(this.component.type)!
+    const n1 = nodeMap.get(this.getTerminalId(this.component, definition.terminals[0].id))! // terminal1
+    const n2 = nodeMap.get(this.getTerminalId(this.component, definition.terminals[1].id))! // terminal2
+    const nWiper = nodeMap.get(this.getTerminalId(this.component, definition.terminals[2].id))! // wiper
+    return [n1, n2, nWiper]
+  }
+
+  stampDC(
+    mnaMatrix: Matrix,
+    rhsVector: Matrix,
+    nodeMap: Map<string, number>,
+    nextBranchIndex: number,
+  ): StampResult {
+    const [n1, n2, nWiper] = this.getNodeIndices(nodeMap)
+
+    // Stamp two resistors: R1 between terminal1 and wiper, R2 between wiper and terminal2
+    const g1 = 1 / this.r1 // Conductance from terminal1 to wiper
+    const g2 = 1 / this.r2 // Conductance from wiper to terminal2
+
+    // R1 stamp: terminal1 to wiper
+    mnaMatrix.set([n1, n1], (mnaMatrix.get([n1, n1]) as number) + g1)
+    mnaMatrix.set([nWiper, nWiper], (mnaMatrix.get([nWiper, nWiper]) as number) + g1)
+    mnaMatrix.set([n1, nWiper], (mnaMatrix.get([n1, nWiper]) as number) - g1)
+    mnaMatrix.set([nWiper, n1], (mnaMatrix.get([nWiper, n1]) as number) - g1)
+
+    // R2 stamp: wiper to terminal2
+    mnaMatrix.set([nWiper, nWiper], (mnaMatrix.get([nWiper, nWiper]) as number) + g2)
+    mnaMatrix.set([n2, n2], (mnaMatrix.get([n2, n2]) as number) + g2)
+    mnaMatrix.set([nWiper, n2], (mnaMatrix.get([nWiper, n2]) as number) - g2)
+    mnaMatrix.set([n2, nWiper], (mnaMatrix.get([n2, nWiper]) as number) - g2)
+
+    console.log(
+      `Potentiometer ${this.id}: G1=${g1.toExponential(3)}S, G2=${g2.toExponential(3)}S, nodes ${n1}-${nWiper}-${n2}`,
+    )
+    return { branchCurrents: [] }
+  }
+
+  calculateCurrent(
+    solution: Matrix,
+    nodeMap: Map<string, number>,
+    branchCurrents: number[],
+    allStampers?: ComponentStamper[],
+  ): number {
+    // Return current through R1 (terminal1 to wiper) as the main current
+    const [n1, n2, nWiper] = this.getNodeIndices(nodeMap)
+    const v1 = solution.get([n1, 0]) as number
+    const vWiper = solution.get([nWiper, 0]) as number
+    return (v1 - vWiper) / this.r1
+  }
+}
+
+/**
  * Component stamper factory
  */
 class ComponentStamperFactory {
@@ -443,6 +547,8 @@ class ComponentStamperFactory {
     ['voltage_source', VoltageSourceStamper],
     ['current_source', CurrentSourceStamper],
     ['switch', SwitchStamper],
+    ['variable_resistor', VariableResistorStamper],
+    ['potentiometer', PotentiometerStamper],
     ['ground', GroundStamper],
     ['node', NodeStamper],
   ])
@@ -539,6 +645,41 @@ function detectFloatingNodes(
         console.log(`🔍 ${component.type} ${component.id} (OPEN): no connectivity`)
         switchCausedFloating = true
       }
+    } else if (component.type === 'variable_resistor') {
+      // Variable resistors provide DC connectivity between their terminals
+      const definition = getComponentDefinition(component.type)!
+      const term1Id = `${component.id}:${definition.terminals[0].id}`
+      const term2Id = `${component.id}:${definition.terminals[1].id}`
+      node1 = termToNodeIndex.get(term1Id)
+      node2 = termToNodeIndex.get(term2Id)
+      console.log(`🔍 ${component.type} ${component.id}: nodes ${node1} ↔ ${node2}`)
+    } else if (component.type === 'potentiometer') {
+      // Potentiometers provide DC connectivity between all three terminals
+      const definition = getComponentDefinition(component.type)!
+      const term1Id = `${component.id}:${definition.terminals[0].id}` // terminal1
+      const term2Id = `${component.id}:${definition.terminals[1].id}` // terminal2
+      const wiperTermId = `${component.id}:${definition.terminals[2].id}` // wiper
+
+      const node1 = termToNodeIndex.get(term1Id)
+      const node2 = termToNodeIndex.get(term2Id)
+      const nodeWiper = termToNodeIndex.get(wiperTermId)
+
+      console.log(
+        `🔍 ${component.type} ${component.id}: nodes ${node1} ↔ ${nodeWiper} ↔ ${node2}`,
+      )
+
+      // Add connectivity: terminal1 ↔ wiper ↔ terminal2
+      if (node1 !== undefined && nodeWiper !== undefined) {
+        connectivity.get(node1)!.add(nodeWiper)
+        connectivity.get(nodeWiper)!.add(node1)
+      }
+      if (nodeWiper !== undefined && node2 !== undefined) {
+        connectivity.get(nodeWiper)!.add(node2)
+        connectivity.get(node2)!.add(nodeWiper)
+      }
+
+      // Skip the standard two-terminal connectivity logic below
+      continue
     }
 
     // Add bidirectional connectivity
@@ -662,57 +803,123 @@ function detectFloatingNodes(
           }
         }
 
-        if (!hasAlternatePath) {
+        // ALWAYS check for dead-end nodes, even if main path exists
+        // This detects partial dead-ends where some branches have no return path
+        console.log(`🔍 Checking for dead-end branches from ${component.type} ${component.id}...`)
+
+        const deadEndNodes = new Set<number>()
+
+        // Build reachable nodes from positive terminal (excluding direct source connection)
+        const reachableFromPos = new Set<number>()
+        const posQueue = [posNode]
+        reachableFromPos.add(posNode)
+
+        while (posQueue.length > 0) {
+          const currentNode = posQueue.shift()!
+          const neighbors = tempConnectivity.get(currentNode) || new Set<number>()
+
+          for (const neighbor of neighbors) {
+            if (!reachableFromPos.has(neighbor)) {
+              reachableFromPos.add(neighbor)
+              posQueue.push(neighbor)
+            }
+          }
+        }
+
+        // Enhanced dead-end detection: Check for nodes with degree-1 connectivity
+        // (only one electrical connection) that create current flow impossibilities
+        for (const node of reachableFromPos) {
+          if (node === posNode || node === negNode) continue // Skip source terminals
+
+          const nodeConnections = tempConnectivity.get(node) || new Set<number>()
+
+          // Check if this is a terminal node (degree-1) that can't complete current loop
+          if (nodeConnections.size <= 1) {
+            // This is a dead-end: current can flow TO this node but has no exit path
+            deadEndNodes.add(node)
+            console.log(
+              `🔍 DEAD-END DETECTED: Node ${node} has only ${nodeConnections.size} connection(s) - current cannot exit`,
+            )
+            continue
+          }
+
+          // For nodes with multiple connections, verify they can reach negative terminal
+          // via a path that doesn't backtrack through the same route
+          let foundIndependentPath = false
+
+          // Try each neighbor as a potential path back to negative
+          for (const neighbor of nodeConnections) {
+            // Create a modified connectivity that doesn't allow backtracking to this node
+            const noBacktrackConnectivity = new Map<number, Set<number>>()
+            for (const [n, connections] of tempConnectivity.entries()) {
+              noBacktrackConnectivity.set(n, new Set(connections))
+            }
+
+            // Remove the edge back to current node to prevent backtracking
+            noBacktrackConnectivity.get(neighbor)?.delete(node)
+
+            // Try to reach negative terminal from this neighbor
+            const visited = new Set<number>([node]) // Don't revisit the starting node
+            const queue: number[] = [neighbor]
+            visited.add(neighbor)
+
+            while (queue.length > 0) {
+              const currentNode: number = queue.shift()!
+
+              if (currentNode === negNode) {
+                foundIndependentPath = true
+                break
+              }
+
+              const connections = noBacktrackConnectivity.get(currentNode) || new Set<number>()
+              for (const conn of connections) {
+                if (!visited.has(conn)) {
+                  visited.add(conn)
+                  queue.push(conn)
+                }
+              }
+            }
+
+            if (foundIndependentPath) {
+              break // Found a valid return path
+            }
+          }
+
+          if (!foundIndependentPath) {
+            deadEndNodes.add(node)
+            console.log(
+              `🔍 DEAD-END DETECTED: Node ${node} cannot reach negative terminal without backtracking`,
+            )
+          }
+        }
+
+        // Report dead-end nodes
+        for (const deadEndNode of deadEndNodes) {
+          // Find terminals on this dead-end node
+          const deadEndTerminals: string[] = []
+          for (const [terminalId, termNodeIndex] of termToNodeIndex.entries()) {
+            if (termNodeIndex === deadEndNode) {
+              deadEndTerminals.push(terminalId)
+            }
+          }
+
+          console.log(
+            `🔍 DEAD-END NODE: ${deadEndNode} with terminals: [${deadEndTerminals.join(', ')}]`,
+          )
+
+          floatingNodes.push(deadEndNode)
+          warnings.push(
+            `⚠️  Incomplete circuit: Node ${deadEndNode} with terminals [${deadEndTerminals.join(', ')}] has no return path to ${component.type} ${component.id}`,
+          )
+          warnings.push(
+            `   This creates an incomplete current loop. GMIN stabilization applied for DC analysis.`,
+          )
+        }
+
+        if (!hasAlternatePath && deadEndNodes.size === 0) {
           console.log(
             `🔍 INCOMPLETE CIRCUIT DETECTED: ${component.type} ${component.id} has no return path`,
           )
-
-          // Find the dead-end nodes (nodes reachable from positive but not returning to negative)
-          const deadEndNodes = new Set<number>()
-          const reachableFromPos = new Set<number>()
-          const posQueue = [posNode]
-          reachableFromPos.add(posNode)
-
-          while (posQueue.length > 0) {
-            const currentNode = posQueue.shift()!
-            const neighbors = tempConnectivity.get(currentNode)!
-
-            for (const neighbor of neighbors) {
-              if (!reachableFromPos.has(neighbor)) {
-                reachableFromPos.add(neighbor)
-                posQueue.push(neighbor)
-              }
-            }
-          }
-
-          // Nodes reachable from positive but not connected back to negative are dead-ends
-          for (const node of reachableFromPos) {
-            if (node !== posNode && node !== negNode) {
-              deadEndNodes.add(node)
-            }
-          }
-
-          for (const deadEndNode of deadEndNodes) {
-            // Find terminals on this dead-end node
-            const deadEndTerminals: string[] = []
-            for (const [terminalId, termNodeIndex] of termToNodeIndex.entries()) {
-              if (termNodeIndex === deadEndNode) {
-                deadEndTerminals.push(terminalId)
-              }
-            }
-
-            console.log(
-              `🔍 DEAD-END NODE: ${deadEndNode} with terminals: [${deadEndTerminals.join(', ')}]`,
-            )
-
-            floatingNodes.push(deadEndNode)
-            warnings.push(
-              `⚠️  Incomplete circuit: Node ${deadEndNode} with terminals [${deadEndTerminals.join(', ')}] has no return path to ${component.type} ${component.id}`,
-            )
-            warnings.push(
-              `   This creates an incomplete current loop. GMIN stabilization applied for DC analysis.`,
-            )
-          }
         }
       }
     }

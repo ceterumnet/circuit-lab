@@ -30,14 +30,39 @@
       >
         <label :for="`prop-${propDef.key}`">{{ propDef.label }}:</label>
 
-        <!-- Number Input -->
+        <!-- Number Input with Slider for Variable Components -->
         <div v-if="propDef.type === 'number'" class="value-input-group">
+          <!-- Slider for resistance on variable resistors and wiper position on potentiometers -->
+          <div v-if="shouldShowSlider(propDef.key)" class="slider-container">
+            <input
+              :id="`slider-${propDef.key}`"
+              v-model.number="editableProperties[propDef.key]"
+              type="range"
+              class="property-slider"
+              :min="getSliderMin(propDef.key)"
+              :max="getSliderMax(propDef.key)"
+              :step="getSliderStep(propDef.key)"
+              @input="updatePropertyRealTime(propDef.key)"
+            />
+            <div class="slider-labels">
+              <span class="slider-label-min">{{
+                formatSliderValue(getSliderMin(propDef.key), propDef.unit)
+              }}</span>
+              <span class="slider-label-max">{{
+                formatSliderValue(getSliderMax(propDef.key), propDef.unit)
+              }}</span>
+            </div>
+          </div>
+
+          <!-- Number input -->
           <input
             :id="`prop-${propDef.key}`"
             v-model.number="editableProperties[propDef.key]"
             type="number"
             class="property-input"
+            :class="{ 'with-slider': shouldShowSlider(propDef.key) }"
             @blur="updateProperty(propDef.key)"
+            @input="updatePropertyRealTime(propDef.key)"
           />
           <span v-if="propDef.unit" class="unit-span">{{ propDef.unit }}</span>
         </div>
@@ -251,6 +276,96 @@ function updateProperty(key: string) {
     properties: newProperties,
   })
   historyStore.saveState(circuitStore.currentCircuit, `Update ${key}`)
+}
+
+// Real-time property updates for sliders (no history saving)
+function updatePropertyRealTime(key: string) {
+  const newProperties = {
+    ...props.component.properties,
+    [key]: editableProperties.value[key],
+  }
+  circuitStore.updateComponent(props.component.id, {
+    properties: newProperties,
+  })
+  // No history saving for real-time updates to avoid spam
+}
+
+// Slider helper functions
+function shouldShowSlider(propertyKey: string): boolean {
+  const componentType = props.component.type
+
+  // Show slider for resistance on variable resistors
+  if (componentType === 'variable_resistor' && propertyKey === 'resistance') {
+    return true
+  }
+
+  // Show slider for wiper position on potentiometers
+  if (componentType === 'potentiometer' && propertyKey === 'wiperPosition') {
+    return true
+  }
+
+  return false
+}
+
+function getSliderMin(propertyKey: string): number {
+  const componentType = props.component.type
+
+  if (componentType === 'variable_resistor' && propertyKey === 'resistance') {
+    return (props.component.properties?.minResistance as number) || 0
+  }
+
+  if (componentType === 'potentiometer' && propertyKey === 'wiperPosition') {
+    return 0 // 0%
+  }
+
+  return 0
+}
+
+function getSliderMax(propertyKey: string): number {
+  const componentType = props.component.type
+
+  if (componentType === 'variable_resistor' && propertyKey === 'resistance') {
+    return (props.component.properties?.maxResistance as number) || 10000
+  }
+
+  if (componentType === 'potentiometer' && propertyKey === 'wiperPosition') {
+    return 100 // 100%
+  }
+
+  return 100
+}
+
+function getSliderStep(propertyKey: string): number {
+  const componentType = props.component.type
+
+  if (componentType === 'variable_resistor' && propertyKey === 'resistance') {
+    const max = getSliderMax(propertyKey)
+    return Math.max(1, Math.round(max / 1000)) // 1000 steps
+  }
+
+  if (componentType === 'potentiometer' && propertyKey === 'wiperPosition') {
+    return 1 // 1% steps
+  }
+
+  return 1
+}
+
+function formatSliderValue(value: number, unit?: string): string {
+  if (unit === '%') {
+    return `${value}%`
+  }
+
+  if (unit === 'Ω') {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M${unit}`
+    }
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}k${unit}`
+    }
+    return `${value}${unit}`
+  }
+
+  return `${value}${unit || ''}`
 }
 
 function deleteComponent() {
@@ -524,5 +639,83 @@ const connectedComponents = computed(() => {
   font-family: monospace;
   text-align: right;
   word-break: break-all;
+}
+
+/* Slider styles */
+.slider-container {
+  margin-bottom: 0.5rem;
+}
+
+.property-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #dee2e6;
+  outline: none;
+  -webkit-appearance: none;
+  margin: 0.25rem 0;
+}
+
+.property-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.property-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.property-slider:focus {
+  background: #adb5bd;
+}
+
+.property-slider:focus::-webkit-slider-thumb {
+  background: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.property-slider:focus::-moz-range-thumb {
+  background: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.slider-label-min,
+.slider-label-max {
+  font-family: monospace;
+}
+
+.property-input.with-slider {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  text-align: center;
+  font-weight: 500;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+.property-input.with-slider:focus {
+  background: white;
+  border-color: #80bdff;
 }
 </style>
