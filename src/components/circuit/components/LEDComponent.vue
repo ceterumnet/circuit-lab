@@ -202,6 +202,7 @@ import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue
 import LEDSymbol from '@/components/circuit/symbols/LEDSymbol.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useInteractionStore } from '@/stores/interaction'
+import { useCircuitStore } from '@/stores/circuit'
 import { getComponentDefinition } from '@/registry/components'
 
 interface Props {
@@ -222,6 +223,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const interactionStore = useInteractionStore()
+const circuitStore = useCircuitStore()
 
 const componentDefinition = computed(() => getComponentDefinition(props.component.type))
 
@@ -262,11 +264,19 @@ const isHighlighted = computed(() => {
   return hovered?.componentId === props.component.id
 })
 
-// LED state determination (will be enhanced when simulation integration is complete)
+// LED state determination connected to simulation results
 const isLEDOn = computed(() => {
-  // Placeholder for LED on/off state detection
-  // Will be connected to simulation results when Newton-Raphson solver is integrated
-  return false
+  const dcSolution = circuitStore.dcSolution
+  if (!dcSolution) return false
+
+  // Get LED current from simulation results
+  const ledCurrent = dcSolution.currents[props.component.id]
+  if (ledCurrent === undefined) return false
+
+  // LED is considered "on" when current exceeds a reasonable threshold
+  // For typical LEDs, 0.5mA (500μA) is a good threshold for visible light
+  const onThreshold = 0.0005 // 0.5mA
+  return Math.abs(ledCurrent) > onThreshold
 })
 
 const ledState = computed(() => {
