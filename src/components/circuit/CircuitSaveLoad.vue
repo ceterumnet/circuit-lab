@@ -21,14 +21,7 @@
     <!-- Load Section -->
     <div class="section">
       <h3>Load Circuit</h3>
-      <div v-if="savedCircuits.length === 0" class="empty-state">
-        <p>No saved circuits found.</p>
-        <button class="seed-button" @click="seedTestCircuits">
-          <Database class="icon" />
-          Load Test Circuits
-        </button>
-      </div>
-      <div v-else class="circuit-list">
+      <div class="circuit-list">
         <div v-for="circuit in savedCircuits" :key="circuit.name" class="circuit-item">
           <div class="circuit-info">
             <span class="circuit-name">{{ circuit.name }}</span>
@@ -86,7 +79,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useHistoryStore } from '@/stores/history'
 import { Save, FolderOpen, Trash2, Download, Upload, Database } from 'lucide-vue-next'
-import { seedSavedCircuitsWithTests } from '@/test-circuits'
 
 const circuitStore = useCircuitStore()
 const historyStore = useHistoryStore()
@@ -205,18 +197,6 @@ function handleFileImport(event: Event) {
   // Reset file input
   if (fileInput.value) {
     fileInput.value.value = ''
-  }
-}
-
-// Seed test circuits
-async function seedTestCircuits() {
-  try {
-    const count = await seedSavedCircuitsWithTests()
-    showStatus(`${count} test circuits loaded!`, 'success')
-    // Trigger UI refresh to show the newly seeded circuits
-    refreshTrigger.value++
-  } catch (error) {
-    showStatus('Failed to load test circuits', 'error')
   }
 }
 

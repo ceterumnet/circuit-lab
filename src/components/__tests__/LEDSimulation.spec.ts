@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { solveDC } from '@/services/simulation'
-import type { Circuit } from '@/types/components'
+import type { Circuit, CircuitComponent } from '@/types/components'
 
 describe('LED Simulation', () => {
   // Function to create a fresh circuit for each test to prevent contamination
@@ -197,7 +197,7 @@ describe('LED Simulation', () => {
       const freshCircuit = JSON.parse(JSON.stringify(createTestCircuit()))
       const reversedCircuit = {
         ...freshCircuit,
-        components: freshCircuit.components.map((comp: any) => {
+        components: freshCircuit.components.map((comp: CircuitComponent) => {
           if (comp.id === 'W1') {
             return {
               ...comp,
@@ -240,7 +240,7 @@ describe('LED Simulation', () => {
       const freshCircuit = JSON.parse(JSON.stringify(createTestCircuit()))
       const lowVoltageCircuit = {
         ...freshCircuit,
-        components: freshCircuit.components.map((comp: any) => {
+        components: freshCircuit.components.map((comp: CircuitComponent) => {
           if (comp.id === 'V1') {
             return { ...comp, properties: { voltage: 1 } }
           }
