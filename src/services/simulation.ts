@@ -600,6 +600,7 @@ class DiodeStamper implements ComponentStamper, NonLinearStamper {
 
   /**
    * Stamp linearized equivalent circuit (companion model approach from Phase 1.99)
+   * Fixed: Proper Norton equivalent circuit implementation
    */
   stampLinearized(
     mnaMatrix: Matrix,
@@ -615,9 +616,16 @@ class DiodeStamper implements ComponentStamper, NonLinearStamper {
 
     const current = this.calculateNonLinearCurrent(diodeVoltage)
     const conductance = this.calculateConductance(diodeVoltage)
-    const equivalentCurrent = current - conductance * diodeVoltage
 
-    // Stamp equivalent conductance
+    // FIXED: Norton equivalent circuit companion model
+    // For a nonlinear element I=f(V), the Norton equivalent is:
+    // I_norton = f(V_old) - g(V_old) * V_old  (constant current source)
+    // G_norton = g(V_old)                      (linear conductance)
+    // This gives: I_total = G_norton * V_new + I_norton
+    // Which linearizes to: f(V_old) + g(V_old) * (V_new - V_old) ≈ f(V_new)
+    const nortonCurrent = current - conductance * diodeVoltage
+
+    // Stamp Norton equivalent conductance (same as before)
     mnaMatrix.set(
       [anodeNode, anodeNode],
       (mnaMatrix.get([anodeNode, anodeNode]) as number) + conductance,
@@ -635,12 +643,15 @@ class DiodeStamper implements ComponentStamper, NonLinearStamper {
       (mnaMatrix.get([cathodeNode, anodeNode]) as number) - conductance,
     )
 
-    // Stamp equivalent current source
-    rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) + equivalentCurrent)
-    rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) - equivalentCurrent)
+    // FIXED: Stamp Norton equivalent current source with correct polarity
+    // Current flows from anode to cathode (positive direction)
+    // KCL: current INTO anode node = +nortonCurrent
+    // KCL: current OUT OF cathode node = -nortonCurrent
+    rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) - nortonCurrent)
+    rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) + nortonCurrent)
 
     console.log(
-      `Diode ${this.id}: V=${diodeVoltage.toFixed(4)}V, I=${current.toExponential(2)}A, G=${conductance.toExponential(2)}S`,
+      `Diode ${this.id}: V=${diodeVoltage.toFixed(4)}V, I=${current.toExponential(2)}A, G=${conductance.toExponential(2)}S, I_norton=${nortonCurrent.toExponential(2)}A`,
     )
   }
 
