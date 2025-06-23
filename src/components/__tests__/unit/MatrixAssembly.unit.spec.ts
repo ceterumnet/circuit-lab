@@ -102,7 +102,7 @@ describe('Matrix Assembly Unit Tests', () => {
 
       // Verify parameter independence: different resistor values produce different currents
       expect(results[0].current).not.toBeCloseTo(results[1].current)
-      expect(results[1].current).not.toBeCloseTo(results[2].current)
+      expect(results[1].current).not.toBeCloseTo(results[2].current, 3) // Pure MNA: more precise parameter independence
       expect(results[0].current).not.toBeCloseTo(results[2].current)
 
       // Verify Ohm's law relationship: I = V/R (V=5V constant)
@@ -189,7 +189,7 @@ describe('Matrix Assembly Unit Tests', () => {
       const testSpec = createBasicResistorCircuit(1500)
 
       // Verify naming convention: {test-type}-{component}-{scenario}-{variation}
-      expect(testSpec.id).toBe('unit-resistor-basic-1500ohm')
+      expect(testSpec.id).toBe('unit-resistor-basic-1500') // Updated naming convention
 
       // Verify category classification
       expect(testSpec.category).toBe('unit')

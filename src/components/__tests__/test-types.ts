@@ -15,19 +15,19 @@ export interface ToleranceSpec {
  * Pre-defined tolerance presets for different testing scenarios
  */
 export const TolerancePresets = {
-  /** High precision for linear circuits with enhanced numerical solver */
+  /** High precision for linear circuits with enhanced numerical solver (Pure MNA with wire resistance) */
   HIGH_PRECISION_LINEAR: {
-    voltage: 1e-9,
-    current: 1e-12,
-    relative: 1e-6,
+    voltage: 1e-9, // 1nV (high precision voltage tolerance)
+    current: 1e-12, // 1pA (high precision current tolerance)
+    relative: 1e-6, // 0.0001% (high precision relative tolerance)
     numerical: 1e-15,
   } as ToleranceSpec,
 
-  /** Standard tolerance for typical linear circuit analysis */
+  /** Standard tolerance for typical linear circuit analysis (accounts for wire resistance effects) */
   STANDARD_LINEAR: {
-    voltage: 1e-6,
-    current: 1e-9,
-    relative: 1e-3,
+    voltage: 1e-6, // 1µV (standard precision accounting for wire effects)
+    current: 1e-9, // 1nA (standard precision accounting for wire resistance)
+    relative: 1e-3, // 0.1% (standard relative tolerance)
     numerical: 1e-12,
   } as ToleranceSpec,
 

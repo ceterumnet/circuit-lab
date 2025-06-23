@@ -78,6 +78,13 @@ abstract class ResistiveStamper implements ComponentStamper {
     if (this.resistance <= 0) return { branchCurrents: [] }
 
     const [n1, n2] = this.getNodeIndices(nodeMap)
+
+    // PURE MNA: Same-node connections don't need stamping (no voltage difference)
+    if (n1 === n2) {
+      console.log(`${this.type} ${this.id}: Same-node connection (${n1}-${n2}), no stamping needed`)
+      return { branchCurrents: [] }
+    }
+
     const g = 1 / this.resistance
 
     // Standard resistor stamp: G matrix modification
@@ -97,9 +104,20 @@ abstract class ResistiveStamper implements ComponentStamper {
     allStampers?: ComponentStamper[],
   ): number {
     const [n1, n2] = this.getNodeIndices(nodeMap)
+
+    // PURE MNA: Same-node connections carry zero current by definition
+    if (n1 === n2) {
+      console.log(`${this.type} ${this.id}: Same-node connection, current = 0A`)
+      return 0
+    }
+
     const v1 = solution.get([n1, 0]) as number
     const v2 = solution.get([n2, 0]) as number
-    return (v1 - v2) / this.resistance
+    const current = (v1 - v2) / this.resistance
+    console.log(
+      `${this.type} ${this.id}: Pure MNA current = I = (${v1.toFixed(4)}V - ${v2.toFixed(4)}V) / ${this.resistance}Ω = ${current.toExponential(3)}A`,
+    )
+    return current
   }
 }
 
@@ -114,12 +132,10 @@ class ResistorStamper extends ResistiveStamper {
 }
 
 /**
- * Wire component stamper - ALL wires now get branch current variables for proper MNA analysis
- * This eliminates heuristic-based current calculations and ensures KCL compliance
+ * Wire component stamper - PURE MNA: Uses G-matrix stamping like all passive components
+ * This ensures consistent Ohm's law calculations and eliminates KCL violations
  */
 class WireStamper extends ResistiveStamper {
-  private branchIndex: number = -1
-
   constructor(component: CircuitComponent) {
     // Use wire's configured resistance, default to 1mΩ for numerical stability
     // 1mΩ is small enough to be negligible in most circuits but avoids conditioning issues
@@ -154,76 +170,11 @@ class WireStamper extends ResistiveStamper {
     return [n1, n2]
   }
 
-  stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
-  ): StampResult {
-    const [n1, n2] = this.getNodeIndices(nodeMap)
+  // PURE MNA: Wire uses inherited G-matrix stamping from ResistiveStamper
+  // No need to override stampDC - uses standard conductance stamping
 
-    // SPECIAL CASE: Same-node wires (n1 === n2) don't carry current
-    // These represent direct connections within the same electrical node
-    if (n1 === n2) {
-      console.log(`Wire ${this.id}: Same-node connection (${n1}-${n2}), no branch current needed`)
-      return { branchCurrents: [] }
-    }
-
-    this.branchIndex = nextBranchIndex
-
-    // EXTENDED MNA: Different-node wires get branch current variables
-    // This ensures every inter-node wire current is directly calculated by MNA
-
-    // Standard voltage-controlled current source stamp (wire as resistor with branch current)
-    // Equations: V1 - V2 = I_wire * R_wire
-    //           I_wire is the branch current variable
-
-    // B matrix: current flowing from node n1 to node n2
-    mnaMatrix.set([n1, this.branchIndex], 1)
-    mnaMatrix.set([n2, this.branchIndex], -1)
-
-    // C matrix: voltage constraint equation
-    mnaMatrix.set([this.branchIndex, n1], 1)
-    mnaMatrix.set([this.branchIndex, n2], -1)
-
-    // Add resistance effect to the branch equation
-    // V1 - V2 - I_wire * R_wire = 0
-    mnaMatrix.set([this.branchIndex, this.branchIndex], -this.resistance)
-
-    console.log(
-      `Wire ${this.id}: R=${this.resistance}Ω, nodes ${n1}-${n2}, branch current index ${this.branchIndex}`,
-    )
-
-    return { branchCurrents: [this.branchIndex] }
-  }
-
-  calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
-  ): number {
-    const [n1, n2] = this.getNodeIndices(nodeMap)
-
-    // Same-node wires carry zero current by definition
-    if (n1 === n2) {
-      console.log(`Wire ${this.id}: Same-node wire, current = 0A`)
-      return 0
-    }
-
-    // CRITICAL: Direct MNA solution - no heuristics, no special cases
-    // This is the current that a real multimeter would measure if inserted in series
-    if (this.branchIndex === -1) {
-      console.error(
-        `Wire ${this.id}: Branch index not set for inter-node wire, cannot calculate current`,
-      )
-      return 0
-    }
-
-    const current = solution.get([this.branchIndex, 0]) as number
-    console.log(`Wire ${this.id}: Direct MNA current = ${current}A`)
-    return current
-  }
+  // PURE MNA: Wire uses inherited Ohm's law current calculation from ResistiveStamper
+  // No need to override calculateCurrent - uses I = (V1-V2)/R
 }
 
 /**
@@ -1269,20 +1220,14 @@ export async function solveDC(
     let totalBranchCurrents = 0
     const numNodes = electricalNodes.length
 
-    // CRITICAL: Only components that need branch currents add them to the MNA matrix
-    // This eliminates the need for heuristic current calculations
+    // PURE MNA: Only components that genuinely need branch currents add them to the MNA matrix
+    // Passive components (resistors, wires) use G-matrix stamping - no branch currents needed
     for (const stamper of stampers) {
       if (stamper.type === 'voltage_source') {
         totalBranchCurrents += 1 // Each voltage source adds one branch current
-      } else if (stamper.type === 'wire') {
-        // Only inter-node wires get branch currents, same-node wires don't
-        const wireStamper = stamper as WireStamper
-        const [n1, n2] = wireStamper.getNodeIndices(termToNodeIndex)
-        if (n1 !== n2) {
-          totalBranchCurrents += 1 // Only inter-node wires add branch currents
-        }
       }
-      // Other components (resistors, grounds, nodes) don't add branch currents
+      // REMOVED: Wire branch current counting - wires now use G-matrix stamping
+      // Other components (resistors, wires, grounds, nodes) don't add branch currents
     }
 
     const matrixSize = numNodes + totalBranchCurrents
