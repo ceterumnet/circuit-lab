@@ -514,49 +514,46 @@ class DiodeStamper implements ComponentStamper, NonLinearStamper {
   }
 
   /**
-   * Calculate diode current using circuit-optimized parameters (same approach as working LED)
-   * Uses shifted exponential to avoid numerical overflow: I = Is * (exp((V-Vf)/Vt) - 1)
+   * Calculate diode current using the STANDARD SHOCKLEY DIODE EQUATION
+   * I = Is * (exp(V/Vt) - 1) - the fundamental semiconductor physics equation
    */
   calculateNonLinearCurrent(voltage: number): number {
     if (voltage < 0) {
-      // Reverse bias - small leakage current
-      return -1e-12
+      // Reverse bias - small leakage current (Shockley equation still applies)
+      const Vt = 0.026 // Standard thermal voltage at room temperature (26mV)
+      const Is = 1e-12 // Standard silicon diode saturation current (1pA)
+      const expArg = Math.max(voltage / Vt, -20) // Prevent underflow
+      return Is * (Math.exp(expArg) - 1) // Will be negative for reverse bias
     }
 
-    // CIRCUIT-OPTIMIZED PARAMETERS: Calibrated for silicon diode in 5V circuits
-    // Target: Diode operates at ~0.7V with realistic milliamp currents
-    const Is = 1e-9 // Saturation current (1nA - more realistic for silicon diode)
-    const Vt = 0.1 // Thermal voltage (100mV - same as working LED for numerical stability)
-    const Vf = 0.65 // Forward voltage threshold (0.65V - closer to silicon turn-on)
+    // STANDARD SHOCKLEY EQUATION PARAMETERS - Real semiconductor physics
+    const Is = 1e-12 // Saturation current (1pA - typical silicon diode)
+    const Vt = 0.026 // Thermal voltage at room temperature (26mV = kT/q)
 
-    // Calculate exponential with voltage offset and overflow protection
-    const expArg = Math.min((voltage - Vf) / Vt, 20) // Prevent overflow
+    // Standard Shockley diode equation: I = Is * (exp(V/Vt) - 1)
+    // NO artificial voltage offset - let physics determine the turn-on voltage
+    const expArg = Math.min(voltage / Vt, 20) // Prevent overflow
     const current = Is * (Math.exp(expArg) - 1)
 
-    // Ensure non-negative current (handle numerical precision)
-    return Math.max(current, 1e-12)
+    // Ensure minimum current for numerical stability
+    return Math.max(current, 1e-15)
   }
 
   /**
-   * Calculate diode conductance - derivative of shifted exponential model
-   * dI/dV = (Is/Vt) * exp((V-Vf)/Vt) - same approach as working LED
+   * Calculate diode conductance - derivative of STANDARD SHOCKLEY EQUATION
+   * dI/dV = (Is/Vt) * exp(V/Vt) - the proper derivative of the Shockley equation
    */
   calculateConductance(voltage: number): number {
-    if (voltage < 0) {
-      return 1e-12 // Small conductance in reverse
-    }
+    // IDENTICAL PARAMETERS to current calculation - STANDARD SHOCKLEY
+    const Is = 1e-12 // Same as current calculation (1pA - standard silicon)
+    const Vt = 0.026 // Same as current calculation (26mV - standard thermal voltage)
 
-    // Same parameters as current calculation - CIRCUIT-OPTIMIZED
-    const Is = 1e-9 // Same as current calculation (1nA - more realistic)
-    const Vt = 0.1 // Same as current calculation (100mV - numerical stability)
-    const Vf = 0.65 // Same forward voltage threshold (0.65V)
-
-    // Derivative of I = Is * (exp((V-Vf)/Vt) - 1) is: dI/dV = (Is/Vt) * exp((V-Vf)/Vt)
-    const expArg = Math.min((voltage - Vf) / Vt, 20) // Same limit as current
+    // Derivative of I = Is * (exp(V/Vt) - 1) is: dI/dV = (Is/Vt) * exp(V/Vt)
+    const expArg = Math.min(voltage / Vt, 20) // Prevent overflow
     const conductance = (Is / Vt) * Math.exp(expArg)
 
     // Ensure minimum conductance for numerical stability
-    return Math.max(conductance, 1e-12)
+    return Math.max(conductance, 1e-15)
   }
 
   /**
