@@ -1,0 +1,105 @@
+{
+  "id": "unit-resistor-basic-1k",
+  "description": "Basic 1kΩ resistor circuit for unit testing component stamping operations",
+  "category": "unit",
+  "testType": "stamper",
+  "component": "resistor",
+  "scenario": "basic",
+  "variation": "1k",
+  "toleranceJustification": "Linear circuit with resistor-only network should achieve highest precision with enhanced numerical solver",
+  "circuit": {
+    "id": "test-basic-resistor-1k",
+    "name": "Basic 1kΩ Resistor Circuit",
+    "components": [
+      {
+        "id": "VS1",
+        "type": "voltage_source",
+        "position": { "x": 100, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "voltage": 5.0,
+          "label": "V1"
+        }
+      },
+      {
+        "id": "R1",
+        "type": "resistor",
+        "position": { "x": 200, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "resistance": 1000,
+          "label": "R1"
+        }
+      },
+      {
+        "id": "GND1",
+        "type": "ground",
+        "position": { "x": 150, "y": 200 },
+        "rotation": 0,
+        "selected": false
+      }
+    ],
+    "wires": [
+      {
+        "id": "W1",
+        "type": "wire",
+        "position": { "x": 150, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "VS1_positive",
+          "endTerminal": "R1_1",
+          "startPosition": { "x": 125, "y": 100 },
+          "endPosition": { "x": 175, "y": 100 }
+        }
+      },
+      {
+        "id": "W2",
+        "type": "wire",
+        "position": { "x": 150, "y": 150 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "R1_2",
+          "endTerminal": "GND1_terminal",
+          "startPosition": { "x": 225, "y": 100 },
+          "endPosition": { "x": 150, "y": 175 }
+        }
+      },
+      {
+        "id": "W3",
+        "type": "wire",
+        "position": { "x": 100, "y": 150 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "VS1_negative",
+          "endTerminal": "GND1_terminal",
+          "startPosition": { "x": 75, "y": 100 },
+          "endPosition": { "x": 150, "y": 175 }
+        }
+      }
+    ],
+    "probes": [],
+    "nodes": {}
+  },
+  "expectedResults": {
+    "voltages": {
+      "N1": 5.0,
+      "N2": 0.0,
+      "N0": 0.0
+    },
+    "currents": {
+      "R1": 0.005,
+      "VS1": 0.005
+    },
+    "tolerances": {
+      "voltage": 1e-9,
+      "current": 1e-12,
+      "relative": 1e-6,
+      "numerical": 1e-15
+    }
+  }
+}

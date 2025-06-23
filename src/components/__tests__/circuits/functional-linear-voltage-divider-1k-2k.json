@@ -1,0 +1,131 @@
+{
+  "id": "functional-linear-voltage-divider-1k-2k",
+  "description": "Voltage divider with R1=1kΩ, R2=2kΩ, V=5V for complete linear circuit analysis",
+  "category": "functional",
+  "testType": "linear",
+  "component": "resistor",
+  "scenario": "voltage-divider",
+  "variation": "1k-2k",
+  "toleranceJustification": "Standard linear circuit should maintain good precision with realistic component tolerances",
+  "circuit": {
+    "id": "test-voltage-divider-1k-2k",
+    "name": "1kΩ-2kΩ Voltage Divider Circuit",
+    "components": [
+      {
+        "id": "VS1",
+        "type": "voltage_source",
+        "position": { "x": 100, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "voltage": 5.0,
+          "label": "V1"
+        }
+      },
+      {
+        "id": "R1",
+        "type": "resistor",
+        "position": { "x": 200, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "resistance": 1000,
+          "label": "R1"
+        }
+      },
+      {
+        "id": "R2",
+        "type": "resistor",
+        "position": { "x": 300, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "resistance": 2000,
+          "label": "R2"
+        }
+      },
+      {
+        "id": "GND1",
+        "type": "ground",
+        "position": { "x": 200, "y": 200 },
+        "rotation": 0,
+        "selected": false
+      }
+    ],
+    "wires": [
+      {
+        "id": "W1",
+        "type": "wire",
+        "position": { "x": 150, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "VS1_positive",
+          "endTerminal": "R1_1",
+          "startPosition": { "x": 125, "y": 100 },
+          "endPosition": { "x": 175, "y": 100 }
+        }
+      },
+      {
+        "id": "W2",
+        "type": "wire",
+        "position": { "x": 250, "y": 100 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "R1_2",
+          "endTerminal": "R2_1",
+          "startPosition": { "x": 225, "y": 100 },
+          "endPosition": { "x": 275, "y": 100 }
+        }
+      },
+      {
+        "id": "W3",
+        "type": "wire",
+        "position": { "x": 325, "y": 150 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "R2_2",
+          "endTerminal": "GND1_terminal",
+          "startPosition": { "x": 325, "y": 100 },
+          "endPosition": { "x": 200, "y": 175 }
+        }
+      },
+      {
+        "id": "W4",
+        "type": "wire",
+        "position": { "x": 100, "y": 150 },
+        "rotation": 0,
+        "selected": false,
+        "properties": {
+          "startTerminal": "VS1_negative",
+          "endTerminal": "GND1_terminal",
+          "startPosition": { "x": 75, "y": 100 },
+          "endPosition": { "x": 200, "y": 175 }
+        }
+      }
+    ],
+    "probes": [],
+    "nodes": {}
+  },
+  "expectedResults": {
+    "voltages": {
+      "N1": 5.0,
+      "N2": 3.3333333333333335,
+      "N3": 0.0,
+      "N0": 0.0
+    },
+    "currents": {
+      "R1": 0.0016666666666666668,
+      "R2": 0.0016666666666666668,
+      "VS1": 0.0016666666666666668
+    },
+    "tolerances": {
+      "voltage": 1e-6,
+      "current": 1e-9,
+      "relative": 1e-3,
+      "numerical": 1e-12
+    }
+  }
+}
