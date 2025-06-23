@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { solveDC } from '@/services/simulation'
 import type { Circuit, CircuitComponent } from '@/types/components'
 
-describe.skip('Diode Simulation', () => {
+describe('Diode Simulation', () => {
   // Function to create a fresh circuit for each test to prevent contamination
   const createTestCircuit = (): Circuit => ({
     id: 'diode-test',
