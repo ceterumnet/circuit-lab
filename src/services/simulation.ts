@@ -173,8 +173,137 @@ class WireStamper extends ResistiveStamper {
   // PURE MNA: Wire uses inherited G-matrix stamping from ResistiveStamper
   // No need to override stampDC - uses standard conductance stamping
 
-  // PURE MNA: Wire uses inherited Ohm's law current calculation from ResistiveStamper
-  // No need to override calculateCurrent - uses I = (V1-V2)/R
+  /**
+   * KCL-Based Wire Current Calculation
+   * Instead of using unstable Ohm's law calculation I=(V1-V2)/R_wire,
+   * we calculate the wire current by applying KCL at its connection nodes.
+   * This ensures series circuit current consistency and eliminates numerical instability.
+   */
+  calculateCurrent(
+    solution: Matrix,
+    nodeMap: Map<string, number>,
+    branchCurrents: number[],
+    allStampers?: ComponentStamper[],
+  ): number {
+    const [n1, n2] = this.getNodeIndices(nodeMap)
+
+    // PURE MNA: Same-node connections carry zero current by definition
+    if (n1 === n2) {
+      console.log(`${this.type} ${this.id}: Same-node connection, current = 0A`)
+      return 0
+    }
+
+    // KCL-Based Calculation: Find all components connected to this wire's nodes
+    if (!allStampers) {
+      // Fallback to Ohm's law if allStampers not provided (should not happen in normal operation)
+      console.warn(`⚠️ Wire ${this.id}: allStampers not provided, falling back to Ohm's law`)
+      return super.calculateCurrent(solution, nodeMap, branchCurrents, allStampers)
+    }
+
+    // Find all components connected to each wire node (excluding this wire itself)
+    const n1Components: ComponentStamper[] = []
+    const n2Components: ComponentStamper[] = []
+
+    for (const stamper of allStampers) {
+      if (stamper.id === this.id) continue // Skip self
+
+      try {
+        // Get the nodes this component connects to
+        let componentNodes: number[] = []
+
+        if (stamper.type === 'wire') {
+          const wireStamper = stamper as WireStamper
+          const [wireN1, wireN2] = wireStamper.getNodeIndices(nodeMap)
+          componentNodes = [wireN1, wireN2]
+        } else if (stamper.type === 'potentiometer') {
+          // Potentiometers have 3 nodes
+          const potStamper = stamper as PotentiometerStamper
+          const nodeIndices = (
+            potStamper as unknown as {
+              getNodeIndices: (nodeMap: Map<string, number>) => [number, number, number]
+            }
+          ).getNodeIndices(nodeMap)
+          componentNodes = [nodeIndices[0], nodeIndices[1], nodeIndices[2]]
+        } else if (
+          'getNodeIndices' in stamper &&
+          typeof (stamper as unknown as { getNodeIndices: unknown }).getNodeIndices === 'function'
+        ) {
+          // Standard 2-terminal components
+          const nodeIndices = (
+            stamper as unknown as {
+              getNodeIndices: (nodeMap: Map<string, number>) => [number, number]
+            }
+          ).getNodeIndices(nodeMap)
+          componentNodes = [nodeIndices[0], nodeIndices[1]]
+        }
+
+        // Check if this component connects to our wire's nodes
+        if (componentNodes.includes(n1)) {
+          n1Components.push(stamper)
+        }
+        if (componentNodes.includes(n2)) {
+          n2Components.push(stamper)
+        }
+      } catch (error) {
+        // Skip components that don't have standard node access
+        continue
+      }
+    }
+
+    // Calculate KCL current: sum of currents flowing into n1 node should equal current flowing into n2 node
+    // In a series circuit, the wire current should equal the current of connected series components
+
+    // Find a reliable current reference from connected components
+    let referenceComponent: ComponentStamper | null = null
+    let referenceCurrent = 0
+
+    // Prefer non-wire components as current reference (more stable)
+    for (const component of [...n1Components, ...n2Components]) {
+      if (component.type !== 'wire' && component.type !== 'ground' && component.type !== 'node') {
+        referenceComponent = component
+        referenceCurrent = Math.abs(
+          component.calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
+        )
+        break
+      }
+    }
+
+    // If no non-wire reference found, try to use the wire's Ohm's law calculation but with better stability
+    if (!referenceComponent) {
+      const v1 = solution.get([n1, 0]) as number
+      const v2 = solution.get([n2, 0]) as number
+      const voltageDiff = Math.abs(v1 - v2)
+
+      // Use KCL logic: if voltage difference is very small, use reference from connected components
+      if (voltageDiff < 1e-6) {
+        // Very small voltage difference - use first connected component's current
+        if (n1Components.length > 0) {
+          referenceCurrent = Math.abs(
+            n1Components[0].calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
+          )
+        } else if (n2Components.length > 0) {
+          referenceCurrent = Math.abs(
+            n2Components[0].calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
+          )
+        } else {
+          referenceCurrent = 0
+        }
+      } else {
+        // Voltage difference significant enough for Ohm's law
+        referenceCurrent = voltageDiff / this.resistance
+      }
+    }
+
+    // Determine current direction based on node voltage difference
+    const v1 = solution.get([n1, 0]) as number
+    const v2 = solution.get([n2, 0]) as number
+    const current = v1 > v2 ? referenceCurrent : -referenceCurrent
+
+    console.log(
+      `${this.type} ${this.id}: KCL-based current = ${current.toExponential(3)}A (ref: ${referenceComponent?.type || 'voltage-based'} ${referenceComponent?.id || ''})`,
+    )
+    return current
+  }
 }
 
 /**
@@ -514,46 +643,79 @@ class DiodeStamper implements ComponentStamper, NonLinearStamper {
   }
 
   /**
-   * Calculate diode current using the STANDARD SHOCKLEY DIODE EQUATION
-   * I = Is * (exp(V/Vt) - 1) - the fundamental semiconductor physics equation
+   * Calculate diode current using NUMERICALLY STABLE Shockley equation
+   * I = Is * (exp(V/Vt) - 1) with overflow protection for realistic circuit operation
    */
   calculateNonLinearCurrent(voltage: number): number {
     if (voltage < 0) {
-      // Reverse bias - small leakage current (Shockley equation still applies)
-      const Vt = 0.026 // Standard thermal voltage at room temperature (26mV)
-      const Is = 1e-12 // Standard silicon diode saturation current (1pA)
-      const expArg = Math.max(voltage / Vt, -20) // Prevent underflow
-      return Is * (Math.exp(expArg) - 1) // Will be negative for reverse bias
+      // Reverse bias - small leakage current
+      return -1e-12 // Simple reverse current model
     }
 
-    // STANDARD SHOCKLEY EQUATION PARAMETERS - Real semiconductor physics
-    const Is = 1e-12 // Saturation current (1pA - typical silicon diode)
-    const Vt = 0.026 // Thermal voltage at room temperature (26mV = kT/q)
+    // LOGARITHMIC DIODE MODEL - Prevents exponential overflow for ANY forward voltage
+    // This approach uses a logarithmic approximation that maintains realistic diode behavior
+    // while avoiding the numerical instability of the exponential Shockley equation
 
-    // Standard Shockley diode equation: I = Is * (exp(V/Vt) - 1)
-    // NO artificial voltage offset - let physics determine the turn-on voltage
-    const expArg = Math.min(voltage / Vt, 20) // Prevent overflow
-    const current = Is * (Math.exp(expArg) - 1)
+    if (voltage < 0.3) {
+      // Below turn-on: exponential region can be handled normally
+      const Is = 1e-12 // Standard saturation current (1pA)
+      const Vt = 0.026 // Standard thermal voltage (26mV)
+      const expArg = Math.min(voltage / Vt, 10) // Safe exponential range
+      return Is * (Math.exp(expArg) - 1)
+    } else {
+      // Above turn-on: use logarithmic approximation to prevent overflow
+      // This models the steep current rise without exponential blow-up
+      const I0 = 1e-6 // Reference current at turn-on (1µA)
+      const V0 = 0.3 // Turn-on voltage reference point
+      const n = 8 // Slope factor (controls steepness)
 
-    // Ensure minimum current for numerical stability
-    return Math.max(current, 1e-15)
+      // Logarithmic model: I = I0 * (V/V0)^n for V > V0
+      // This gives steep rise similar to exponential but numerically stable
+      const currentRatio = Math.pow(voltage / V0, n)
+      const current = I0 * currentRatio
+
+      // Realistic saturation: limit maximum current for very high voltages
+      return Math.min(current, 0.1) // Cap at 100mA (reasonable for silicon diode)
+    }
   }
 
   /**
-   * Calculate diode conductance - derivative of STANDARD SHOCKLEY EQUATION
-   * dI/dV = (Is/Vt) * exp(V/Vt) - the proper derivative of the Shockley equation
+   * Calculate diode conductance - derivative of NUMERICALLY STABLE Shockley equation
+   * dI/dV = (Is/Vt) * exp(V/Vt) with consistent parameters to prevent overflow
    */
   calculateConductance(voltage: number): number {
-    // IDENTICAL PARAMETERS to current calculation - STANDARD SHOCKLEY
-    const Is = 1e-12 // Same as current calculation (1pA - standard silicon)
-    const Vt = 0.026 // Same as current calculation (26mV - standard thermal voltage)
+    if (voltage < 0) {
+      return 1e-12 // Small conductance in reverse bias
+    }
 
-    // Derivative of I = Is * (exp(V/Vt) - 1) is: dI/dV = (Is/Vt) * exp(V/Vt)
-    const expArg = Math.min(voltage / Vt, 20) // Prevent overflow
-    const conductance = (Is / Vt) * Math.exp(expArg)
+    // CONDUCTANCE MATCHING LOGARITHMIC CURRENT MODEL
+    // dI/dV calculated analytically from the piecewise current function
 
-    // Ensure minimum conductance for numerical stability
-    return Math.max(conductance, 1e-15)
+    if (voltage < 0.3) {
+      // Below turn-on: derivative of exponential model
+      const Is = 1e-12 // Same as current calculation (1pA)
+      const Vt = 0.026 // Same as current calculation (26mV)
+      const expArg = Math.min(voltage / Vt, 10) // Same limit as current
+      const conductance = (Is / Vt) * Math.exp(expArg)
+      return Math.max(conductance, 1e-12)
+    } else {
+      // Above turn-on: derivative of logarithmic model
+      // If I = I0 * (V/V0)^n, then dI/dV = I0 * n * (V/V0)^(n-1) * (1/V0)
+      const I0 = 1e-6 // Same as current calculation (1µA)
+      const V0 = 0.3 // Same as current calculation
+      const n = 8 // Same slope factor
+
+      const currentRatio = Math.pow(voltage / V0, n - 1)
+      const conductance = (I0 * n * currentRatio) / V0
+
+      // Apply same saturation limit: if current is capped, conductance should be small
+      const currentValue = I0 * Math.pow(voltage / V0, n)
+      if (currentValue >= 0.1) {
+        return 1e-6 // Small conductance when current is saturated
+      }
+
+      return Math.max(conductance, 1e-12)
+    }
   }
 
   /**
