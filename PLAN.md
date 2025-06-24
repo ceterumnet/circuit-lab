@@ -765,8 +765,61 @@ circuitStore.setSimulationThrottleMs(150) // Adjust throttling delay
 - **Frontend:** Vue 3 + TypeScript + Vite
 - **Canvas:** Konva.js with vue-konva integration
 - **State Management:** Pinia stores
-- **Simulation:** Custom JavaScript DC analysis engine
+- **Simulation:** Custom JavaScript DC analysis engine with Pure MNA implementation
 - **Styling:** CSS with scoped component styles
+
+### 🎯 **ARCHITECTURAL EVOLUTION & KEY INSIGHTS**
+
+#### **Discovery 1: Pure MNA Architecture (✅ IMPLEMENTED)**
+
+**PROBLEM SOLVED**: Original hybrid approach mixed G-matrix stamping (resistors) with branch current variables (wires), violating fundamental circuit physics.
+
+**SOLUTION**: Implemented Pure MNA where:
+
+- **ALL passive components** → G-matrix stamping (consistent Ohm's law)
+- **ONLY voltage sources** → Branch current variables (unknown currents)
+- **Current sources** → RHS injection (known currents)
+
+**RESULT**: Perfect KCL compliance, parameter independence restored, realistic wire currents.
+
+#### **Discovery 2: Modeling Separation Principle (🎯 NEXT TO IMPLEMENT)**
+
+**KEY INSIGHT**: **Modeling happens at different times for different reasons**
+
+**CURRENT PROBLEM**: Non-linear behavior embedded within MNA loop causes:
+
+- Companion model domination
+- Newton-Raphson oscillations
+- Parameter independence failures
+
+**NEW APPROACH - Load Line Intersection**:
+
+1. **Educational Time**: Complex models for I-V curve plotting and analysis
+2. **Operating Point Time**: Load line intersection using circuit constraints
+3. **Simulation Time**: Simple linear equivalent circuits for MNA stability
+
+**BENEFITS**:
+
+- **Educational Value**: Classic load line analysis students learn in textbooks
+- **Numerical Stability**: No companion model contamination
+- **Fast Performance**: Single intersection solve vs iterative methods
+- **Accurate Physics**: Complex models where needed, simple where stable
+
+#### **Discovery 3: Stamper Architecture Refactoring (📋 PLANNED)**
+
+**CURRENT ISSUE**: Monolithic `simulation.ts` file becoming unmaintainable with 1000+ lines.
+
+**SOLUTION**: Modular stamper architecture:
+
+```
+src/services/stampers/
+├── linear/          # Stable, well-tested components
+├── nonlinear/       # Load line intersection approach
+├── utilities/       # Shared analysis tools
+└── index.ts         # Clean public API
+```
+
+**BENEFITS**: Maintainability, separation of concerns, improved testing, educational clarity.
 
 ### Component Registry System
 
@@ -810,16 +863,45 @@ circuit → buildNetlist() → solveModifiedNodalAnalysis() → updateProbes()
 
 ## Immediate Next Steps
 
-### 1. Continue Phase 1.98 - Potentiometers & Variable Resistors (Priority: High)
+### 1. ✅ PHASE 1.98 COMPLETED - Potentiometers & Variable Resistors
 
-✅ **PHASE 1.97 COMPLETED:** Independent Current Sources + Basic Switches - Full implementation with mixed-source support and interactive switching
+**STATUS**: ✅ **SUCCESSFULLY COMPLETED** - Full implementation with enhanced floating node detection
 
-**Next Components to Implement:**
+**ACHIEVEMENTS**:
 
-- **Variable Resistors:** Two-terminal adjustable resistance components with slider interface
-- **Three-Terminal Potentiometers:** Full potentiometer with wiper access for voltage divider applications
-- **Interactive Controls:** Real-time resistance adjustment with immediate simulation feedback
-- **Parameter Study Tools:** Circuit sensitivity analysis and resistance sweep capabilities
+- ✅ **Variable Resistors**: Two-terminal adjustable resistance with slider interface
+- ✅ **Three-Terminal Potentiometers**: Full potentiometer with wiper access for voltage divider applications
+- ✅ **Interactive Controls**: Real-time resistance adjustment with immediate simulation feedback
+- ✅ **Parameter Study Tools**: Circuit sensitivity analysis and resistance sweep capabilities
+- ✅ **Enhanced Floating Node Detection**: Improved algorithm supporting new component types
+
+### 2. 🎯 IMMEDIATE PRIORITY - Diode Model Architecture Redesign
+
+**CRITICAL ISSUE**: Current diode implementation has fundamental architectural problems that cannot be fixed with parameter tuning alone.
+
+#### **Phase 2.1: Load Line Intersection Implementation (Week 1-2)**
+
+- [ ] **Create DiodeCharacteristic class**: Complex I-V model for educational plotting and analysis
+- [ ] **Implement LoadLineIntersection solver**: Graphical operating point analysis using circuit constraints
+- [ ] **Design LinearMNAStamping**: Convert operating point to voltage source + resistance equivalent
+- [ ] **Test Parameter Independence**: Validate different saturation currents produce different operating points
+- [ ] **UI Integration**: Visual load line plots for educational value
+
+#### **Phase 2.2: Stamper Architecture Refactoring (Week 3-4)**
+
+- [ ] **Modular Stamper Files**: Move stampers from monolithic `simulation.ts` to organized separate files
+- [ ] **Clean Architecture**: Separate linear, nonlinear, and utility stampers into logical modules
+- [ ] **Backward Compatibility**: Ensure all existing circuits continue to work during refactoring
+- [ ] **Test Harness Enhancement**: Improved testing with modular component architecture
+- [ ] **Documentation**: Clear separation between educational models and simulation models
+
+#### **Success Criteria for Diode Redesign**
+
+- [ ] **Parameter Independence**: Different saturation currents → different operating points (currently broken)
+- [ ] **Series Circuit KCL**: Perfect current matching in diode circuits (currently ~50% error)
+- [ ] **Numerical Stability**: No Newton-Raphson oscillations or companion model domination
+- [ ] **Educational Value**: Visual I-V curves and load line analysis for learning
+- [ ] **Performance**: Operating point solving faster than iterative Newton-Raphson
 
 ### 2. Phase 1.99 - Simple Diode Models & Non-Linear Solving
 
