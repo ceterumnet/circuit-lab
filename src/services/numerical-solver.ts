@@ -1,4 +1,4 @@
-import { zeros, lusolve, matrix, Matrix, multiply, subtract, add } from 'mathjs'
+import { zeros, lusolve, matrix, Matrix, multiply, subtract, add, index, range } from 'mathjs'
 
 /**
  * Enhanced numerical solver with improved precision and stability
@@ -426,6 +426,107 @@ export class NewtonRaphsonSolver {
   }
 
   /**
+   * Generate intelligent initial guess for Newton-Raphson based on circuit topology
+   * This dramatically improves convergence by starting closer to the expected solution
+   */
+  private generateInitialGuess(
+    matrixSize: number,
+    nodeMap: Map<string, number>,
+    nonLinearStampers: NonLinearStamper[],
+    linearMatrix: Matrix,
+    linearRhs: Matrix,
+  ): Matrix {
+    const initialGuess = matrix(zeros(matrixSize, 1))
+
+    console.log('🎯 Generating intelligent initial guess:')
+
+    // Step 1: Identify voltage source nodes from the linear system
+    // Voltage sources create identity rows in the matrix with their voltage in RHS
+    for (let i = 0; i < matrixSize; i++) {
+      const row = linearMatrix.subset(index(i, range(0, matrixSize))) as Matrix
+      const rowArray = row.toArray()[0] as number[]
+      const rhsValue = linearRhs.get([i, 0]) as number
+
+      // Check if this is a voltage source constraint (identity row with voltage in RHS)
+      const nonZeroCount = rowArray.filter((val) => Math.abs(val) > 1e-10).length
+      const hasIdentityElement = rowArray.some((val) => Math.abs(val - 1) < 1e-10)
+
+      if (nonZeroCount === 2 && hasIdentityElement && Math.abs(rhsValue) > 1e-10) {
+        initialGuess.set([i, 0], rhsValue)
+        console.log(`  Node ${i}: ${rhsValue.toFixed(2)}V (voltage source)`)
+      }
+    }
+
+    // Step 2: Set diode anode nodes to expected forward voltage
+    for (const stamper of nonLinearStampers) {
+      const [anodeNode, cathodeNode] = stamper.getNodeIndices(nodeMap)
+
+      if (stamper.type === 'diode') {
+        // Silicon diode: expect ~0.7V forward voltage
+        const expectedForwardVoltage = 0.7
+        const currentAnodeGuess = initialGuess.get([anodeNode, 0]) as number
+        const currentCathodeGuess = initialGuess.get([cathodeNode, 0]) as number
+
+        // If anode isn't already set by voltage source, set it to cathode + 0.7V
+        if (Math.abs(currentAnodeGuess) < 1e-10) {
+          const newAnodeVoltage = currentCathodeGuess + expectedForwardVoltage
+          initialGuess.set([anodeNode, 0], newAnodeVoltage)
+          console.log(
+            `  Node ${anodeNode}: ${newAnodeVoltage.toFixed(2)}V (diode anode, ${stamper.id})`,
+          )
+        }
+      } else if (stamper.type === 'led') {
+        // LED: expect ~3V forward voltage
+        const expectedForwardVoltage = 3.0
+        const currentAnodeGuess = initialGuess.get([anodeNode, 0]) as number
+        const currentCathodeGuess = initialGuess.get([cathodeNode, 0]) as number
+
+        // If anode isn't already set by voltage source, set it to cathode + 3V
+        if (Math.abs(currentAnodeGuess) < 1e-10) {
+          const newAnodeVoltage = currentCathodeGuess + expectedForwardVoltage
+          initialGuess.set([anodeNode, 0], newAnodeVoltage)
+          console.log(
+            `  Node ${anodeNode}: ${newAnodeVoltage.toFixed(2)}V (LED anode, ${stamper.id})`,
+          )
+        }
+      }
+    }
+
+    // Step 3: Apply simple voltage divider logic for remaining unset nodes
+    // Find nodes that are still at 0V and interpolate based on nearby set nodes
+    const setNodes: Array<{ index: number; voltage: number }> = []
+    for (let i = 0; i < matrixSize; i++) {
+      const voltage = initialGuess.get([i, 0]) as number
+      if (Math.abs(voltage) > 1e-10) {
+        setNodes.push({ index: i, voltage })
+      }
+    }
+
+    // For unset nodes, use weighted average of set nodes (simple heuristic)
+    for (let i = 0; i < matrixSize; i++) {
+      const currentVoltage = initialGuess.get([i, 0]) as number
+      if (Math.abs(currentVoltage) < 1e-10 && setNodes.length > 0) {
+        // Simple heuristic: average of all set node voltages
+        const averageVoltage =
+          setNodes.reduce((sum, node) => sum + node.voltage, 0) / setNodes.length
+        initialGuess.set([i, 0], averageVoltage * 0.5) // Conservative estimate
+        console.log(`  Node ${i}: ${(averageVoltage * 0.5).toFixed(2)}V (interpolated)`)
+      }
+    }
+
+    const nonZeroNodes = []
+    for (let i = 0; i < matrixSize; i++) {
+      const voltage = initialGuess.get([i, 0]) as number
+      if (Math.abs(voltage) > 1e-10) {
+        nonZeroNodes.push(`${i}:${voltage.toFixed(2)}V`)
+      }
+    }
+    console.log(`  Initial guess summary: ${nonZeroNodes.join(', ')}`)
+
+    return initialGuess
+  }
+
+  /**
    * Solve non-linear DC circuit using Newton-Raphson method
    */
   solve(
@@ -445,8 +546,10 @@ export class NewtonRaphsonSolver {
     console.log(`  Max iterations: ${this.options.maxIterations}`)
     console.log(`  Convergence tolerance: ${this.options.convergenceTolerance.toExponential(1)}`)
 
-    // Initialize solution vector
-    let solution = initialGuess || matrix(zeros(matrixSize, 1))
+    // Initialize solution vector with intelligent guess
+    let solution =
+      initialGuess ||
+      this.generateInitialGuess(matrixSize, nodeMap, nonLinearStampers, linearMatrix, linearRhs)
     let iteration = 0
     let converged = false
     let residualNorm = Infinity
