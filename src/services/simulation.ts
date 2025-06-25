@@ -804,6 +804,7 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   protected diodeCharacteristic: DiodeCharacteristic
   protected operatingPoint: { voltage: number; current: number } | null = null
   protected cachedAllStampers: ComponentStamper[] | null = null
+  protected parametersInitialized: boolean = false // CRITICAL FIX: Prevent re-triggering
 
   constructor(private component: CircuitComponent) {
     this.id = component.id
@@ -818,12 +819,14 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
         `🔧 Diode ${this.id}: Using explicit parameters Is=${explicitSaturationCurrent.toExponential(2)}A`,
       )
       this.diodeCharacteristic = new DiodeCharacteristic(explicitSaturationCurrent, 1)
+      this.parametersInitialized = true // Mark as initialized
     } else {
       // Use intelligent parameter selection - will be updated during circuit analysis
       console.log(
         `🧠 Diode ${this.id}: Will use intelligent parameter selection based on circuit analysis`,
       )
       this.diodeCharacteristic = new DiodeCharacteristic(1e-12, 1) // Temporary default
+      this.parametersInitialized = false // Will be initialized during first stampLinearized call
     }
   }
 
@@ -833,6 +836,41 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
    */
   setAllStampers(stampers: ComponentStamper[]): void {
     this.cachedAllStampers = stampers
+  }
+
+  /**
+   * Generate intelligent initial guess using Load Line Intersection
+   * ARCHITECTURE COMPLIANCE: Proper use of Load Line for initialization
+   */
+  generateInitialGuess(nodeMap: Map<string, number>): { voltage: number; current: number } | null {
+    if (!this.cachedAllStampers) {
+      return null
+    }
+
+    // Get circuit conditions for load line analysis
+    // Create a dummy solution matrix for circuit analysis (not used for initial guess)
+    const dummySolution = matrix([[0], [0]]) // Minimal matrix for type compliance
+    const { theveninVoltage, theveninResistance } = this.analyzeCircuitEnvironment(
+      dummySolution,
+      nodeMap,
+      this.cachedAllStampers,
+    )
+
+    if (theveninVoltage > 0 && theveninResistance > 0) {
+      const loadLineResult = LoadLineIntersection.solve(
+        this.diodeCharacteristic,
+        theveninVoltage,
+        theveninResistance,
+      )
+
+      console.log(
+        `🎯 Load Line Initial Guess: V=${loadLineResult.voltage.toFixed(4)}V, I=${loadLineResult.current.toExponential(3)}A`,
+      )
+
+      return loadLineResult
+    }
+
+    return null
   }
 
   private getTerminalId = (c: CircuitComponent, t: string) => `${c.id}:${t}`
@@ -914,20 +952,18 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   }
 
   /**
-   * Calculate diode current using Load Line Intersection approach
-   * This replaces the old broken logarithmic model
+   * Calculate diode current using DiodeCharacteristic (NonLinearStamper interface)
+   * ARCHITECTURE COMPLIANCE: Direct delegation to DiodeCharacteristic
    */
   calculateNonLinearCurrent(voltage: number): number {
-    // For direct voltage queries, use the diode characteristic directly
     return this.diodeCharacteristic.getCurrent(voltage)
   }
 
   /**
-   * Calculate diode conductance using Load Line Intersection approach
-   * This replaces the old broken conductance calculation
+   * Calculate diode conductance using DiodeCharacteristic (NonLinearStamper interface)
+   * ARCHITECTURE COMPLIANCE: Direct delegation to DiodeCharacteristic
    */
   calculateConductance(voltage: number): number {
-    // For direct voltage queries, use the diode characteristic directly
     return this.diodeCharacteristic.getConductance(voltage)
   }
 
@@ -944,13 +980,11 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   ): void {
     const [anodeNode, cathodeNode] = this.getNodeIndices(nodeMap)
 
-    // PHASE 1.1: Intelligent parameter selection (if not explicitly set)
-    const explicitSaturationCurrent = this.component.properties?.saturationCurrent as number
-    console.log(`🔧 Debug ${this.id}: explicitSaturationCurrent = ${explicitSaturationCurrent}`)
-    console.log(`🔧 Debug ${this.id}: allStampers provided = ${!!allStampers}`)
-
-    if (!explicitSaturationCurrent && allStampers) {
-      console.log(`🎯 Diode ${this.id}: TRIGGERING intelligent parameter selection`)
+    // CRITICAL FIX: Only trigger parameter scaling ONCE, not on every iteration
+    if (!this.parametersInitialized && allStampers) {
+      console.log(
+        `🎯 Diode ${this.id}: TRIGGERING intelligent parameter selection (first time only)`,
+      )
 
       // Analyze circuit conditions for automatic parameter selection
       const circuitConditions = CircuitAnalyzer.analyzeForDiode(this.id, nodeMap, allStampers)
@@ -965,10 +999,9 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
         optimalProfile.saturationCurrent,
         optimalProfile.emissionCoefficient,
       )
-    } else {
-      console.log(
-        `🔧 Debug ${this.id}: Parameter scaling SKIPPED - explicitSaturationCurrent=${explicitSaturationCurrent}, allStampers=${!!allStampers}`,
-      )
+
+      // Mark as initialized to prevent re-triggering
+      this.parametersInitialized = true
     }
 
     // PHASE 1: Analyze the circuit to determine Thevenin equivalent
@@ -978,49 +1011,69 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
       allStampers,
     )
 
-    // PHASE 1: Find operating point using Load Line Intersection
-    const operatingPoint = LoadLineIntersection.solve(
-      this.diodeCharacteristic,
-      theveninVoltage,
-      theveninResistance,
-    )
+    // Get current diode voltage from solution
+    const anodeVoltage = solution.get([anodeNode, 0]) as number
+    const cathodeVoltage = solution.get([cathodeNode, 0]) as number
+    const diodeVoltage = anodeVoltage - cathodeVoltage
 
-    // Cache the operating point for consistent current calculation
-    this.operatingPoint = operatingPoint
+    // ARCHITECTURE COMPLIANCE: Use the DiodeCharacteristic directly
+    // This ensures parameter independence and consistent behavior
+    const diodeCurrent = this.diodeCharacteristic.getCurrent(diodeVoltage)
+    const diodeConductance = this.diodeCharacteristic.getConductance(diodeVoltage)
 
-    // PHASE 1: Stamp as simple current source (operating point current)
-    // This is much more stable than Norton equivalent approach
-    const operatingCurrent = operatingPoint.current
+    // ARCHITECTURE COMPLIANCE: Standard Newton-Raphson linearization
+    // Stamp current source equivalent circuit for the current operating point
+    rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) - diodeCurrent)
+    rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) + diodeCurrent)
 
-    // Stamp constant current source representing the operating point
-    // Current flows from anode to cathode (positive direction)
-    // KCL: current INTO cathode node = +operatingCurrent
-    // KCL: current OUT OF anode node = -operatingCurrent
-    rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) - operatingCurrent)
-    rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) + operatingCurrent)
-
-    // Add small conductance for numerical stability (prevents singular matrix)
-    const smallConductance = 1e-12
+    // Add conductance for numerical stability and Newton-Raphson linearization
+    const GMIN = 1e-12 // GMIN stabilization as documented
     mnaMatrix.set(
       [anodeNode, anodeNode],
-      (mnaMatrix.get([anodeNode, anodeNode]) as number) + smallConductance,
+      (mnaMatrix.get([anodeNode, anodeNode]) as number) + diodeConductance + GMIN,
     )
     mnaMatrix.set(
       [cathodeNode, cathodeNode],
-      (mnaMatrix.get([cathodeNode, cathodeNode]) as number) + smallConductance,
+      (mnaMatrix.get([cathodeNode, cathodeNode]) as number) + diodeConductance + GMIN,
     )
     mnaMatrix.set(
       [anodeNode, cathodeNode],
-      (mnaMatrix.get([anodeNode, cathodeNode]) as number) - smallConductance,
+      (mnaMatrix.get([anodeNode, cathodeNode]) as number) - diodeConductance - GMIN,
     )
     mnaMatrix.set(
       [cathodeNode, anodeNode],
-      (mnaMatrix.get([cathodeNode, anodeNode]) as number) - smallConductance,
+      (mnaMatrix.get([cathodeNode, anodeNode]) as number) - diodeConductance - GMIN,
     )
 
-    console.log(
-      `Diode ${this.id}: Operating Point V=${operatingPoint.voltage.toFixed(4)}V, I=${operatingCurrent.toExponential(3)}A`,
-    )
+    // Store operating point for consistency
+    this.operatingPoint = { voltage: diodeVoltage, current: diodeCurrent }
+
+    // PHASE 2: Load Line Intersection for educational analysis (optional)
+    // This provides educational insight but doesn't override Newton-Raphson convergence
+    if (theveninVoltage > 0 && theveninResistance > 0 && Math.abs(diodeVoltage) < 0.1) {
+      // Only calculate load line for educational purposes when near initial guess
+      const loadLineResult = LoadLineIntersection.solve(
+        this.diodeCharacteristic,
+        theveninVoltage,
+        theveninResistance,
+      )
+
+      console.log(
+        `📚 Load Line Reference: V=${loadLineResult.voltage.toFixed(4)}V, I=${loadLineResult.current.toExponential(3)}A (educational)`,
+      )
+    }
+
+    // Log final operating point
+    const finalCurrent = this.operatingPoint?.current || diodeCurrent
+    if (finalCurrent > 1e-9) {
+      console.log(
+        `Diode ${this.id}: CONDUCTING - V=${this.operatingPoint?.voltage.toFixed(4) || diodeVoltage.toFixed(4)}V, I=${finalCurrent.toExponential(3)}A`,
+      )
+    } else {
+      console.log(
+        `Diode ${this.id}: BLOCKING - V=${this.operatingPoint?.voltage.toFixed(4) || diodeVoltage.toFixed(4)}V, I=${finalCurrent.toExponential(3)}A`,
+      )
+    }
   }
 
   /**
@@ -1040,8 +1093,8 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
 
   /**
    * Calculate current from final solution (ComponentStamper interface)
-   * FIXED: For converged Newton-Raphson, use the stamped operating point current
-   * This ensures consistency between stamping and current calculation
+   * ARCHITECTURE COMPLIANCE: Use the stamped operating point for consistency
+   * This ensures 100% consistency between stamping and current calculation
    */
   calculateCurrent(
     solution: Matrix,
@@ -1049,18 +1102,20 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
     branchCurrents: number[],
     allStampers?: ComponentStamper[],
   ): number {
-    // If we have a cached operating point from Newton-Raphson, use it for consistency
+    // ARCHITECTURE COMPLIANCE: Use the stamped operating point current
+    // This ensures 100% consistency with what was stamped into the matrix
     if (this.operatingPoint) {
       return this.operatingPoint.current
     }
 
-    // Fallback: calculate from solution voltages
+    // Fallback: calculate from voltage using DiodeCharacteristic (not hardcoded values)
     const [anodeNode, cathodeNode] = this.getNodeIndices(nodeMap)
     const anodeVoltage = solution.get([anodeNode, 0]) as number
     const cathodeVoltage = solution.get([cathodeNode, 0]) as number
     const diodeVoltage = anodeVoltage - cathodeVoltage
 
-    return this.calculateNonLinearCurrent(diodeVoltage)
+    // ARCHITECTURE COMPLIANCE: Use DiodeCharacteristic instead of hardcoded parameters
+    return this.diodeCharacteristic.getCurrent(diodeVoltage)
   }
 }
 
@@ -1087,6 +1142,8 @@ class LEDStamper extends DiodeStamper {
 
     // Override the parent's diode characteristic with LED-specific parameters
     this.diodeCharacteristic = new DiodeCharacteristic(Is, N)
+    // LEDs use explicit parameters, so mark as initialized
+    this.parametersInitialized = true
   }
 
   /**
