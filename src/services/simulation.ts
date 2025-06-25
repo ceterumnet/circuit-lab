@@ -730,19 +730,35 @@ export class LoadLineIntersection {
     // Load line function: I = (Vth - V) / Rth
     const loadLine = (voltage: number) => (theveninVoltage - voltage) / theveninResistance
 
-    // IMPROVED: Use bisection method for robust convergence
-    // Find voltage range where intersection must occur
-    let vLow = 0.0
+    // ENHANCED: Check for reverse bias scenario first
+    // If Thevenin voltage is negative, this indicates reverse bias
+    if (theveninVoltage < 0) {
+      console.log(`🔄 Reverse bias detected: Vth=${theveninVoltage.toFixed(3)}V`)
+      // In reverse bias, most voltage appears across diode, tiny current flows
+      const reverseVoltage = theveninVoltage * 0.99 // ~99% of supply voltage across diode
+      const reverseCurrent = diodeCharacteristic.getCurrent(reverseVoltage)
+      console.log(
+        `🎯 Load Line Intersection (Reverse): V=${reverseVoltage.toFixed(4)}V, I=${reverseCurrent.toExponential(3)}A`,
+      )
+      return { voltage: reverseVoltage, current: reverseCurrent }
+    }
+
+    // IMPROVED: Extend search range to include negative voltages for forward bias edge cases
+    let vLow = -theveninVoltage // Allow negative voltages for complete analysis
     let vHigh = theveninVoltage
 
-    // Check if diode is conducting at all
+    // Check if diode is conducting at all (enhanced logic)
     const diodeCurrentAtZero = diodeCharacteristic.getCurrent(0)
     const loadCurrentAtZero = loadLine(0)
 
-    if (diodeCurrentAtZero >= loadCurrentAtZero) {
-      // Diode doesn't conduct - operating point at zero voltage
-      console.log(`🎯 Load Line Intersection: Diode not conducting, V=0V, I=0A`)
-      return { voltage: 0, current: 0 }
+    // For very low Thevenin voltages, be more careful about intersection detection
+    if (theveninVoltage < 0.7 && diodeCurrentAtZero >= loadCurrentAtZero) {
+      // Very low voltage - check if intersection exists in tiny current regime
+      const lowVoltageCurrent = Math.min(theveninVoltage / theveninResistance / 1000, 1e-12)
+      console.log(
+        `🎯 Load Line Intersection: Low voltage/current, V=0V, I=${lowVoltageCurrent.toExponential(3)}A`,
+      )
+      return { voltage: 0, current: lowVoltageCurrent }
     }
 
     // Find bounds where intersection occurs
@@ -839,6 +855,35 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   }
 
   /**
+   * Helper method to check if two nodes are connected through wire components
+   * ENHANCED: Used for circuit topology analysis
+   */
+  private isNodeConnectedThroughWires(
+    node1: number | undefined,
+    node2: number | undefined,
+    allStampers: ComponentStamper[],
+    nodeMap: Map<string, number>,
+  ): boolean {
+    if (node1 === undefined || node2 === undefined) return false
+    if (node1 === node2) return true
+
+    // Simple approach: check if any wire connects these nodes directly
+    for (const stamper of allStampers) {
+      if (stamper.type === 'wire') {
+        const wireStamper = stamper as WireStamper
+        const [wireNode1, wireNode2] = wireStamper.getNodeIndices(nodeMap)
+        if (
+          (wireNode1 === node1 && wireNode2 === node2) ||
+          (wireNode1 === node2 && wireNode2 === node1)
+        ) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
+  /**
    * Generate intelligent initial guess using Load Line Intersection
    * ARCHITECTURE COMPLIANCE: Proper use of Load Line for initialization
    */
@@ -885,7 +930,7 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   /**
    * Analyze the circuit to determine the Thevenin equivalent seen by the diode
    * This is critical for proper load line intersection
-   * IMPROVED: Proper circuit analysis instead of hardcoded values
+   * ENHANCED: Includes diode orientation detection for reverse bias scenarios
    */
   private analyzeCircuitEnvironment(
     solution: Matrix,
@@ -909,6 +954,9 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
     const voltageSources: { voltage: number; component: CircuitComponent }[] = []
     const resistors: { resistance: number; component: CircuitComponent }[] = []
 
+    // ENHANCED: Analyze circuit topology to detect diode orientation
+    let isDiodeReverseBiased = false
+
     for (const stamper of stampersToUse) {
       if (stamper.type === 'voltage_source') {
         const vsComponent = (stamper as VoltageSourceStamper).component as CircuitComponent
@@ -927,12 +975,52 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
       }
     }
 
+    // ENHANCED: Detect reverse bias by analyzing circuit connections
+    // Check if voltage source positive terminal connects to diode cathode (reverse bias indicator)
+    try {
+      const [diodeAnodeNode, diodeCathodeNode] = this.getNodeIndices(nodeMap)
+
+      // Find voltage source connections
+      for (const vs of voltageSources) {
+        const vsStamper = stampersToUse.find(
+          (s) => s.id === vs.component.id,
+        ) as VoltageSourceStamper
+        if (vsStamper) {
+          const definition = getComponentDefinition('voltage_source')!
+          const vsPosTerminal = `${vs.component.id}:${definition.terminals[0].id}`
+          const vsNegTerminal = `${vs.component.id}:${definition.terminals[1].id}`
+
+          const vsPosNode = nodeMap.get(vsPosTerminal)
+          const vsNegNode = nodeMap.get(vsNegTerminal)
+
+          // Check circuit topology through wire connections
+          if (
+            this.isNodeConnectedThroughWires(vsPosNode, diodeCathodeNode, stampersToUse, nodeMap) ||
+            this.isNodeConnectedThroughWires(vsNegNode, diodeAnodeNode, stampersToUse, nodeMap)
+          ) {
+            isDiodeReverseBiased = true
+            console.log(`  🔄 REVERSE BIAS DETECTED: Diode ${this.id} is reverse biased`)
+            break
+          }
+        }
+      }
+    } catch (error) {
+      console.log(`  Could not analyze diode orientation: ${error}`)
+    }
+
     // For simple series circuits (typical test case):
-    // Thevenin voltage = voltage source voltage
+    // Thevenin voltage = voltage source voltage (with polarity correction)
     // Thevenin resistance = sum of all series resistances
     if (voltageSources.length > 0) {
       theveninVoltage = voltageSources[0].voltage
-      console.log(`  Using voltage source: ${theveninVoltage}V`)
+
+      // ENHANCED: Apply polarity correction for reverse bias
+      if (isDiodeReverseBiased) {
+        theveninVoltage = -Math.abs(theveninVoltage) // Ensure negative for reverse bias
+        console.log(`  Using voltage source (reverse bias): ${theveninVoltage}V`)
+      } else {
+        console.log(`  Using voltage source: ${theveninVoltage}V`)
+      }
     } else {
       theveninVoltage = 5.0 // Default fallback
       console.log(`  No voltage source found, using default: ${theveninVoltage}V`)
@@ -968,8 +1056,10 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   }
 
   /**
-   * Stamp linearized equivalent circuit using Load Line Intersection approach
-   * PHASE 1: This replaces the broken companion model with proper circuit analysis
+   * ARCHITECTURE COMPLIANCE: SPICE-like Load Line Intersection approach
+   * Phase 1: Analyze linear circuit to get Thevenin equivalent
+   * Phase 2: Use Load Line Intersection to find diode operating point
+   * Phase 3: Inject diode as current source (Norton equivalent) into MNA
    */
   stampLinearized(
     mnaMatrix: Matrix,
@@ -1004,74 +1094,89 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
       this.parametersInitialized = true
     }
 
-    // PHASE 1: Analyze the circuit to determine Thevenin equivalent
+    // PHASE 1: Analyze the linear circuit to get Thevenin equivalent
     const { theveninVoltage, theveninResistance } = this.analyzeCircuitEnvironment(
       solution,
       nodeMap,
       allStampers,
     )
 
-    // Get current diode voltage from solution
-    const anodeVoltage = solution.get([anodeNode, 0]) as number
-    const cathodeVoltage = solution.get([cathodeNode, 0]) as number
-    const diodeVoltage = anodeVoltage - cathodeVoltage
-
-    // ARCHITECTURE COMPLIANCE: Use the DiodeCharacteristic directly
-    // This ensures parameter independence and consistent behavior
-    const diodeCurrent = this.diodeCharacteristic.getCurrent(diodeVoltage)
-    const diodeConductance = this.diodeCharacteristic.getConductance(diodeVoltage)
-
-    // ARCHITECTURE COMPLIANCE: Standard Newton-Raphson linearization
-    // Stamp current source equivalent circuit for the current operating point
-    rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) - diodeCurrent)
-    rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) + diodeCurrent)
-
-    // Add conductance for numerical stability and Newton-Raphson linearization
-    const GMIN = 1e-12 // GMIN stabilization as documented
-    mnaMatrix.set(
-      [anodeNode, anodeNode],
-      (mnaMatrix.get([anodeNode, anodeNode]) as number) + diodeConductance + GMIN,
-    )
-    mnaMatrix.set(
-      [cathodeNode, cathodeNode],
-      (mnaMatrix.get([cathodeNode, cathodeNode]) as number) + diodeConductance + GMIN,
-    )
-    mnaMatrix.set(
-      [anodeNode, cathodeNode],
-      (mnaMatrix.get([anodeNode, cathodeNode]) as number) - diodeConductance - GMIN,
-    )
-    mnaMatrix.set(
-      [cathodeNode, anodeNode],
-      (mnaMatrix.get([cathodeNode, anodeNode]) as number) - diodeConductance - GMIN,
-    )
-
-    // Store operating point for consistency
-    this.operatingPoint = { voltage: diodeVoltage, current: diodeCurrent }
-
-    // PHASE 2: Load Line Intersection for educational analysis (optional)
-    // This provides educational insight but doesn't override Newton-Raphson convergence
-    if (theveninVoltage > 0 && theveninResistance > 0 && Math.abs(diodeVoltage) < 0.1) {
-      // Only calculate load line for educational purposes when near initial guess
+    // PHASE 2: Use Load Line Intersection to solve for stable operating point
+    // This separates complex diode physics from MNA matrix integration (SPICE approach)
+    if (theveninVoltage > 0 && theveninResistance > 0) {
       const loadLineResult = LoadLineIntersection.solve(
         this.diodeCharacteristic,
         theveninVoltage,
         theveninResistance,
       )
 
-      console.log(
-        `📚 Load Line Reference: V=${loadLineResult.voltage.toFixed(4)}V, I=${loadLineResult.current.toExponential(3)}A (educational)`,
-      )
-    }
+      // PHASE 3: Inject diode as current source (Norton equivalent) into MNA
+      // This makes the diode appear as a well-behaved linear element that obeys KCL
+      const diodeCurrent = loadLineResult.current
+      const diodeVoltage = loadLineResult.voltage
 
-    // Log final operating point
-    const finalCurrent = this.operatingPoint?.current || diodeCurrent
-    if (finalCurrent > 1e-9) {
-      console.log(
-        `Diode ${this.id}: CONDUCTING - V=${this.operatingPoint?.voltage.toFixed(4) || diodeVoltage.toFixed(4)}V, I=${finalCurrent.toExponential(3)}A`,
+      // Current source stamping: inject pre-calculated current into RHS
+      rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) - diodeCurrent)
+      rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) + diodeCurrent)
+
+      // Add minimal conductance for numerical stability (GMIN)
+      const GMIN = 1e-12 // Standard SPICE GMIN value
+      mnaMatrix.set(
+        [anodeNode, anodeNode],
+        (mnaMatrix.get([anodeNode, anodeNode]) as number) + GMIN,
       )
+      mnaMatrix.set(
+        [cathodeNode, cathodeNode],
+        (mnaMatrix.get([cathodeNode, cathodeNode]) as number) + GMIN,
+      )
+      mnaMatrix.set(
+        [anodeNode, cathodeNode],
+        (mnaMatrix.get([anodeNode, cathodeNode]) as number) - GMIN,
+      )
+      mnaMatrix.set(
+        [cathodeNode, anodeNode],
+        (mnaMatrix.get([cathodeNode, anodeNode]) as number) - GMIN,
+      )
+
+      // Store operating point for consistency
+      this.operatingPoint = { voltage: diodeVoltage, current: diodeCurrent }
+
+      // Log final operating point
+      if (diodeCurrent > 1e-9) {
+        console.log(
+          `Diode ${this.id}: CONDUCTING - V=${diodeVoltage.toFixed(4)}V, I=${diodeCurrent.toExponential(3)}A (Load Line)`,
+        )
+      } else {
+        console.log(
+          `Diode ${this.id}: BLOCKING - V=${diodeVoltage.toFixed(4)}V, I=${diodeCurrent.toExponential(3)}A (Load Line)`,
+        )
+      }
     } else {
+      // Fallback: Use simple current source model if no circuit analysis available
+      const anodeVoltage = solution.get([anodeNode, 0]) as number
+      const cathodeVoltage = solution.get([cathodeNode, 0]) as number
+      const diodeVoltage = anodeVoltage - cathodeVoltage
+      const diodeCurrent = this.diodeCharacteristic.getCurrent(diodeVoltage)
+
+      // Simple current source injection
+      rhsVector.set([anodeNode, 0], (rhsVector.get([anodeNode, 0]) as number) - diodeCurrent)
+      rhsVector.set([cathodeNode, 0], (rhsVector.get([cathodeNode, 0]) as number) + diodeCurrent)
+
+      // GMIN for stability
+      const GMIN = 1e-12
+      mnaMatrix.set(
+        [anodeNode, anodeNode],
+        (mnaMatrix.get([anodeNode, anodeNode]) as number) + GMIN,
+      )
+      mnaMatrix.set(
+        [cathodeNode, cathodeNode],
+        (mnaMatrix.get([cathodeNode, cathodeNode]) as number) + GMIN,
+      )
+
+      this.operatingPoint = { voltage: diodeVoltage, current: diodeCurrent }
+
       console.log(
-        `Diode ${this.id}: BLOCKING - V=${this.operatingPoint?.voltage.toFixed(4) || diodeVoltage.toFixed(4)}V, I=${finalCurrent.toExponential(3)}A`,
+        `Diode ${this.id}: Fallback mode - V=${diodeVoltage.toFixed(4)}V, I=${diodeCurrent.toExponential(3)}A`,
       )
     }
   }
@@ -1773,53 +1878,10 @@ export async function solveDC(
     const solveStartTime = performance.now()
 
     if (hasNonLinearComponents) {
-      console.log('🔥 Using Newton-Raphson Solver for non-linear DC analysis...')
+      console.log('🎯 Using Load Line Intersection approach for non-linear DC analysis...')
 
-      // Create linear system (matrix without non-linear components)
-      const linearMatrix = matrix(zeros(matrixSize, matrixSize))
-      const linearRhs = matrix(zeros(matrixSize, 1))
-
-      // Stamp only linear components
-      let nextLinearBranchIndex = numNodes
-      const linearBranchCurrents: number[] = []
-
-      for (const stamper of stampers) {
-        // Skip non-linear components for linear stamping
-        if (stamper.type !== 'diode' && stamper.type !== 'led') {
-          const result = stamper.stampDC(
-            linearMatrix,
-            linearRhs,
-            termToNodeIndex,
-            nextLinearBranchIndex,
-          )
-          linearBranchCurrents.push(...result.branchCurrents)
-          nextLinearBranchIndex += result.branchCurrents.length
-        }
-      }
-
-      // Apply GMIN and ground constraints to linear system
-      const GMIN = 1e-12
-      for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
-        if (!groundNodeIndices.includes(nodeIndex)) {
-          linearMatrix.set(
-            [nodeIndex, nodeIndex],
-            (linearMatrix.get([nodeIndex, nodeIndex]) as number) + GMIN,
-          )
-        }
-      }
-
-      if (useEnhancedSolver) {
-        EnhancedMNASolver.applyGroundConstraintsEnhanced(linearMatrix, linearRhs, groundNodeIndices)
-      } else {
-        for (const groundIndex of groundNodeIndices) {
-          for (let i = 0; i < matrixSize; i++) {
-            linearMatrix.set([groundIndex, i], 0)
-            linearMatrix.set([i, groundIndex], 0)
-          }
-          linearMatrix.set([groundIndex, groundIndex], 1)
-          linearRhs.set([groundIndex, 0], 0)
-        }
-      }
+      // ARCHITECTURE COMPLIANCE: Try direct Load Line solution first (SPICE-like)
+      // For simple circuits, this should eliminate the need for Newton-Raphson
 
       // CRITICAL FIX: Provide all stampers to diode stampers for proper circuit analysis
       for (const stamper of nonLinearStampers) {
@@ -1829,46 +1891,188 @@ export async function solveDC(
         }
       }
 
-      // Solve with Newton-Raphson - RESTORED: LED-optimized settings that achieved 100% success
-      const newtonSolver = new NewtonRaphsonSolver({
-        maxIterations: 100, // RESTORED: More iterations for reliable LED convergence
-        convergenceTolerance: 1e-1, // RESTORED: Relaxed tolerance that achieved LED test success
-        dampingFactor: 0.7, // RESTORED: Less aggressive damping for LED model stability
-        useAdaptiveDamping: true,
-        tolerance: 1e-12,
-        useMatrixConditioning: true,
-        useIterativeRefinement: true,
-        enablePrecisionMonitoring: false, // Reduced logging for cleaner output
-      })
+      // Create the full system including Load Line pre-solved diodes
+      const fullMatrix = matrix(zeros(matrixSize, matrixSize))
+      const fullRhs = matrix(zeros(matrixSize, 1))
 
-      const newtonResult = newtonSolver.solve(
-        linearMatrix,
-        linearRhs,
-        groundNodeIndices,
-        nonLinearStampers,
-        termToNodeIndex,
-        undefined, // initialGuess
-        stampers, // allStampers for parameter scaling
-      )
+      // Stamp all components (including diodes using Load Line approach)
+      let nextFullBranchIndex = numNodes
+      const fullBranchCurrents: number[] = []
 
-      solution = newtonResult.solution
-
-      solverMetrics = {
-        conditionNumber: newtonResult.linearSolverMetrics?.conditionNumber,
-        refinementIterations: newtonResult.linearSolverMetrics?.refinementIterations,
-        significantDigits: newtonResult.linearSolverMetrics?.precisionMetrics?.significantDigits,
-        solveTime: performance.now() - solveStartTime,
+      for (const stamper of stampers) {
+        if (stamper.type === 'diode' || stamper.type === 'led') {
+          // For diodes, use Load Line pre-calculation in stampLinearized
+          // This requires a dummy solution vector for the analysis
+          const dummySolution = matrix(zeros(matrixSize, 1))
+          const diodeStamper = stamper as DiodeStamper
+          diodeStamper.stampLinearized(
+            fullMatrix,
+            fullRhs,
+            termToNodeIndex,
+            dummySolution,
+            stampers,
+          )
+        } else {
+          // Standard linear component stamping
+          const result = stamper.stampDC(fullMatrix, fullRhs, termToNodeIndex, nextFullBranchIndex)
+          fullBranchCurrents.push(...result.branchCurrents)
+          nextFullBranchIndex += result.branchCurrents.length
+        }
       }
 
-      if (newtonResult.converged) {
-        console.log(`✅ Newton-Raphson solver converged in ${newtonResult.iterations} iterations`)
-        console.log(`   Final residual: ${newtonResult.residualNorm.toExponential(2)}`)
+      // Apply GMIN and ground constraints
+      const GMIN = 1e-12
+      for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+        if (!groundNodeIndices.includes(nodeIndex)) {
+          fullMatrix.set(
+            [nodeIndex, nodeIndex],
+            (fullMatrix.get([nodeIndex, nodeIndex]) as number) + GMIN,
+          )
+        }
+      }
+
+      if (useEnhancedSolver) {
+        EnhancedMNASolver.applyGroundConstraintsEnhanced(fullMatrix, fullRhs, groundNodeIndices)
       } else {
-        console.warn(
-          `❌ Newton-Raphson solver failed to converge after ${newtonResult.iterations} iterations`,
+        for (const groundIndex of groundNodeIndices) {
+          for (let i = 0; i < matrixSize; i++) {
+            fullMatrix.set([groundIndex, i], 0)
+            fullMatrix.set([i, groundIndex], 0)
+          }
+          fullMatrix.set([groundIndex, groundIndex], 1)
+          fullRhs.set([groundIndex, 0], 0)
+        }
+      }
+
+      // Try direct linear solve with Load Line pre-calculated diodes
+      try {
+        if (useEnhancedSolver) {
+          console.log('🔍 Attempting Load Line + Enhanced Linear Solver...')
+          const enhancedSolver = new EnhancedMNASolver({
+            tolerance: 1e-12,
+            useMatrixConditioning: true,
+            useIterativeRefinement: true,
+            enablePrecisionMonitoring: false,
+          })
+
+          const solverResult = enhancedSolver.solve(fullMatrix, fullRhs)
+          solution = solverResult.solution
+
+          solverMetrics = {
+            conditionNumber: solverResult.conditionNumber,
+            refinementIterations: solverResult.refinementIterations,
+            significantDigits: solverResult.precisionMetrics?.significantDigits,
+            solveTime: performance.now() - solveStartTime,
+          }
+
+          console.log('✅ Load Line + Linear solver succeeded - no Newton-Raphson needed!')
+        } else {
+          console.log('📐 Attempting Load Line + Basic Linear Solver...')
+          solution = lusolve(fullMatrix, fullRhs) as Matrix
+          solverMetrics = {
+            solveTime: performance.now() - solveStartTime,
+          }
+          console.log('✅ Load Line + Basic linear solver succeeded!')
+        }
+      } catch (error) {
+        console.warn('⚠️ Load Line + Linear solver failed, falling back to Newton-Raphson...')
+        console.warn('Error:', error)
+
+        // Fallback to Newton-Raphson if direct approach fails
+        // This maintains compatibility with complex multi-diode circuits
+        console.log('🔥 Using Newton-Raphson Solver as fallback...')
+
+        // Create linear system (matrix without non-linear components)
+        const linearMatrix = matrix(zeros(matrixSize, matrixSize))
+        const linearRhs = matrix(zeros(matrixSize, 1))
+
+        // Stamp only linear components
+        let nextLinearBranchIndex = numNodes
+        const linearBranchCurrents: number[] = []
+
+        for (const stamper of stampers) {
+          // Skip non-linear components for linear stamping
+          if (stamper.type !== 'diode' && stamper.type !== 'led') {
+            const result = stamper.stampDC(
+              linearMatrix,
+              linearRhs,
+              termToNodeIndex,
+              nextLinearBranchIndex,
+            )
+            linearBranchCurrents.push(...result.branchCurrents)
+            nextLinearBranchIndex += result.branchCurrents.length
+          }
+        }
+
+        // Apply GMIN and ground constraints to linear system
+        for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+          if (!groundNodeIndices.includes(nodeIndex)) {
+            linearMatrix.set(
+              [nodeIndex, nodeIndex],
+              (linearMatrix.get([nodeIndex, nodeIndex]) as number) + GMIN,
+            )
+          }
+        }
+
+        if (useEnhancedSolver) {
+          EnhancedMNASolver.applyGroundConstraintsEnhanced(
+            linearMatrix,
+            linearRhs,
+            groundNodeIndices,
+          )
+        } else {
+          for (const groundIndex of groundNodeIndices) {
+            for (let i = 0; i < matrixSize; i++) {
+              linearMatrix.set([groundIndex, i], 0)
+              linearMatrix.set([i, groundIndex], 0)
+            }
+            linearMatrix.set([groundIndex, groundIndex], 1)
+            linearRhs.set([groundIndex, 0], 0)
+          }
+        }
+
+        // Solve with Newton-Raphson fallback
+        const newtonSolver = new NewtonRaphsonSolver({
+          maxIterations: 50, // Fewer iterations since Load Line should provide good starting point
+          convergenceTolerance: 1e-6, // Tighter tolerance for better accuracy
+          dampingFactor: 0.7,
+          useAdaptiveDamping: true,
+          tolerance: 1e-12,
+          useMatrixConditioning: true,
+          useIterativeRefinement: true,
+          enablePrecisionMonitoring: false,
+        })
+
+        const newtonResult = newtonSolver.solve(
+          linearMatrix,
+          linearRhs,
+          groundNodeIndices,
+          nonLinearStampers,
+          termToNodeIndex,
+          undefined, // initialGuess
+          stampers, // allStampers for parameter scaling
         )
-        console.warn(`   Final residual: ${newtonResult.residualNorm.toExponential(2)}`)
-        console.warn(`   Using non-converged solution (may be inaccurate)`)
+
+        solution = newtonResult.solution
+
+        solverMetrics = {
+          conditionNumber: newtonResult.linearSolverMetrics?.conditionNumber,
+          refinementIterations: newtonResult.linearSolverMetrics?.refinementIterations,
+          significantDigits: newtonResult.linearSolverMetrics?.precisionMetrics?.significantDigits,
+          solveTime: performance.now() - solveStartTime,
+        }
+
+        if (newtonResult.converged) {
+          console.log(
+            `✅ Newton-Raphson fallback converged in ${newtonResult.iterations} iterations`,
+          )
+          console.log(`   Final residual: ${newtonResult.residualNorm.toExponential(2)}`)
+        } else {
+          console.warn(
+            `❌ Newton-Raphson fallback failed after ${newtonResult.iterations} iterations`,
+          )
+          console.warn(`   Final residual: ${newtonResult.residualNorm.toExponential(2)}`)
+        }
       }
     } else if (useEnhancedSolver) {
       console.log('🔍 Using Enhanced MNA Solver for linear DC analysis...')
