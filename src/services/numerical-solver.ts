@@ -1,4 +1,5 @@
 import { zeros, lusolve, matrix, Matrix, multiply, subtract, add, index, range } from 'mathjs'
+import type { ComponentStamper } from './simulation'
 
 /**
  * Enhanced numerical solver with improved precision and stability
@@ -399,6 +400,7 @@ export interface NonLinearStamper {
     rhsVector: Matrix,
     nodeMap: Map<string, number>,
     solution: Matrix,
+    allStampers?: ComponentStamper[],
   ): void
 }
 
@@ -536,6 +538,7 @@ export class NewtonRaphsonSolver {
     nonLinearStampers: NonLinearStamper[],
     nodeMap: Map<string, number>,
     initialGuess?: Matrix,
+    allStampers?: ComponentStamper[],
   ): NewtonRaphsonResult {
     const startTime = performance.now()
     const matrixSize = linearMatrix.size()[0]
@@ -566,7 +569,7 @@ export class NewtonRaphsonSolver {
 
       // Step 2: Stamp all non-linear components with linearized equivalent circuits
       for (const stamper of nonLinearStampers) {
-        stamper.stampLinearized(jacobianMatrix, rhsVector, nodeMap, solution)
+        stamper.stampLinearized(jacobianMatrix, rhsVector, nodeMap, solution, allStampers)
       }
 
       // Step 3: Apply ground constraints
