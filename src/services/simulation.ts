@@ -56,7 +56,7 @@ abstract class ResistiveStamper implements ComponentStamper {
   constructor(
     public id: string,
     public type: string,
-    protected component: CircuitComponent,
+    public component: CircuitComponent,
     protected resistance: number,
   ) {}
 
@@ -310,12 +310,12 @@ export class WireStamper extends ResistiveStamper {
  * Voltage source component stamper
  */
 export class VoltageSourceStamper implements ComponentStamper {
-  private voltage: number
+  public voltage: number
   private branchIndex: number = -1
   public id: string
   public type: string
 
-  constructor(private component: CircuitComponent) {
+  constructor(public component: CircuitComponent) {
     this.id = component.id
     this.type = component.type
     this.voltage = (component.properties?.voltage as number) || 0
@@ -873,14 +873,14 @@ class DiodeStamper implements ComponentStamper, NonLinearStamper {
 
     for (const stamper of stampersToUse) {
       if (stamper.type === 'voltage_source') {
-        const vsComponent = (stamper as any).component as CircuitComponent
+        const vsComponent = (stamper as VoltageSourceStamper).component as CircuitComponent
         if (vsComponent?.properties?.voltage) {
           const voltage = vsComponent.properties.voltage as number
           voltageSources.push({ voltage, component: vsComponent })
           console.log(`  Found voltage source ${vsComponent.id}: ${voltage}V`)
         }
       } else if (stamper.type === 'resistor') {
-        const resistorComponent = (stamper as any).component as CircuitComponent
+        const resistorComponent = (stamper as ResistorStamper).component as CircuitComponent
         if (resistorComponent?.properties?.resistance) {
           const resistance = resistorComponent.properties.resistance as number
           resistors.push({ resistance, component: resistorComponent })
