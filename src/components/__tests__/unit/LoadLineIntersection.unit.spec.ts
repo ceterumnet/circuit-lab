@@ -62,6 +62,49 @@ describe('DiodeCharacteristic Unit Tests', () => {
       expect(conductance_0_7V).toBeGreaterThan(conductance_0_6V)
       expect(conductance_0_7V).toBeGreaterThan(0)
     })
+
+    it('should follow exponential I-V characteristic (Shockley equation)', () => {
+      const diode = new DiodeCharacteristic(1e-12, 1)
+
+      // Test exponential behavior across voltage range
+      const voltages = [0.4, 0.5, 0.6, 0.7, 0.8]
+      const currents = voltages.map((v) => diode.getCurrent(v))
+
+      console.log('Pure DiodeCharacteristic exponential behavior:')
+      voltages.forEach((v, i) => {
+        console.log(`  V=${v}V: I=${currents[i].toExponential(3)}A`)
+      })
+
+      // Verify exponential increase: current should increase dramatically with voltage
+      expect(currents[4]).toBeGreaterThan(currents[0] * 1000) // At least 1000x increase from 0.4V to 0.8V
+      expect(currents[3]).toBeGreaterThan(currents[2] * 2) // At least 2x increase per 0.1V step
+      expect(currents[2]).toBeGreaterThan(currents[1] * 2)
+      expect(currents[1]).toBeGreaterThan(currents[0] * 2)
+
+      // All forward voltages should produce positive current
+      currents.forEach((current) => {
+        expect(current).toBeGreaterThan(0)
+      })
+    })
+
+    it('should handle very low voltages correctly (sub-threshold)', () => {
+      const diode = new DiodeCharacteristic(1e-12, 1)
+
+      // Test very low voltage where diode should barely conduct
+      const current_0_1V = diode.getCurrent(0.1)
+      const current_0_2V = diode.getCurrent(0.2)
+
+      console.log(`Pure DiodeCharacteristic at low voltages:`)
+      console.log(`  V=0.1V: I=${current_0_1V.toExponential(3)}A`)
+      console.log(`  V=0.2V: I=${current_0_2V.toExponential(3)}A`)
+
+      // At very low voltages, current should be very small (dominated by thermal effects)
+      expect(current_0_1V).toBeLessThan(1e-9) // Less than 1nA at 0.1V
+      expect(current_0_2V).toBeLessThan(1e-7) // Less than 100nA at 0.2V
+
+      // But still should show exponential relationship
+      expect(current_0_2V).toBeGreaterThan(current_0_1V)
+    })
   })
 })
 
