@@ -798,7 +798,7 @@ export class LoadLineIntersection {
  * Non-linear diode stamper using Load Line Intersection approach
  * PHASE 1: Complete redesign for proper circuit analysis
  */
-class DiodeStamper implements ComponentStamper, NonLinearStamper {
+export class DiodeStamper implements ComponentStamper, NonLinearStamper {
   public id: string
   public type: string
   protected diodeCharacteristic: DiodeCharacteristic
@@ -2032,7 +2032,7 @@ interface DiodeParameterProfile {
 /**
  * Real diode parameter library based on industry datasheets
  */
-class DiodeParameterLibrary {
+export class DiodeParameterLibrary {
   private static profiles: DiodeParameterProfile[] = [
     {
       name: 'Small Signal Silicon',
@@ -2225,33 +2225,21 @@ export class CircuitAnalyzer {
     for (const stamper of allStampers) {
       if (stamper.type === 'voltage_source') {
         // Extract actual voltage from VoltageSourceStamper
-        try {
-          // Extract voltage from VoltageSourceStamper via property access
-          const voltageStamper = stamper as VoltageSourceStamper
-          const voltage = Math.abs(
-            (voltageStamper as unknown as { voltage: number }).voltage || 5.0,
-          )
-          maxVoltage = Math.max(maxVoltage, voltage)
-          hasVoltageSource = true
-          console.log(`  Found voltage source ${stamper.id}: ${voltage}V`)
-        } catch (error) {
-          console.log(`  Voltage source ${stamper.id}: Using default 5V (extraction failed)`)
-          maxVoltage = Math.max(maxVoltage, 5.0)
-          hasVoltageSource = true
-        }
+        const voltageStamper = stamper as VoltageSourceStamper
+        const voltage = Math.abs(voltageStamper.voltage || 5.0)
+        maxVoltage = Math.max(maxVoltage, voltage)
+        hasVoltageSource = true
+        console.log(`  Found voltage source ${stamper.id}: ${voltage}V`)
       } else if (stamper.type === 'resistor') {
         // Extract actual resistance from ResistorStamper
-        try {
-          // Extract resistance from ResistorStamper via property access
-          const resistorStamper = stamper as ResistorStamper
-          const resistance =
-            (resistorStamper as unknown as { resistance: number }).resistance || 1000
-          totalResistance += resistance
-          console.log(`  Found resistor ${stamper.id}: ${resistance}Ω`)
-        } catch (error) {
-          console.log(`  Resistor ${stamper.id}: Using default 1kΩ (extraction failed)`)
-          totalResistance += 1000
-        }
+        const resistorStamper = stamper as ResistorStamper
+        // Access the protected resistance property through component properties
+        const resistance =
+          typeof resistorStamper.component.properties?.resistance === 'number'
+            ? resistorStamper.component.properties.resistance
+            : 1000
+        totalResistance += resistance
+        console.log(`  Found resistor ${stamper.id}: ${resistance}Ω`)
       }
     }
 
