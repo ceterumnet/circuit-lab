@@ -124,7 +124,7 @@ abstract class ResistiveStamper implements ComponentStamper {
 /**
  * Resistor component stamper
  */
-class ResistorStamper extends ResistiveStamper {
+export class ResistorStamper extends ResistiveStamper {
   constructor(component: CircuitComponent) {
     const resistance = (component.properties?.resistance as number) || 1000
     super(component.id, component.type, component, resistance)
@@ -135,7 +135,7 @@ class ResistorStamper extends ResistiveStamper {
  * Wire component stamper - PURE MNA: Uses G-matrix stamping like all passive components
  * This ensures consistent Ohm's law calculations and eliminates KCL violations
  */
-class WireStamper extends ResistiveStamper {
+export class WireStamper extends ResistiveStamper {
   constructor(component: CircuitComponent) {
     // Use wire's configured resistance, default to 1mΩ for numerical stability
     // 1mΩ is small enough to be negligible in most circuits but avoids conditioning issues
@@ -309,7 +309,7 @@ class WireStamper extends ResistiveStamper {
 /**
  * Voltage source component stamper
  */
-class VoltageSourceStamper implements ComponentStamper {
+export class VoltageSourceStamper implements ComponentStamper {
   private voltage: number
   private branchIndex: number = -1
   public id: string
@@ -369,7 +369,21 @@ class VoltageSourceStamper implements ComponentStamper {
     branchCurrents: number[],
     allStampers?: ComponentStamper[],
   ): number {
-    return solution.get([this.branchIndex, 0]) as number
+    // For voltage sources, current comes from the branch current variable
+    // Use the branchCurrents parameter if available, otherwise fall back to branchIndex
+    if (branchCurrents && branchCurrents.length > 0) {
+      // Use the first branch current index (voltage sources only have one branch current)
+      const branchIndex = branchCurrents[0]
+      return solution.get([branchIndex, 0]) as number
+    } else if (this.branchIndex >= 0) {
+      // Fall back to stored branchIndex if branchCurrents not provided
+      return solution.get([this.branchIndex, 0]) as number
+    } else {
+      // If neither is available, we can't calculate current
+      throw new Error(
+        `VoltageSourceStamper ${this.id}: Cannot calculate current - no branch index available`,
+      )
+    }
   }
 }
 
@@ -2146,7 +2160,7 @@ class DiodeParameterLibrary {
 /**
  * Circuit analysis for automatic parameter selection
  */
-class CircuitAnalyzer {
+export class CircuitAnalyzer {
   /**
    * Analyze circuit from stampers to estimate expected diode operating conditions
    * This implementation extracts actual component values from the stampers
