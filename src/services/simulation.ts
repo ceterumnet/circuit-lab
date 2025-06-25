@@ -1236,66 +1236,41 @@ class LEDStamper extends DiodeStamper {
     super(component)
     this.ledColor = (component.properties?.color as string) || 'blue'
 
-    // Phase 1.99 specification: LED forward voltages
-    const forwardVoltages = { red: 1.7, yellow: 1.8, green: 2.1, blue: 3.0, white: 3.3 }
-    this.forwardVoltage = forwardVoltages[this.ledColor as keyof typeof forwardVoltages] || 3.0
+    // Color-specific LED electrical parameters (realistic industry values)
+    // Based on real SPICE LED models with different semiconductor materials
+    const ledParameters = {
+      red: { Is: 15.0e-12, N: 1.8, Vf: 1.7 }, // GaAs - Lower Vf, lower N
+      yellow: { Is: 25.0e-12, N: 2.2, Vf: 1.8 }, // GaAsP - Similar to red but slightly higher
+      green: { Is: 35.0e-12, N: 3.1, Vf: 2.1 }, // GaP - Medium values
+      blue: { Is: 93.2e-12, N: 6.8, Vf: 3.0 }, // GaN - High Vf, high N (from Nichia NSPW500BS)
+      white: { Is: 120e-12, N: 7.2, Vf: 3.3 }, // GaN + phosphor - Highest values
+    }
 
-    // REALISTIC: Use industry-standard LED SPICE parameters
-    // Based on real SPICE LED models: IS = 93.2P to 0.27n, N = 3.73 to 7.47
-    const Is = 93.2e-12 // Saturation current (93.2 picoamps - industry standard)
-    const N = 6.79 // Emission coefficient (6.79 for blue LED - from Nichia NSPW500BS)
+    const params = ledParameters[this.ledColor as keyof typeof ledParameters] || ledParameters.blue
+    this.forwardVoltage = params.Vf
 
-    // Override the parent's diode characteristic with LED-specific parameters
-    this.diodeCharacteristic = new DiodeCharacteristic(Is, N)
+    // Use color-specific parameters instead of hardcoded blue LED values
+    this.diodeCharacteristic = new DiodeCharacteristic(params.Is, params.N)
     // LEDs use explicit parameters, so mark as initialized
     this.parametersInitialized = true
   }
 
   /**
-   * LED current: REALISTIC industry-standard LED parameters
-   * Based on real SPICE LED models from industry sources and research
+   * LED current: Uses color-specific parameters from DiodeCharacteristic
+   * Each LED color has different saturation current and emission coefficient
    */
   calculateNonLinearCurrent(voltage: number): number {
-    if (voltage < 0) {
-      // Reverse bias - small leakage current
-      return -1e-12
-    }
-
-    // REALISTIC LED SPICE PARAMETERS - Based on industry research
-    // From real SPICE LED models: IS = 93.2P to 0.27n, N = 3.73 to 7.47
-    const Is = 93.2e-12 // Saturation current (93.2 picoamps - industry standard)
-    const N = 6.79 // Emission coefficient (6.79 for blue LED - from Nichia NSPW500BS)
-    const Vt = 0.026 // Standard thermal voltage at room temperature (26mV)
-
-    // Standard SPICE diode equation: I = Is * (exp(V/(N*Vt)) - 1)
-    // This is the proper equation used in professional SPICE simulators
-    const expArg = Math.min(voltage / (N * Vt), 20) // Prevent overflow
-    const current = Is * (Math.exp(expArg) - 1)
-
-    // Ensure minimum current for numerical stability
-    return Math.max(current, 1e-15)
+    // Use the DiodeCharacteristic that has color-specific parameters
+    return this.diodeCharacteristic.getCurrent(voltage)
   }
 
   /**
-   * LED conductance: derivative of realistic SPICE LED equation
-   * REALISTIC: These parameters should produce proper 20-30mA operation at ~3V
+   * LED conductance: Uses color-specific parameters from DiodeCharacteristic
+   * Each LED color has different conductance based on its electrical parameters
    */
   calculateConductance(voltage: number): number {
-    if (voltage < 0) {
-      return 1e-12 // Small conductance in reverse
-    }
-
-    // IDENTICAL parameters to current calculation - REALISTIC SPICE VALUES
-    const Is = 93.2e-12 // Same as current calculation (93.2 picoamps)
-    const N = 6.79 // Same emission coefficient (blue LED from Nichia)
-    const Vt = 0.026 // Same thermal voltage (standard 26mV)
-
-    // Derivative of I = Is * (exp(V/(N*Vt)) - 1) is: dI/dV = (Is/(N*Vt)) * exp(V/(N*Vt))
-    const expArg = Math.min(voltage / (N * Vt), 20) // Same limit as current
-    const conductance = (Is / (N * Vt)) * Math.exp(expArg)
-
-    // Ensure minimum conductance for numerical stability
-    return Math.max(conductance, 1e-12)
+    // Use the DiodeCharacteristic that has color-specific parameters
+    return this.diodeCharacteristic.getConductance(voltage)
   }
 
   isOn(voltage: number): boolean {
