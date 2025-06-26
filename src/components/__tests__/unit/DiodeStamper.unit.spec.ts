@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { matrix, zeros, Matrix } from 'mathjs'
-import type { CircuitComponent } from '../../../types/components'
+import type { CircuitComponent } from '@/types/components'
 import { ResistorStamper, VoltageSourceStamper, type ComponentStamper } from '@/services/stampers'
 import { DiodeStamper } from '@/services/stampers'
 

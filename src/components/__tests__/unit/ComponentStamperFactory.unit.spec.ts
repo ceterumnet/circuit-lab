@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { CircuitComponent } from '../../../types/components'
-import { ComponentStamperFactory } from '../../../services/stampers'
+import type { CircuitComponent } from '@/types/components'
+import { ComponentStamperFactory } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR COMPONENT STAMPER FACTORY

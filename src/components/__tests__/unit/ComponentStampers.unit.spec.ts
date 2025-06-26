@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { loadCircuitFile, validateCircuitStructure } from '../circuit-loader'
-import type { TestCircuitSpec } from '../test-types'
 
 describe('Component Stampers Unit Tests', () => {
   describe('Resistor Stamping Operations', () => {

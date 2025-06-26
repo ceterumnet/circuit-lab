@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { matrix, Matrix, zeros } from 'mathjs'
-import type { CircuitComponent } from '../../../types/components'
+import { describe, it, expect } from 'vitest'
+import { matrix, zeros } from 'mathjs'
+import type { CircuitComponent } from '@/types/components'
 // Import REAL stampers and simulation engine - NO MOCKS!
 import { solveDC } from '@/services/simulation'
 import { ResistorStamper, type ComponentStamper, VoltageSourceStamper } from '@/services/stampers'
-import type { Circuit } from '../../../types/components'
+import type { Circuit } from '@/types/components'
 
 /**
  * UNIT TESTS FOR MATRIX ASSEMBLY - REAL IMPLEMENTATION

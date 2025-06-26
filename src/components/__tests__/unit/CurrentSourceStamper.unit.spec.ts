@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matrix, Matrix, zeros } from 'mathjs'
+import { matrix, zeros } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
 import { CurrentSourceStamper } from '../../../services/stampers'
 

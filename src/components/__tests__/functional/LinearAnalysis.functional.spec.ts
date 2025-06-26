@@ -4,12 +4,8 @@ import {
   createParameterIndependenceTestSet,
   resetIdCounters,
 } from '../circuit-factory'
-import {
-  validateSimulationResults,
-  expectSimulationToMatch,
-  createTestSummaryReport,
-} from '../test-validation'
-import type { TestCircuitSpec, ValidationResult } from '../test-types'
+import { createTestSummaryReport } from '../test-validation'
+import type { ValidationResult } from '../test-types'
 
 describe('Linear Analysis Functional Tests', () => {
   beforeEach(() => {
@@ -202,7 +198,7 @@ describe('Linear Analysis Functional Tests', () => {
       expect(testSpec.circuit.wires).toHaveLength(4) // 4 connecting wires
 
       // Each wire should have proper terminal connections
-      testSpec.circuit.wires.forEach((wire, index) => {
+      testSpec.circuit.wires.forEach((wire) => {
         expect(wire.properties?.startTerminal).toBeDefined()
         expect(wire.properties?.endTerminal).toBeDefined()
         expect(typeof wire.properties?.startTerminal).toBe('string')
@@ -219,8 +215,6 @@ describe('Linear Analysis Functional Tests', () => {
       ]
 
       testCases.forEach(({ r1, r2, description }) => {
-        const testSpec = createVoltageDividerCircuit(r1, r2, 5.0)
-
         // Check for potential numerical issues
         const totalResistance = r1 + r2
         const expectedCurrent = 5.0 / totalResistance

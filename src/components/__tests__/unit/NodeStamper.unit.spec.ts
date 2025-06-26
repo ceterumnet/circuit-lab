@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { matrix, Matrix, zeros } from 'mathjs'
-import type { CircuitComponent } from '../../../types/components'
-import { NodeStamper } from '../../../services/stampers'
-import type { ComponentStamper } from '../../../services/stampers'
+import { matrix, zeros } from 'mathjs'
+import type { CircuitComponent } from '@/types/components'
+import { NodeStamper } from '@/services/stampers'
+import type { ComponentStamper } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR NODE STAMPER

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { loadCircuitFile, loadCircuitsByCategory } from '../circuit-loader'
-import type { TestCircuitSpec } from '../test-types'
 
 describe('Linear Circuit Analysis Functional Tests', () => {
   describe('Voltage Divider Circuit Analysis', () => {
