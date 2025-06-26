@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { matrix, Matrix, zeros } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
+import { ResistorStamper } from '../../../services/stampers'
 
 /**
  * UNIT TESTS FOR RESISTOR STAMPER
@@ -11,35 +12,8 @@ import type { CircuitComponent } from '../../../types/components'
  * 3. Current calculation
  * 4. Parameter independence
  *
- * CRITICAL: These test the ACTUAL ResistorStamper class from simulation.ts
+ * Tests the ACTUAL ResistorStamper class implementation.
  */
-
-// We need to export ResistorStamper from simulation.ts to test it
-// For now, let's create a minimal implementation to test the concept
-
-/**
- * Minimal ResistorStamper interface for testing
- * This should match the actual implementation in simulation.ts
- */
-interface ComponentStamper {
-  id: string
-  type: string
-  stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
-  ): { branchCurrents: number[] }
-  calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
-  ): number
-}
-
-// TestableResistorStamper is just ComponentStamper for now
-type TestableResistorStamper = ComponentStamper
 
 /**
  * Create a test resistor component
@@ -75,26 +49,17 @@ describe('ResistorStamper Unit Tests', () => {
       const resistance = 1000 // 1kΩ
       const expectedConductance = 1 / resistance // 0.001 S
 
+      // Create test resistor and stamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       // Create test matrices
-      const mnaMatrix = matrix(zeros(3, 3)) // 3x3 matrix for this test
+      const mnaMatrix = matrix(zeros(3, 3))
       const rhsVector = matrix(zeros(3, 1))
       const nodeMap = createTestNodeMap('R1')
 
-      // Expected G-matrix stamping pattern for resistor between nodes 0 and 1:
-      // [  G  -G   0 ]
-      // [ -G   G   0 ]
-      // [  0   0   0 ]
-
-      // Manually verify the expected stamping pattern
-      // This is what ResistorStamper.stampDC() should do:
-      const node1 = 0
-      const node2 = 1
-
-      // Stamp conductance into matrix
-      mnaMatrix.set([node1, node1], (mnaMatrix.get([node1, node1]) as number) + expectedConductance)
-      mnaMatrix.set([node2, node2], (mnaMatrix.get([node2, node2]) as number) + expectedConductance)
-      mnaMatrix.set([node1, node2], (mnaMatrix.get([node1, node2]) as number) - expectedConductance)
-      mnaMatrix.set([node2, node1], (mnaMatrix.get([node2, node1]) as number) - expectedConductance)
+      // Use the ACTUAL ResistorStamper to stamp the matrix
+      stamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
       // Verify the stamped values
       expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(expectedConductance, 12) // G
@@ -114,29 +79,17 @@ describe('ResistorStamper Unit Tests', () => {
 
       resistanceValues.forEach((resistance) => {
         const expectedConductance = 1 / resistance
+
+        // Create actual ResistorStamper with this resistance
+        const component = createTestResistor('R1', resistance)
+        const stamper = new ResistorStamper(component)
+
         const mnaMatrix = matrix(zeros(3, 3))
         const rhsVector = matrix(zeros(3, 1))
         const nodeMap = createTestNodeMap('R1')
 
-        // Stamp the resistor (manual implementation of what ResistorStamper should do)
-        const node1 = 0
-        const node2 = 1
-        mnaMatrix.set(
-          [node1, node1],
-          (mnaMatrix.get([node1, node1]) as number) + expectedConductance,
-        )
-        mnaMatrix.set(
-          [node2, node2],
-          (mnaMatrix.get([node2, node2]) as number) + expectedConductance,
-        )
-        mnaMatrix.set(
-          [node1, node2],
-          (mnaMatrix.get([node1, node2]) as number) - expectedConductance,
-        )
-        mnaMatrix.set(
-          [node2, node1],
-          (mnaMatrix.get([node2, node1]) as number) - expectedConductance,
-        )
+        // Use ACTUAL ResistorStamper to stamp the matrix
+        stamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
         const stampedConductance = mnaMatrix.get([0, 0]) as number
         stampedConductances.push(stampedConductance)
@@ -166,17 +119,16 @@ describe('ResistorStamper Unit Tests', () => {
       const resistance = 2200 // 2.2kΩ
       const expectedConductance = 1 / resistance
 
+      // Create actual ResistorStamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       const mnaMatrix = matrix(zeros(3, 3))
       const rhsVector = matrix(zeros(3, 1))
       const nodeMap = createTestNodeMap('R1')
 
-      // Stamp resistor (what ResistorStamper.stampDC() should do)
-      const node1 = 0
-      const node2 = 1
-      mnaMatrix.set([node1, node1], (mnaMatrix.get([node1, node1]) as number) + expectedConductance)
-      mnaMatrix.set([node2, node2], (mnaMatrix.get([node2, node2]) as number) + expectedConductance)
-      mnaMatrix.set([node1, node2], (mnaMatrix.get([node1, node2]) as number) - expectedConductance)
-      mnaMatrix.set([node2, node1], (mnaMatrix.get([node2, node1]) as number) - expectedConductance)
+      // Use ACTUAL ResistorStamper to stamp the matrix
+      stamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
       // Verify matrix symmetry (passive components should create symmetric matrices)
       expect(mnaMatrix.get([0, 1]) as number).toBeCloseTo(mnaMatrix.get([1, 0]) as number, 15)
@@ -198,6 +150,10 @@ describe('ResistorStamper Unit Tests', () => {
       const voltage2 = 0.0 // Node 2 voltage (ground)
       const expectedCurrent = (voltage1 - voltage2) / resistance // 5mA
 
+      // Create actual ResistorStamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       // Create solution vector with known voltages
       const solution = matrix(zeros(3, 1))
       solution.set([0, 0], voltage1) // Node 0 = 5V
@@ -206,12 +162,8 @@ describe('ResistorStamper Unit Tests', () => {
 
       const nodeMap = createTestNodeMap('R1')
 
-      // Calculate current (what ResistorStamper.calculateCurrent() should do)
-      const node1Index = nodeMap.get('R1:terminal1')! // 0
-      const node2Index = nodeMap.get('R1:terminal2')! // 1
-      const v1 = solution.get([node1Index, 0]) as number
-      const v2 = solution.get([node2Index, 0]) as number
-      const calculatedCurrent = (v1 - v2) / resistance
+      // Use ACTUAL ResistorStamper to calculate current
+      const calculatedCurrent = stamper.calculateCurrent(solution, nodeMap, [])
 
       expect(calculatedCurrent).toBeCloseTo(expectedCurrent, 12)
       expect(calculatedCurrent).toBeCloseTo(0.005, 12) // 5mA
@@ -224,6 +176,10 @@ describe('ResistorStamper Unit Tests', () => {
       const voltage2 = 3.0 // Node 2 = 3V
       const expectedCurrent = (voltage1 - voltage2) / resistance // -6mA
 
+      // Create actual ResistorStamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       const solution = matrix(zeros(3, 1))
       solution.set([0, 0], voltage1)
       solution.set([1, 0], voltage2)
@@ -231,12 +187,8 @@ describe('ResistorStamper Unit Tests', () => {
 
       const nodeMap = createTestNodeMap('R1')
 
-      // Calculate current
-      const node1Index = nodeMap.get('R1:terminal1')!
-      const node2Index = nodeMap.get('R1:terminal2')!
-      const v1 = solution.get([node1Index, 0]) as number
-      const v2 = solution.get([node2Index, 0]) as number
-      const calculatedCurrent = (v1 - v2) / resistance
+      // Use ACTUAL ResistorStamper to calculate current
+      const calculatedCurrent = stamper.calculateCurrent(solution, nodeMap, [])
 
       expect(calculatedCurrent).toBeCloseTo(expectedCurrent, 12)
       expect(calculatedCurrent).toBeCloseTo(-0.006, 12) // -6mA
@@ -249,16 +201,16 @@ describe('ResistorStamper Unit Tests', () => {
       const resistance = 0.001 // 1mΩ (very small)
       const expectedConductance = 1 / resistance // 1000 S (very large)
 
+      // Create actual ResistorStamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       const mnaMatrix = matrix(zeros(3, 3))
+      const rhsVector = matrix(zeros(3, 1))
       const nodeMap = createTestNodeMap('R1')
 
-      // Stamp very small resistor
-      const node1 = 0
-      const node2 = 1
-      mnaMatrix.set([node1, node1], (mnaMatrix.get([node1, node1]) as number) + expectedConductance)
-      mnaMatrix.set([node2, node2], (mnaMatrix.get([node2, node2]) as number) + expectedConductance)
-      mnaMatrix.set([node1, node2], (mnaMatrix.get([node1, node2]) as number) - expectedConductance)
-      mnaMatrix.set([node2, node1], (mnaMatrix.get([node2, node1]) as number) - expectedConductance)
+      // Use ACTUAL ResistorStamper to stamp the matrix
+      stamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
       expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(expectedConductance, 6) // 1000 S
       expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(1000, 6)
@@ -268,16 +220,16 @@ describe('ResistorStamper Unit Tests', () => {
       const resistance = 1e12 // 1TΩ (very large)
       const expectedConductance = 1 / resistance // 1pS (very small)
 
+      // Create actual ResistorStamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       const mnaMatrix = matrix(zeros(3, 3))
+      const rhsVector = matrix(zeros(3, 1))
       const nodeMap = createTestNodeMap('R1')
 
-      // Stamp very large resistor
-      const node1 = 0
-      const node2 = 1
-      mnaMatrix.set([node1, node1], (mnaMatrix.get([node1, node1]) as number) + expectedConductance)
-      mnaMatrix.set([node2, node2], (mnaMatrix.get([node2, node2]) as number) + expectedConductance)
-      mnaMatrix.set([node1, node2], (mnaMatrix.get([node1, node2]) as number) - expectedConductance)
-      mnaMatrix.set([node2, node1], (mnaMatrix.get([node2, node1]) as number) - expectedConductance)
+      // Use ACTUAL ResistorStamper to stamp the matrix
+      stamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
       expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(expectedConductance, 18) // 1e-12 S
       expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(1e-12, 18)
@@ -285,20 +237,17 @@ describe('ResistorStamper Unit Tests', () => {
 
     it('should not modify RHS vector for passive resistor', () => {
       const resistance = 1000
+
+      // Create actual ResistorStamper
+      const component = createTestResistor('R1', resistance)
+      const stamper = new ResistorStamper(component)
+
       const mnaMatrix = matrix(zeros(3, 3))
       const rhsVector = matrix(zeros(3, 1))
-
-      // RHS is already initialized to zero by zeros()
       const nodeMap = createTestNodeMap('R1')
 
-      // Stamp resistor (should not modify RHS for passive component)
-      const expectedConductance = 1 / resistance
-      const node1 = 0
-      const node2 = 1
-      mnaMatrix.set([node1, node1], (mnaMatrix.get([node1, node1]) as number) + expectedConductance)
-      mnaMatrix.set([node2, node2], (mnaMatrix.get([node2, node2]) as number) + expectedConductance)
-      mnaMatrix.set([node1, node2], (mnaMatrix.get([node1, node2]) as number) - expectedConductance)
-      mnaMatrix.set([node2, node1], (mnaMatrix.get([node2, node1]) as number) - expectedConductance)
+      // Use ACTUAL ResistorStamper to stamp the matrix (should not modify RHS for passive component)
+      stamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
       // RHS should remain zero for passive resistor
       expect(rhsVector.get([0, 0]) as number).toBe(0)
@@ -309,26 +258,21 @@ describe('ResistorStamper Unit Tests', () => {
 })
 
 describe('ResistorStamper Integration Validation', () => {
-  it('should be ready for integration with actual ResistorStamper class', () => {
-    // This test documents what needs to be done to integrate with real implementation:
-
-    // TODO: Export ResistorStamper from simulation.ts
-    // TODO: Replace manual stamping with actual ResistorStamper.stampDC() calls
-    // TODO: Replace manual current calculation with ResistorStamper.calculateCurrent() calls
-    // TODO: Add tests for getNodeIndices() method
-    // TODO: Add tests for component property extraction
-
-    // For now, verify our test framework is ready
+  it('should use actual ResistorStamper class from stampers module', () => {
+    // Verify we're testing the ACTUAL ResistorStamper implementation
     const testResistor = createTestResistor('R1', 1000)
-    expect(testResistor.id).toBe('R1')
-    expect(testResistor.type).toBe('resistor')
-    expect(testResistor.properties?.resistance).toBe(1000)
+    const stamper = new ResistorStamper(testResistor)
+
+    // Verify the stamper has the expected properties
+    expect(stamper.id).toBe('R1')
+    expect(stamper.type).toBe('resistor')
 
     const nodeMap = createTestNodeMap('R1')
     expect(nodeMap.get('R1:terminal1')).toBe(0)
     expect(nodeMap.get('R1:terminal2')).toBe(1)
 
-    console.log('✅ ResistorStamper unit test framework ready for integration')
-    console.log('Next: Export ResistorStamper from simulation.ts and test actual implementation')
+    console.log('✅ ResistorStamper tests now use ACTUAL ResistorStamper class')
+    console.log('✅ All manual matrix operations replaced with real stamper calls')
+    console.log('✅ Tests will catch real bugs in ResistorStamper implementation')
   })
 })
