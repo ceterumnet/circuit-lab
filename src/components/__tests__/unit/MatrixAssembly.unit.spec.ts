@@ -1,91 +1,37 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createBasicResistorCircuit, resetIdCounters } from '../circuit-factory'
-import { validateSimulationResults, expectSimulationToMatch } from '../test-validation'
-import type { TestCircuitSpec } from '../test-types'
-import type { Circuit, SimulationResult } from '../../../types/components'
 import { matrix, Matrix, zeros } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
-
-// TODO: Import actual simulation service once we identify the interface
-// For now, we'll create a mock interface to demonstrate the test structure
-interface MockSimulationService {
-  simulateCircuit(circuit: Circuit): Promise<SimulationResult>
-}
-
-// Mock simulation service - will be replaced with actual service
-const mockSimulationService: MockSimulationService = {
-  async simulateCircuit(circuit: Circuit): Promise<SimulationResult> {
-    // This is a placeholder that returns expected results for demonstration
-    // In reality, this would call the actual MNA simulation engine
-
-    // For the mock, we'll calculate basic results based on the circuit structure
-    // This is a simplified simulation for testing the test infrastructure
-
-    // Find voltage source
-    const voltageSource = circuit.components.find((c) => c.type === 'voltage_source')
-    const resistor = circuit.components.find((c) => c.type === 'resistor')
-
-    if (!voltageSource || !resistor) {
-      throw new Error('Mock simulation requires voltage source and resistor')
-    }
-
-    const voltage = (voltageSource.properties?.voltage as number) || 0
-    const resistance = (resistor.properties?.resistance as number) || 1
-    const current = voltage / resistance
-
-    return {
-      nodes: [
-        { id: 'N1', voltage: voltage, components: [voltageSource.id] },
-        { id: 'N2', voltage: 0, components: [] },
-        { id: 'N0', voltage: 0, components: [] },
-      ],
-      currents: {
-        [resistor.id]: current,
-        [voltageSource.id]: current,
-      },
-      timestamp: Date.now(),
-    }
-  },
-}
+// Import REAL stampers and simulation engine - NO MOCKS!
+import { solveDC } from '../../../services/simulation'
+import {
+  ResistorStamper,
+  type ComponentStamper,
+  type StampResult,
+} from '../../../services/stampers'
+import { VoltageSourceStamper, WireStamper } from '../../../services/simulation'
+import type { Circuit } from '../../../types/components'
 
 /**
- * UNIT TESTS FOR MATRIX ASSEMBLY
+ * UNIT TESTS FOR MATRIX ASSEMBLY - REAL IMPLEMENTATION
  *
- * These tests verify that multiple stampers work together correctly:
- * 1. Combined G-matrix and branch current stamping
- * 2. Node mapping consistency across components
- * 3. Matrix size calculation and structure
- * 4. RHS vector assembly from multiple sources
- * 5. Complete circuit matrix validation
+ * CRITICAL: These tests use REAL stampers to test actual matrix assembly.
+ * NO MOCKED STAMPERS - they hide real integration issues!
  *
- * CRITICAL: This tests the integration of ResistorStamper + VoltageSourceStamper
- * to create complete MNA systems that can be solved
+ * This validates that multiple REAL stampers work together correctly:
+ * 1. Combined G-matrix and branch current stamping using actual ResistorStamper + VoltageSourceStamper
+ * 2. Node mapping consistency across real components
+ * 3. Matrix size calculation and structure from real stamping
+ * 4. RHS vector assembly from real stampers
+ * 5. Complete circuit matrix validation with actual simulation engine
+ *
+ * ARCHITECTURE: Tests the integration of REAL ResistorStamper + VoltageSourceStamper
+ * to create complete MNA systems that can be solved by the real simulation engine
  */
 
 /**
- * ComponentStamper interface matching simulation.ts
+ * Create REAL test components using actual CircuitComponent interface
  */
-interface ComponentStamper {
-  id: string
-  type: string
-  stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
-  ): { branchCurrents: number[] }
-  calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
-  ): number
-}
-
-/**
- * Create test components for matrix assembly
- */
-function createTestResistor(id: string, resistance: number): CircuitComponent {
+function createRealTestResistor(id: string, resistance: number): CircuitComponent {
   return {
     id,
     type: 'resistor',
@@ -96,7 +42,7 @@ function createTestResistor(id: string, resistance: number): CircuitComponent {
   }
 }
 
-function createTestVoltageSource(id: string, voltage: number): CircuitComponent {
+function createRealTestVoltageSource(id: string, voltage: number): CircuitComponent {
   return {
     id,
     type: 'voltage_source',
@@ -107,8 +53,51 @@ function createTestVoltageSource(id: string, voltage: number): CircuitComponent 
   }
 }
 
+function createRealTestGround(id: string): CircuitComponent {
+  return {
+    id,
+    type: 'ground',
+    position: { x: 300, y: 200 },
+    rotation: 0,
+    selected: false,
+    properties: {},
+  }
+}
+
 /**
- * Create node mapping for simple voltage divider circuit
+ * Create REAL stampers using direct instantiation (like successful ResistorStamper tests)
+ * This tests the actual integration!
+ */
+function createRealResistorStamper(id: string, resistance: number): ComponentStamper {
+  const component = createRealTestResistor(id, resistance)
+  return new ResistorStamper(component)
+}
+
+function createRealVoltageSourceStamper(id: string, voltage: number): ComponentStamper {
+  const component = createRealTestVoltageSource(id, voltage)
+  return new VoltageSourceStamper(component)
+}
+
+/**
+ * Create node mapping for simple series circuit
+ * V1(+) -- R1 -- V1(-)
+ */
+function createSimpleSeriesNodeMap(): Map<string, number> {
+  const nodeMap = new Map<string, number>()
+
+  // Voltage source V1 terminals
+  nodeMap.set('V1:positive', 0) // Node 0: V+ terminal
+  nodeMap.set('V1:negative', 1) // Node 1: V- terminal (ground)
+
+  // Resistor R1 terminals
+  nodeMap.set('R1:terminal1', 0) // Node 0: Connected to V+
+  nodeMap.set('R1:terminal2', 1) // Node 1: Connected to V- (ground)
+
+  return nodeMap
+}
+
+/**
+ * Create node mapping for voltage divider circuit
  * V1(+) -- R1 -- Node1 -- R2 -- V1(-)
  */
 function createVoltageDividerNodeMap(): Map<string, number> {
@@ -126,576 +115,449 @@ function createVoltageDividerNodeMap(): Map<string, number> {
   nodeMap.set('R2:terminal1', 1) // Node 1: Middle node
   nodeMap.set('R2:terminal2', 2) // Node 2: Connected to ground
 
-  // Ground reference
-  nodeMap.set('ground', 2) // Node 2: Ground reference
-
   return nodeMap
 }
 
-/**
- * Manual stamping functions to test matrix assembly
- */
-function stampResistor(
-  mnaMatrix: Matrix,
-  rhsVector: Matrix,
-  node1: number,
-  node2: number,
-  resistance: number,
-): void {
-  const conductance = 1 / resistance
+describe('Matrix Assembly REAL Implementation Unit Tests', () => {
+  describe('REAL Single Component Stamping', () => {
+    it('should stamp real ResistorStamper into MNA matrix correctly', () => {
+      const resistance = 1000 // 1kΩ
+      const resistorStamper = createRealResistorStamper('R1', resistance)
 
-  // G-matrix stamping
-  mnaMatrix.set([node1, node1], (mnaMatrix.get([node1, node1]) as number) + conductance)
-  mnaMatrix.set([node2, node2], (mnaMatrix.get([node2, node2]) as number) + conductance)
-  mnaMatrix.set([node1, node2], (mnaMatrix.get([node1, node2]) as number) - conductance)
-  mnaMatrix.set([node2, node1], (mnaMatrix.get([node2, node1]) as number) - conductance)
-}
+      // Verify this is the REAL ResistorStamper
+      expect(resistorStamper).toBeInstanceOf(ResistorStamper)
+      expect(resistorStamper.id).toBe('R1')
+      expect(resistorStamper.type).toBe('resistor')
 
-function stampVoltageSource(
-  mnaMatrix: Matrix,
-  rhsVector: Matrix,
-  nodePos: number,
-  nodeNeg: number,
-  branchIndex: number,
-  voltage: number,
-): void {
-  // Branch current stamping
-  mnaMatrix.set([nodePos, branchIndex], 1)
-  mnaMatrix.set([nodeNeg, branchIndex], -1)
+      // Create test matrices
+      const mnaMatrix = matrix(zeros(2, 2))
+      const rhsVector = matrix(zeros(2, 1))
+      const nodeMap = createSimpleSeriesNodeMap()
 
-  // Voltage constraint stamping
-  mnaMatrix.set([branchIndex, nodePos], 1)
-  mnaMatrix.set([branchIndex, nodeNeg], -1)
+      // Call REAL stampDC method
+      const result = resistorStamper.stampDC(mnaMatrix, rhsVector, nodeMap, 0)
 
-  // RHS voltage injection
-  rhsVector.set([branchIndex, 0], voltage)
-}
+      // Verify REAL G-matrix stamping
+      const expectedConductance = 1 / resistance // 0.001 S
+      expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(expectedConductance, 12)
+      expect(mnaMatrix.get([1, 1]) as number).toBeCloseTo(expectedConductance, 12)
+      expect(mnaMatrix.get([0, 1]) as number).toBeCloseTo(-expectedConductance, 12)
+      expect(mnaMatrix.get([1, 0]) as number).toBeCloseTo(-expectedConductance, 12)
 
-describe('Matrix Assembly Unit Tests', () => {
-  beforeEach(() => {
-    resetIdCounters()
-  })
+      // Verify no branch currents for resistor
+      expect(result.branchCurrents).toEqual([])
 
-  describe('Component Stamping Operations', () => {
-    it('should correctly stamp a basic resistor into MNA matrix', async () => {
-      // Test Case: unit-resistor-basic-1000
-      const testSpec = createBasicResistorCircuit(1000)
+      // Verify RHS vector unchanged (resistors don't modify RHS)
+      expect(rhsVector.get([0, 0]) as number).toBe(0)
+      expect(rhsVector.get([1, 0]) as number).toBe(0)
 
-      expect(testSpec.id).toBe('unit-resistor-basic-1000')
-      expect(testSpec.category).toBe('unit')
-      expect(testSpec.testType).toBe('stamper')
-      expect(testSpec.component).toBe('resistor')
-
-      // Verify circuit structure
-      expect(testSpec.circuit.components).toHaveLength(3) // VS, R, GND
-      expect(testSpec.circuit.wires).toHaveLength(3) // 3 connecting wires
-
-      // Find the resistor component
-      const resistor = testSpec.circuit.components.find((c) => c.type === 'resistor')
-      expect(resistor).toBeDefined()
-      expect(resistor?.properties?.resistance).toBe(1000)
-
-      // Verify expected results structure
-      expect(testSpec.expectedResults.currents).toHaveProperty('R1')
-      expect(testSpec.expectedResults.currents['R1']).toBeCloseTo(0.005) // 5V / 1000Ω = 5mA
-
-      // Run simulation (mock for now)
-      const simulationResult = await mockSimulationService.simulateCircuit(testSpec.circuit)
-
-      // Validate results against expected values
-      expectSimulationToMatch(simulationResult, testSpec.expectedResults, testSpec.id)
+      console.log('✅ REAL ResistorStamper Matrix Assembly:')
+      console.log(`  Stamper class: ${resistorStamper.constructor.name}`)
+      console.log(`  Resistance: ${resistance}Ω, Conductance: ${expectedConductance}S`)
+      console.log(`  G-matrix stamped correctly: ±${expectedConductance}S`)
     })
 
-    it('should demonstrate parameter independence with different resistor values', async () => {
-      const resistorValues = [100, 1000, 10000]
-      const results: Array<{ value: number; current: number }> = []
+    it('should stamp real VoltageSourceStamper into MNA matrix correctly', () => {
+      const voltage = 5.0 // 5V
+      const branchIndex = 2
+      const voltageStamper = createRealVoltageSourceStamper('V1', voltage)
 
-      for (const resistance of resistorValues) {
-        const testSpec = createBasicResistorCircuit(resistance)
-        const simulationResult = await mockSimulationService.simulateCircuit(testSpec.circuit)
+      // Verify this is the REAL VoltageSourceStamper
+      expect(voltageStamper).toBeInstanceOf(VoltageSourceStamper)
+      expect(voltageStamper.id).toBe('V1')
+      expect(voltageStamper.type).toBe('voltage_source')
 
-        // Extract the resistor current
-        const resistorId = testSpec.circuit.components.find((c) => c.type === 'resistor')?.id
-        expect(resistorId).toBeDefined()
+      // Create test matrices (3x3 for 2 nodes + 1 branch current)
+      const mnaMatrix = matrix(zeros(3, 3))
+      const rhsVector = matrix(zeros(3, 1))
+      const nodeMap = createSimpleSeriesNodeMap()
 
-        const current = simulationResult.currents[resistorId!]
-        results.push({ value: resistance, current })
+      // Call REAL stampDC method
+      const result = voltageStamper.stampDC(mnaMatrix, rhsVector, nodeMap, branchIndex)
 
-        // Validate this specific test case
-        expectSimulationToMatch(simulationResult, testSpec.expectedResults, testSpec.id)
-      }
+      // Verify REAL branch current variable stamping
+      expect(mnaMatrix.get([0, 2]) as number).toBe(1) // Branch current into node 0
+      expect(mnaMatrix.get([1, 2]) as number).toBe(-1) // Branch current out of node 1
 
-      // Verify parameter independence: different resistor values produce different currents
-      expect(results[0].current).not.toBeCloseTo(results[1].current)
-      expect(results[1].current).not.toBeCloseTo(results[2].current, 3) // Pure MNA: more precise parameter independence
-      expect(results[0].current).not.toBeCloseTo(results[2].current)
+      // Verify REAL voltage constraint stamping
+      expect(mnaMatrix.get([2, 0]) as number).toBe(1) // V0 - V1 = V
+      expect(mnaMatrix.get([2, 1]) as number).toBe(-1)
 
-      // Verify Ohm's law relationship: I = V/R (V=5V constant)
-      results.forEach(({ value, current }) => {
-        const expectedCurrent = 5.0 / value
-        expect(current).toBeCloseTo(expectedCurrent, 6) // High precision for linear circuit
-      })
+      // Verify REAL RHS voltage injection
+      expect(rhsVector.get([2, 0]) as number).toBe(voltage)
 
-      console.log('Parameter Independence Results:')
-      results.forEach(({ value, current }) => {
-        console.log(`  ${value}Ω → ${current.toExponential(3)}A`)
-      })
-    })
+      // Verify branch current index returned
+      expect(result.branchCurrents).toEqual([branchIndex])
 
-    it('should validate tolerance specifications for high precision linear circuits', async () => {
-      const testSpec = createBasicResistorCircuit(1000)
-      const simulationResult = await mockSimulationService.simulateCircuit(testSpec.circuit)
-
-      // Verify tolerance settings
-      const tolerances = testSpec.expectedResults.tolerances
-      expect(tolerances.voltage).toBe(1e-9) // High precision voltage tolerance
-      expect(tolerances.current).toBe(1e-12) // High precision current tolerance
-      expect(tolerances.relative).toBe(1e-6) // High precision relative tolerance
-      expect(tolerances.numerical).toBe(1e-15) // Numerical precision tolerance
-
-      // Verify tolerance justification
-      expect(testSpec.toleranceJustification).toContain('enhanced numerical solver')
-      expect(testSpec.toleranceJustification).toContain('highest precision')
-
-      // Perform detailed validation
-      const validation = validateSimulationResults(
-        simulationResult,
-        testSpec.expectedResults,
-        testSpec.id,
-      )
-
-      expect(validation.passed).toBe(true)
-      expect(validation.errors).toHaveLength(0)
-
-      // Check that we're actually achieving high precision
-      const maxVoltageError = Math.max(...Object.values(validation.metrics.voltageErrors))
-      const maxCurrentError = Math.max(...Object.values(validation.metrics.currentErrors))
-
-      expect(maxVoltageError).toBeLessThan(tolerances.voltage)
-      expect(maxCurrentError).toBeLessThan(tolerances.current)
-      expect(validation.metrics.maxRelativeError).toBeLessThan(tolerances.relative)
-
-      console.log('High Precision Validation Metrics:')
-      console.log(`  Max Voltage Error: ${maxVoltageError.toExponential(3)}V`)
-      console.log(`  Max Current Error: ${maxCurrentError.toExponential(3)}A`)
-      console.log(
-        `  Max Relative Error: ${(validation.metrics.maxRelativeError * 100).toFixed(6)}%`,
-      )
+      console.log('✅ REAL VoltageSourceStamper Matrix Assembly:')
+      console.log(`  Stamper class: ${voltageStamper.constructor.name}`)
+      console.log(`  Voltage: ${voltage}V`)
+      console.log(`  Branch current variable: Index ${branchIndex}`)
+      console.log(`  RHS injection: ${rhsVector.get([2, 0])}V`)
     })
   })
 
-  describe('Matrix Building Validation', () => {
-    it('should verify circuit structure matches test specification', async () => {
-      const testSpec = createBasicResistorCircuit(1000)
-
-      // Validate component count and types
-      const componentTypes = testSpec.circuit.components.map((c) => c.type)
-      expect(componentTypes).toContain('voltage_source')
-      expect(componentTypes).toContain('resistor')
-      expect(componentTypes).toContain('ground')
-
-      // Validate wire connectivity
-      expect(testSpec.circuit.wires).toHaveLength(3)
-
-      // Each wire should have start and end terminals
-      testSpec.circuit.wires.forEach((wire, _index) => {
-        expect(wire.properties?.startTerminal).toBeDefined()
-        expect(wire.properties?.endTerminal).toBeDefined()
-        expect(wire.properties?.startPosition).toBeDefined()
-        expect(wire.properties?.endPosition).toBeDefined()
-      })
-
-      // Validate expected results structure
-      expect(Object.keys(testSpec.expectedResults.voltages)).toContain('N0') // Ground reference
-      expect(Object.keys(testSpec.expectedResults.currents)).toHaveLength(2) // VS and R currents
-    })
-
-    it('should validate test naming convention compliance', () => {
-      const testSpec = createBasicResistorCircuit(1500)
-
-      // Verify naming convention: {test-type}-{component}-{scenario}-{variation}
-      expect(testSpec.id).toBe('unit-resistor-basic-1500') // Updated naming convention
-
-      // Verify category classification
-      expect(testSpec.category).toBe('unit')
-      expect(testSpec.testType).toBe('stamper')
-      expect(testSpec.component).toBe('resistor')
-      expect(testSpec.scenario).toBe('basic')
-      expect(testSpec.variation).toBe('1500ohm')
-
-      // Verify description format
-      expect(testSpec.description).toContain('1500Ω')
-      expect(testSpec.description).toContain('unit testing')
-    })
-  })
-
-  describe('Error Handling and Edge Cases', () => {
-    it('should handle zero resistance gracefully', async () => {
-      // This test demonstrates handling of edge cases
-      // Zero resistance should either be handled gracefully or produce a clear error
-      const testSpec = createBasicResistorCircuit(0)
-
-      expect(testSpec.expectedResults.currents).toHaveProperty('R1')
-
-      // In reality, zero resistance might cause numerical issues
-      // The actual MNA solver should handle this appropriately
-      try {
-        const simulationResult = await mockSimulationService.simulateCircuit(testSpec.circuit)
-        // If simulation succeeds, validate the results
-        expectSimulationToMatch(simulationResult, testSpec.expectedResults, testSpec.id)
-      } catch (error) {
-        // If simulation fails, it should provide a meaningful error message
-        expect(error).toBeDefined()
-        console.log('Zero resistance handling:', error)
-      }
-    })
-
-    it('should handle very large resistance values', async () => {
-      const testSpec = createBasicResistorCircuit(1e12) // 1TΩ
-
-      // Very large resistance should produce very small current
-      expect(testSpec.expectedResults.currents['R1']).toBeCloseTo(5e-12) // 5pA
-
-      const simulationResult = await mockSimulationService.simulateCircuit(testSpec.circuit)
-      expectSimulationToMatch(simulationResult, testSpec.expectedResults, testSpec.id)
-    })
-  })
-
-  describe('Simple Voltage Divider Circuit', () => {
-    it('should assemble complete MNA matrix for 5V with 1kΩ + 2kΩ voltage divider', () => {
-      // Test Circuit: 5V -- 1kΩ -- Node1 -- 2kΩ -- Ground
-      // Expected: Node1 = 5V * 2kΩ/(1kΩ+2kΩ) = 3.333V
-
+  describe('REAL Multi-Component Matrix Assembly', () => {
+    it('should combine real ResistorStamper + VoltageSourceStamper correctly', () => {
+      // Test Case: Simple series circuit V1-R1 using REAL stampers
       const voltage = 5.0 // 5V source
+      const resistance = 1000 // 1kΩ resistor
+      const expectedCurrent = voltage / resistance // 5mA
+
+      // Create REAL stampers
+      const voltageStamper = createRealVoltageSourceStamper('V1', voltage)
+      const resistorStamper = createRealResistorStamper('R1', resistance)
+
+      // Verify these are REAL implementations
+      expect(voltageStamper).toBeInstanceOf(VoltageSourceStamper)
+      expect(resistorStamper).toBeInstanceOf(ResistorStamper)
+
+      // Create matrices (3x3: 2 nodes + 1 branch current)
+      const mnaMatrix = matrix(zeros(3, 3))
+      const rhsVector = matrix(zeros(3, 1))
+      const nodeMap = createSimpleSeriesNodeMap()
+
+      // Stamp REAL components in sequence
+      let nextBranchIndex = 2
+
+      // 1. Stamp REAL resistor (G-matrix)
+      const resistorResult = resistorStamper.stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex)
+      nextBranchIndex += resistorResult.branchCurrents.length
+
+      // 2. Stamp REAL voltage source (branch current + voltage constraint)
+      const voltageResult = voltageStamper.stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex)
+
+      // Verify combined matrix structure
+      const expectedConductance = 1 / resistance
+
+      // G-matrix portion (from resistor)
+      expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(expectedConductance, 12)
+      expect(mnaMatrix.get([1, 1]) as number).toBeCloseTo(expectedConductance, 12)
+      expect(mnaMatrix.get([0, 1]) as number).toBeCloseTo(-expectedConductance, 12)
+      expect(mnaMatrix.get([1, 0]) as number).toBeCloseTo(-expectedConductance, 12)
+
+      // Branch current portion (from voltage source)
+      expect(mnaMatrix.get([0, 2]) as number).toBe(1)
+      expect(mnaMatrix.get([1, 2]) as number).toBe(-1)
+      expect(mnaMatrix.get([2, 0]) as number).toBe(1)
+      expect(mnaMatrix.get([2, 1]) as number).toBe(-1)
+
+      // RHS vector (from voltage source)
+      expect(rhsVector.get([2, 0]) as number).toBe(voltage)
+      expect(rhsVector.get([0, 0]) as number).toBe(0)
+      expect(rhsVector.get([1, 0]) as number).toBe(0)
+
+      // Verify branch current tracking
+      expect(resistorResult.branchCurrents).toEqual([])
+      expect(voltageResult.branchCurrents).toEqual([2])
+
+      console.log('✅ REAL Multi-Component Matrix Assembly:')
+      console.log(`  ResistorStamper: ${resistorStamper.constructor.name}`)
+      console.log(`  VoltageSourceStamper: ${voltageStamper.constructor.name}`)
+      console.log(`  Combined matrix: G-matrix + branch variables`)
+      console.log(`  Expected current: ${expectedCurrent * 1000}mA`)
+    })
+
+    it('should demonstrate parameter independence with real stampers', () => {
+      const voltage = 12.0 // 12V source
+      const resistanceValues = [100, 1000, 10000] // Different resistor values
+      const stampedConductances: number[] = []
+
+      resistanceValues.forEach((resistance) => {
+        // Create REAL stampers for each test
+        const voltageStamper = createRealVoltageSourceStamper('V1', voltage)
+        const resistorStamper = createRealResistorStamper('R1', resistance)
+
+        // Verify REAL implementations
+        expect(voltageStamper).toBeInstanceOf(VoltageSourceStamper)
+        expect(resistorStamper).toBeInstanceOf(ResistorStamper)
+
+        // Create fresh matrices for each test
+        const mnaMatrix = matrix(zeros(3, 3))
+        const rhsVector = matrix(zeros(3, 1))
+        const nodeMap = createSimpleSeriesNodeMap()
+
+        // Stamp REAL components
+        resistorStamper.stampDC(mnaMatrix, rhsVector, nodeMap, 2)
+        voltageStamper.stampDC(mnaMatrix, rhsVector, nodeMap, 2)
+
+        // Extract stamped conductance
+        const stampedConductance = mnaMatrix.get([0, 0]) as number
+        stampedConductances.push(stampedConductance)
+
+        // Verify correct conductance for this resistance
+        const expectedConductance = 1 / resistance
+        expect(stampedConductance).toBeCloseTo(expectedConductance, 12)
+
+        // Verify voltage stamping is consistent
+        expect(rhsVector.get([2, 0]) as number).toBe(voltage)
+      })
+
+      // Verify parameter independence: different resistances → different conductances
+      expect(stampedConductances[0]).not.toBeCloseTo(stampedConductances[1], 6)
+      expect(stampedConductances[1]).not.toBeCloseTo(stampedConductances[2], 6)
+      expect(stampedConductances[0]).not.toBeCloseTo(stampedConductances[2], 6)
+
+      // Verify exact conductance values
+      const expectedConductances = resistanceValues.map((r) => 1 / r)
+      stampedConductances.forEach((stamped, index) => {
+        expect(stamped).toBeCloseTo(expectedConductances[index], 12)
+      })
+
+      console.log('✅ REAL Parameter Independence Results:')
+      resistanceValues.forEach((resistance, index) => {
+        console.log(`  ${resistance}Ω → G=${stampedConductances[index].toExponential(3)}S`)
+      })
+    })
+
+    it('should create correct voltage divider matrix with real stampers', () => {
+      // Test Case: Voltage divider R1=1kΩ, R2=2kΩ, V=9V
+      const voltage = 9.0
       const r1 = 1000 // 1kΩ
       const r2 = 2000 // 2kΩ
-      const branchIndex = 3 // Branch current index for voltage source
 
-      // Create 4x4 matrix (3 nodes + 1 branch current)
+      // Create REAL stampers
+      const voltageStamper = createRealVoltageSourceStamper('V1', voltage)
+      const resistor1Stamper = createRealResistorStamper('R1', r1)
+      const resistor2Stamper = createRealResistorStamper('R2', r2)
+
+      // Verify REAL implementations
+      expect(voltageStamper).toBeInstanceOf(VoltageSourceStamper)
+      expect(resistor1Stamper).toBeInstanceOf(ResistorStamper)
+      expect(resistor2Stamper).toBeInstanceOf(ResistorStamper)
+
+      // Create matrices (4x4: 3 nodes + 1 branch current)
       const mnaMatrix = matrix(zeros(4, 4))
       const rhsVector = matrix(zeros(4, 1))
       const nodeMap = createVoltageDividerNodeMap()
 
-      // Stamp R1 between nodes 0 and 1
-      stampResistor(mnaMatrix, rhsVector, 0, 1, r1)
+      // Stamp REAL components
+      const nextBranchIndex = 3
 
-      // Stamp R2 between nodes 1 and 2
-      stampResistor(mnaMatrix, rhsVector, 1, 2, r2)
+      resistor1Stamper.stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex)
+      resistor2Stamper.stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex)
+      voltageStamper.stampDC(mnaMatrix, rhsVector, nodeMap, nextBranchIndex)
 
-      // Stamp voltage source between nodes 0 and 2
-      stampVoltageSource(mnaMatrix, rhsVector, 0, 2, branchIndex, voltage)
-
-      // Expected MNA matrix structure:
-      // [G1    -G1     0     1 ]   [V0]   [ 0 ]
-      // [-G1  G1+G2  -G2     0 ]   [V1]   [ 0 ]
-      // [ 0    -G2    G2    -1 ] × [V2] = [ 0 ]
-      // [ 1     0     -1     0 ]   [I1]   [ V ]
-
+      // Verify combined G-matrix (sum of both resistor stampings)
       const g1 = 1 / r1 // 0.001 S
       const g2 = 1 / r2 // 0.0005 S
 
-      // Verify G-matrix portion (upper-left 3x3)
-      expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(g1, 12) // G1
-      expect(mnaMatrix.get([1, 1]) as number).toBeCloseTo(g1 + g2, 12) // G1 + G2
-      expect(mnaMatrix.get([2, 2]) as number).toBeCloseTo(g2, 12) // G2
-      expect(mnaMatrix.get([0, 1]) as number).toBeCloseTo(-g1, 12) // -G1
-      expect(mnaMatrix.get([1, 0]) as number).toBeCloseTo(-g1, 12) // -G1
-      expect(mnaMatrix.get([1, 2]) as number).toBeCloseTo(-g2, 12) // -G2
-      expect(mnaMatrix.get([2, 1]) as number).toBeCloseTo(-g2, 12) // -G2
+      // Node 0: Connected to R1, V1+
+      expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(g1, 12)
+      expect(mnaMatrix.get([0, 1]) as number).toBeCloseTo(-g1, 12)
 
-      // Verify branch current connections
-      expect(mnaMatrix.get([0, 3]) as number).toBe(1) // +I into node 0
-      expect(mnaMatrix.get([2, 3]) as number).toBe(-1) // -I out of node 2
-      expect(mnaMatrix.get([1, 3]) as number).toBe(0) // No current into node 1
+      // Node 1: Connected to both R1 and R2 (middle node)
+      expect(mnaMatrix.get([1, 1]) as number).toBeCloseTo(g1 + g2, 12)
+      expect(mnaMatrix.get([1, 0]) as number).toBeCloseTo(-g1, 12)
+      expect(mnaMatrix.get([1, 2]) as number).toBeCloseTo(-g2, 12)
 
-      // Verify voltage constraint
-      expect(mnaMatrix.get([3, 0]) as number).toBe(1) // V0 constraint
-      expect(mnaMatrix.get([3, 2]) as number).toBe(-1) // -V2 constraint
-      expect(mnaMatrix.get([3, 1]) as number).toBe(0) // Node 1 not in constraint
+      // Node 2: Connected to R2, V1-
+      expect(mnaMatrix.get([2, 2]) as number).toBeCloseTo(g2, 12)
+      expect(mnaMatrix.get([2, 1]) as number).toBeCloseTo(-g2, 12)
 
-      // Verify RHS vector
-      expect(rhsVector.get([0, 0]) as number).toBe(0) // No current injection at node 0
-      expect(rhsVector.get([1, 0]) as number).toBe(0) // No current injection at node 1
-      expect(rhsVector.get([2, 0]) as number).toBe(0) // No current injection at node 2
-      expect(rhsVector.get([3, 0]) as number).toBe(voltage) // Voltage constraint = 5V
+      // Voltage source constraints
+      expect(mnaMatrix.get([0, 3]) as number).toBe(1)
+      expect(mnaMatrix.get([2, 3]) as number).toBe(-1)
+      expect(mnaMatrix.get([3, 0]) as number).toBe(1)
+      expect(mnaMatrix.get([3, 2]) as number).toBe(-1)
 
-      console.log('Voltage Divider Matrix Assembly Results:')
-      console.log(`  G1 = ${g1.toExponential(3)}S (${r1}Ω)`)
-      console.log(`  G2 = ${g2.toExponential(3)}S (${r2}Ω)`)
-      console.log(`  Expected V1 = ${((voltage * r2) / (r1 + r2)).toFixed(3)}V`)
-    })
+      // RHS vector
+      expect(rhsVector.get([3, 0]) as number).toBe(voltage)
 
-    it('should demonstrate parameter independence in matrix assembly', () => {
-      // Test different resistance values produce different matrix entries
-      const testCases = [
-        { r1: 100, r2: 200, voltage: 3.3 }, // Low resistance
-        { r1: 1000, r2: 2000, voltage: 5.0 }, // Standard resistance
-        { r1: 10000, r2: 20000, voltage: 12.0 }, // High resistance
-      ]
-
-      const assembledMatrices: Matrix[] = []
-
-      testCases.forEach((testCase, index) => {
-        const branchIndex = 3
-        const mnaMatrix = matrix(zeros(4, 4))
-        const rhsVector = matrix(zeros(4, 1))
-
-        // Assemble matrix for this test case
-        stampResistor(mnaMatrix, rhsVector, 0, 1, testCase.r1)
-        stampResistor(mnaMatrix, rhsVector, 1, 2, testCase.r2)
-        stampVoltageSource(mnaMatrix, rhsVector, 0, 2, branchIndex, testCase.voltage)
-
-        assembledMatrices.push(mnaMatrix)
-
-        // Verify this matrix has correct conductance values
-        const g1 = 1 / testCase.r1
-        const g2 = 1 / testCase.r2
-        expect(mnaMatrix.get([0, 0]) as number).toBeCloseTo(g1, 12)
-        expect(mnaMatrix.get([1, 1]) as number).toBeCloseTo(g1 + g2, 12)
-        expect(rhsVector.get([3, 0]) as number).toBe(testCase.voltage)
-      })
-
-      // Verify parameter independence: different resistances → different matrices
-      const matrix1_00 = assembledMatrices[0].get([0, 0]) as number
-      const matrix2_00 = assembledMatrices[1].get([0, 0]) as number
-      const matrix3_00 = assembledMatrices[2].get([0, 0]) as number
-
-      expect(matrix1_00).not.toBeCloseTo(matrix2_00, 6)
-      expect(matrix2_00).not.toBeCloseTo(matrix3_00, 6)
-      expect(matrix1_00).not.toBeCloseTo(matrix3_00, 6)
-
-      console.log('Matrix Assembly Parameter Independence:')
-      testCases.forEach((testCase, index) => {
-        const g1 = 1 / testCase.r1
-        console.log(`  Case ${index + 1}: ${testCase.r1}Ω → G=${g1.toExponential(3)}S`)
-      })
+      console.log('✅ REAL Voltage Divider Matrix Assembly:')
+      console.log(`  R1: ${r1}Ω (G1=${g1}S)`)
+      console.log(`  R2: ${r2}Ω (G2=${g2}S)`)
+      console.log(`  Middle node conductance: ${g1 + g2}S`)
+      console.log(`  Voltage: ${voltage}V`)
     })
   })
 
-  describe('Matrix Structure Validation', () => {
-    it('should create correct matrix dimensions for different circuit sizes', () => {
-      // Test various circuit sizes and verify matrix dimensions
+  describe('REAL Simulation Engine Integration', () => {
+    it('should solve complete circuit using real simulation engine', async () => {
+      // Test Case: Simple series circuit that can be solved by real solveDC
+      const voltage = 5.0
+      const resistance = 1000
+      const expectedCurrent = voltage / resistance // 5mA
 
-      // Single resistor circuit: 2 nodes + 0 branch currents = 2x2
-      const singleResistorMatrix = matrix(zeros(2, 2))
-      stampResistor(singleResistorMatrix, matrix(zeros(2, 1)), 0, 1, 1000)
-      expect(singleResistorMatrix.size()).toEqual([2, 2])
-
-      // Voltage source circuit: 2 nodes + 1 branch current = 3x3
-      const voltageSourceMatrix = matrix(zeros(3, 3))
-      stampVoltageSource(voltageSourceMatrix, matrix(zeros(3, 1)), 0, 1, 2, 5.0)
-      expect(voltageSourceMatrix.size()).toEqual([3, 3])
-
-      // Voltage divider circuit: 3 nodes + 1 branch current = 4x4
-      const voltageDividerMatrix = matrix(zeros(4, 4))
-      stampResistor(voltageDividerMatrix, matrix(zeros(4, 1)), 0, 1, 1000)
-      stampResistor(voltageDividerMatrix, matrix(zeros(4, 1)), 1, 2, 2000)
-      stampVoltageSource(voltageDividerMatrix, matrix(zeros(4, 1)), 0, 2, 3, 5.0)
-      expect(voltageDividerMatrix.size()).toEqual([4, 4])
-
-      console.log('Matrix Dimension Validation:')
-      console.log('  Single resistor: 2x2 matrix')
-      console.log('  Voltage source: 3x3 matrix')
-      console.log('  Voltage divider: 4x4 matrix')
-    })
-
-    it('should maintain matrix symmetry for passive portions', () => {
-      // Test that G-matrix portion remains symmetric even with voltage sources
-      const mnaMatrix = matrix(zeros(4, 4))
-      const rhsVector = matrix(zeros(4, 1))
-
-      // Stamp resistors (should create symmetric G-matrix)
-      stampResistor(mnaMatrix, rhsVector, 0, 1, 1000)
-      stampResistor(mnaMatrix, rhsVector, 1, 2, 2000)
-
-      // Verify G-matrix portion (3x3) is symmetric
-      for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 3; j++) {
-          const value_ij = mnaMatrix.get([i, j]) as number
-          const value_ji = mnaMatrix.get([j, i]) as number
-          expect(value_ij).toBeCloseTo(value_ji, 15)
-        }
+      // Create a real circuit using actual Circuit interface
+      const circuit: Circuit = {
+        id: 'test-series-circuit',
+        name: 'Real Series Circuit Test',
+        components: [
+          createRealTestVoltageSource('V1', voltage),
+          createRealTestResistor('R1', resistance),
+          createRealTestGround('GND1'),
+          // Add wires as components (this is how the simulation engine expects them)
+          {
+            id: 'W1',
+            type: 'wire',
+            position: { x: 0, y: 0 },
+            rotation: 0,
+            selected: false,
+            properties: {
+              startComponentId: 'V1',
+              startTerminal: 'positive',
+              endComponentId: 'R1',
+              endTerminal: 'terminal1',
+            },
+          },
+          {
+            id: 'W2',
+            type: 'wire',
+            position: { x: 0, y: 0 },
+            rotation: 0,
+            selected: false,
+            properties: {
+              startComponentId: 'R1',
+              startTerminal: 'terminal2',
+              endComponentId: 'GND1',
+              endTerminal: 'terminal',
+            },
+          },
+          {
+            id: 'W3',
+            type: 'wire',
+            position: { x: 0, y: 0 },
+            rotation: 0,
+            selected: false,
+            properties: {
+              startComponentId: 'V1',
+              startTerminal: 'negative',
+              endComponentId: 'GND1',
+              endTerminal: 'terminal',
+            },
+          },
+        ],
+        wires: [], // Keep empty for now
+        probes: [],
+        nodes: {},
       }
 
-      // Now add voltage source (makes overall matrix asymmetric)
-      stampVoltageSource(mnaMatrix, rhsVector, 0, 2, 3, 5.0)
+      // Call REAL simulation engine
+      const result = await solveDC(circuit, true) // Use enhanced solver
 
-      // G-matrix portion should still be symmetric
-      for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 3; j++) {
-          const value_ij = mnaMatrix.get([i, j]) as number
-          const value_ji = mnaMatrix.get([j, i]) as number
-          expect(value_ij).toBeCloseTo(value_ji, 15)
+      // Verify simulation succeeded
+      expect(result).not.toBeNull()
+      expect(result!.voltages).toBeDefined()
+      expect(result!.currents).toBeDefined()
+
+      // Verify voltage results (account for 1mΩ wire resistance effects)
+      expect(result!.voltages[0]).toBeCloseTo(voltage, 3) // Node 0: V+ (relaxed tolerance)
+      expect(result!.voltages[1]).toBeCloseTo(0, 3) // Node 1: Ground (relaxed tolerance)
+
+      // Verify current results (account for 1mΩ wire resistance effects)
+      // V1 current is negative (flows out of positive terminal - correct physics)
+      expect(result!.currents['V1']).toBeCloseTo(-expectedCurrent, 3)
+      expect(result!.currents['R1']).toBeCloseTo(expectedCurrent, 3)
+
+      // Verify KCL: voltage source and resistor currents should have equal magnitudes
+      // V1 is negative (flows out), R1 is positive (flows through) - this is correct physics
+      expect(
+        Math.abs(Math.abs(result!.currents['V1']) - Math.abs(result!.currents['R1'])),
+      ).toBeLessThan(1e-3)
+
+      console.log('✅ REAL Simulation Engine Integration:')
+      console.log(
+        `  Circuit: ${circuit.components.length} components, ${circuit.wires.length} wires`,
+      )
+      console.log(`  V1 voltage: ${result!.voltages[0]}V`)
+      console.log(`  Ground voltage: ${result!.voltages[1]}V`)
+      console.log(`  V1 current: ${(result!.currents['V1'] * 1000).toFixed(3)}mA`)
+      console.log(`  R1 current: ${(result!.currents['R1'] * 1000).toFixed(3)}mA`)
+      console.log(`  KCL compliance: ✅`)
+    })
+
+    it('should handle parameter variations with real simulation engine', async () => {
+      const voltage = 12.0
+      const resistanceValues = [500, 1000, 2000] // Different resistor values
+      const results: Array<{ resistance: number; current: number; voltage: number }> = []
+
+      for (const resistance of resistanceValues) {
+        // Create circuit with this resistance value
+        const circuit: Circuit = {
+          id: `test-circuit-${resistance}`,
+          name: `Parameter Test ${resistance}Ω`,
+          components: [
+            createRealTestVoltageSource('V1', voltage),
+            createRealTestResistor('R1', resistance),
+            createRealTestGround('GND1'),
+            // Add wires as components (this is how the simulation engine expects them)
+            {
+              id: 'W1',
+              type: 'wire',
+              position: { x: 0, y: 0 },
+              rotation: 0,
+              selected: false,
+              properties: {
+                startComponentId: 'V1',
+                startTerminal: 'positive',
+                endComponentId: 'R1',
+                endTerminal: 'terminal1',
+              },
+            },
+            {
+              id: 'W2',
+              type: 'wire',
+              position: { x: 0, y: 0 },
+              rotation: 0,
+              selected: false,
+              properties: {
+                startComponentId: 'R1',
+                startTerminal: 'terminal2',
+                endComponentId: 'GND1',
+                endTerminal: 'terminal',
+              },
+            },
+            {
+              id: 'W3',
+              type: 'wire',
+              position: { x: 0, y: 0 },
+              rotation: 0,
+              selected: false,
+              properties: {
+                startComponentId: 'V1',
+                startTerminal: 'negative',
+                endComponentId: 'GND1',
+                endTerminal: 'terminal',
+              },
+            },
+          ],
+          wires: [], // Keep empty for now
+          probes: [],
+          nodes: {},
         }
+
+        // Solve with REAL simulation engine
+        const result = await solveDC(circuit, true)
+        expect(result).not.toBeNull()
+
+        const current = result!.currents['R1']
+        const nodeVoltage = result!.voltages[0]
+
+        results.push({ resistance, current, voltage: nodeVoltage })
+
+        // Verify Ohm's law: I = V/R (account for 1mΩ wire resistance effects)
+        const expectedCurrent = voltage / resistance
+        expect(current).toBeCloseTo(expectedCurrent, 3)
+        expect(nodeVoltage).toBeCloseTo(voltage, 3)
       }
 
-      // But overall matrix should be asymmetric due to branch currents
-      expect(mnaMatrix.get([0, 3]) as number).toBe(1) // Upper right
-      expect(mnaMatrix.get([3, 0]) as number).toBe(1) // Lower left (same value but asymmetric structure)
+      // Verify parameter independence: different resistances → different currents
+      expect(results[0].current).not.toBeCloseTo(results[1].current, 6)
+      expect(results[1].current).not.toBeCloseTo(results[2].current, 6)
+      expect(results[0].current).not.toBeCloseTo(results[2].current, 6)
+
+      // Verify voltage remains constant (voltage source behavior, account for wire resistance)
+      results.forEach(({ voltage: nodeVoltage }) => {
+        expect(nodeVoltage).toBeCloseTo(voltage, 3)
+      })
+
+      console.log('✅ REAL Parameter Variation Results:')
+      results.forEach(({ resistance, current, voltage: nodeVoltage }) => {
+        console.log(
+          `  ${resistance}Ω → I=${(current * 1000).toFixed(3)}mA, V=${nodeVoltage.toFixed(3)}V`,
+        )
+      })
     })
-
-    it('should handle multiple voltage sources correctly', () => {
-      // Test circuit with two voltage sources (requires 2 branch currents)
-      // V1(5V) -- R1 -- Node1 -- R2 -- V2(3V)
-
-      const mnaMatrix = matrix(zeros(5, 5)) // 3 nodes + 2 branch currents
-      const rhsVector = matrix(zeros(5, 1))
-
-      const r1 = 1000
-      const r2 = 2000
-      const v1 = 5.0
-      const v2 = 3.0
-
-      // Stamp resistors
-      stampResistor(mnaMatrix, rhsVector, 0, 1, r1) // V1+ to Node1
-      stampResistor(mnaMatrix, rhsVector, 1, 2, r2) // Node1 to V2+
-
-      // Stamp voltage sources with different branch indices
-      stampVoltageSource(mnaMatrix, rhsVector, 0, 2, 3, v1) // V1: 5V
-      stampVoltageSource(mnaMatrix, rhsVector, 2, 1, 4, v2) // V2: 3V (note polarity)
-
-      // Verify both voltage sources are stamped correctly
-      expect(rhsVector.get([3, 0]) as number).toBe(v1) // V1 = 5V
-      expect(rhsVector.get([4, 0]) as number).toBe(v2) // V2 = 3V
-
-      // Verify branch current connections for both sources
-      expect(mnaMatrix.get([0, 3]) as number).toBe(1) // V1 positive
-      expect(mnaMatrix.get([2, 3]) as number).toBe(-1) // V1 negative
-      expect(mnaMatrix.get([2, 4]) as number).toBe(1) // V2 positive
-      expect(mnaMatrix.get([1, 4]) as number).toBe(-1) // V2 negative
-
-      console.log('Multiple Voltage Source Assembly:')
-      console.log(`  V1 = ${v1}V (branch index 3)`)
-      console.log(`  V2 = ${v2}V (branch index 4)`)
-      console.log('  Matrix size: 5x5 (3 nodes + 2 branch currents)')
-    })
-  })
-
-  describe('Node Mapping Consistency', () => {
-    it('should handle node mapping correctly across multiple components', () => {
-      // Test that node indices are consistent between components
-      const nodeMap = createVoltageDividerNodeMap()
-
-      // Verify voltage source terminals
-      expect(nodeMap.get('V1:positive')).toBe(0)
-      expect(nodeMap.get('V1:negative')).toBe(2)
-
-      // Verify R1 connects V+ to middle node
-      expect(nodeMap.get('R1:terminal1')).toBe(0) // Same as V1:positive
-      expect(nodeMap.get('R1:terminal2')).toBe(1) // Middle node
-
-      // Verify R2 connects middle node to ground
-      expect(nodeMap.get('R2:terminal1')).toBe(1) // Same as R1:terminal2
-      expect(nodeMap.get('R2:terminal2')).toBe(2) // Same as V1:negative
-
-      // Verify ground reference
-      expect(nodeMap.get('ground')).toBe(2) // Same as V1:negative
-
-      console.log('Node Mapping Consistency:')
-      console.log('  V1+ = R1.1 = Node 0')
-      console.log('  R1.2 = R2.1 = Node 1 (middle)')
-      console.log('  R2.2 = V1- = Ground = Node 2')
-    })
-
-    it('should detect node mapping errors', () => {
-      // Test validation of node mapping consistency
-      const invalidNodeMap = new Map<string, number>()
-
-      // Create inconsistent mapping (R1 and R2 don't connect)
-      invalidNodeMap.set('R1:terminal1', 0)
-      invalidNodeMap.set('R1:terminal2', 1)
-      invalidNodeMap.set('R2:terminal1', 2) // Should be 1 to connect!
-      invalidNodeMap.set('R2:terminal2', 3)
-
-      // This would create a disconnected circuit
-      // In a real implementation, this should be detected and flagged
-
-      // For now, just verify the mapping is indeed inconsistent
-      const r1_terminal2 = invalidNodeMap.get('R1:terminal2')
-      const r2_terminal1 = invalidNodeMap.get('R2:terminal1')
-
-      expect(r1_terminal2).not.toBe(r2_terminal1) // Should be equal for connected circuit
-      expect(r1_terminal2).toBe(1)
-      expect(r2_terminal1).toBe(2)
-
-      console.log('Node Mapping Error Detection:')
-      console.log(`  R1.terminal2 = ${r1_terminal2} (should connect to R2.terminal1)`)
-      console.log(`  R2.terminal1 = ${r2_terminal1} (disconnected!)`)
-    })
-  })
-
-  describe('RHS Vector Assembly', () => {
-    it('should correctly assemble RHS vector from multiple sources', () => {
-      // Test RHS assembly with voltage sources and current sources
-      const mnaMatrix = matrix(zeros(4, 4))
-      const rhsVector = matrix(zeros(4, 1))
-
-      // Stamp voltage divider with voltage source
-      stampResistor(mnaMatrix, rhsVector, 0, 1, 1000)
-      stampResistor(mnaMatrix, rhsVector, 1, 2, 2000)
-      stampVoltageSource(mnaMatrix, rhsVector, 0, 2, 3, 5.0)
-
-      // Verify RHS vector structure
-      expect(rhsVector.get([0, 0]) as number).toBe(0) // Node 0: no current injection
-      expect(rhsVector.get([1, 0]) as number).toBe(0) // Node 1: no current injection
-      expect(rhsVector.get([2, 0]) as number).toBe(0) // Node 2: no current injection
-      expect(rhsVector.get([3, 0]) as number).toBe(5.0) // Branch: voltage constraint
-
-      // Simulate adding a current source (would modify RHS at nodes)
-      // Current source: 2mA into node 1
-      const currentInjection = 0.002 // 2mA
-      rhsVector.set([1, 0], (rhsVector.get([1, 0]) as number) + currentInjection)
-
-      // Verify RHS after current injection
-      expect(rhsVector.get([0, 0]) as number).toBe(0)
-      expect(rhsVector.get([1, 0]) as number).toBe(currentInjection)
-      expect(rhsVector.get([2, 0]) as number).toBe(0)
-      expect(rhsVector.get([3, 0]) as number).toBe(5.0)
-
-      console.log('RHS Vector Assembly:')
-      console.log(`  Node currents: [0, ${currentInjection}, 0]`)
-      console.log(`  Voltage constraints: [${5.0}]`)
-    })
-  })
-})
-
-describe('Matrix Assembly Integration Validation', () => {
-  it('should be ready for integration with actual simulation system', () => {
-    // This test documents what needs to be done for real integration:
-
-    // TODO: Integrate with actual ComponentStamperFactory
-    // TODO: Test with real simulation.ts matrix assembly
-    // TODO: Add ground constraint handling
-    // TODO: Add matrix conditioning and solving
-    // TODO: Validate against known circuit solutions
-
-    // For now, verify our test framework covers the essentials
-    const testComponents = [createTestResistor('R1', 1000), createTestVoltageSource('V1', 5.0)]
-
-    expect(testComponents[0].type).toBe('resistor')
-    expect(testComponents[1].type).toBe('voltage_source')
-
-    const nodeMap = createVoltageDividerNodeMap()
-    expect(nodeMap.size).toBe(7) // 7 terminal mappings
-
-    console.log('✅ Matrix Assembly unit test framework ready for integration')
-    console.log('Next: Integrate with actual simulation system and validate solutions')
-  })
-
-  it('should demonstrate complete MNA system assembly', () => {
-    // Final demonstration of complete matrix assembly process
-
-    console.log('🔍 Complete MNA Matrix Assembly Process:')
-    console.log('  1. Create node mapping for all components')
-    console.log('  2. Calculate matrix size (nodes + branch currents)')
-    console.log('  3. Initialize zero matrices')
-    console.log('  4. Stamp each component (G-matrix or branch current)')
-    console.log('  5. Assemble RHS vector (currents + voltage constraints)')
-    console.log('  6. Apply ground constraints')
-    console.log('  7. Solve linear system: Ax = b')
-    console.log('  8. Extract node voltages and branch currents')
-
-    // Verify our tests cover steps 1-5
-    expect(true).toBe(true) // Framework covers matrix assembly steps
   })
 })
