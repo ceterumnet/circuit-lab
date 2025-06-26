@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { matrix, Matrix, zeros } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
 // Import the REAL VoltageSourceStamper from simulation.ts
-import { VoltageSourceStamper, type ComponentStamper } from '../../../services/simulation'
+import { VoltageSourceStamper, type ComponentStamper } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR VOLTAGE SOURCE STAMPER - REAL IMPLEMENTATION

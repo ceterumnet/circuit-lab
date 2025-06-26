@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { matrix, Matrix, zeros } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
-import { type ComponentStamper, type StampResult } from '../../../services/stampers'
-import { WireStamper } from '../../../services/simulation'
+import { type ComponentStamper, WireStamper } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR WIRE STAMPER

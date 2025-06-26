@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { matrix, zeros, Matrix } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
-import { ResistorStamper, type ComponentStamper } from '../../../services/stampers'
-import { DiodeStamper, VoltageSourceStamper } from '../../../services/simulation'
+import { ResistorStamper, VoltageSourceStamper, type ComponentStamper } from '@/services/stampers'
+import { DiodeStamper } from '@/services/simulation'
 
 /**
  * UNIT TESTS FOR DIODE STAMPER MNA INTEGRATION

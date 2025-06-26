@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import type { CircuitComponent } from '../../../types/components'
 // Import the REAL CircuitAnalyzer from simulation.ts and stampers from stampers module
-import { CircuitAnalyzer, VoltageSourceStamper } from '../../../services/simulation'
-import { ResistorStamper, type ComponentStamper } from '../../../services/stampers'
+import { CircuitAnalyzer } from '@/services/simulation'
+import { ResistorStamper, VoltageSourceStamper, type ComponentStamper } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR CIRCUIT ANALYZER

@@ -2,13 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { matrix, Matrix, zeros } from 'mathjs'
 import type { CircuitComponent } from '../../../types/components'
 // Import REAL stampers and simulation engine - NO MOCKS!
-import { solveDC } from '../../../services/simulation'
-import {
-  ResistorStamper,
-  type ComponentStamper,
-  type StampResult,
-} from '../../../services/stampers'
-import { VoltageSourceStamper, WireStamper } from '../../../services/simulation'
+import { solveDC } from '@/services/simulation'
+import { ResistorStamper, type ComponentStamper, VoltageSourceStamper } from '@/services/stampers'
 import type { Circuit } from '../../../types/components'
 
 /**
