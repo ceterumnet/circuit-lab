@@ -1,6 +1,7 @@
 import type { ComponentStamper } from '../shared'
 import { VoltageSourceStamper } from '../linear/VoltageSourceStamper'
 import { ResistorStamper } from '../linear/ResistorStamper'
+import { VariableResistorStamper } from '../linear/VariableResistorStamper'
 
 /**
  * Circuit analysis for automatic parameter selection
@@ -40,6 +41,15 @@ export class CircuitAnalyzer {
             : 1000
         totalResistance += resistance
         console.log(`  Found resistor ${stamper.id}: ${resistance}Ω`)
+      } else if (stamper.type === 'variable_resistor') {
+        // CRITICAL FIX: Detect variable resistors as resistive components
+        const variableResistorStamper = stamper as VariableResistorStamper
+        const resistance =
+          typeof variableResistorStamper.component.properties?.resistance === 'number'
+            ? variableResistorStamper.component.properties.resistance
+            : 1000
+        totalResistance += resistance
+        console.log(`  Found variable resistor ${stamper.id}: ${resistance}Ω`)
       }
     }
 

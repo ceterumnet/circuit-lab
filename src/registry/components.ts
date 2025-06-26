@@ -168,13 +168,7 @@ const ledDefinition: ComponentDefinition = {
       unit: '',
       default: 'red',
     },
-    {
-      key: 'saturationCurrent',
-      type: 'number',
-      label: 'Saturation Current',
-      unit: 'A',
-      default: 1e-9,
-    },
+    // Removed saturationCurrent - LEDs should use color-specific parameters from LEDStamper
   ],
   icon: 'LEDSymbol', // Professional LED symbol with light rays
 }

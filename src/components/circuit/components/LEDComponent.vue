@@ -231,7 +231,7 @@ const componentDefinition = computed(() => getComponentDefinition(props.componen
 const ledColor = computed(() => (props.component.properties?.color as string) || 'red')
 
 const saturationCurrent = computed(
-  () => (props.component.properties?.saturationCurrent as number) || 1e-9, // 1nA default for LEDs
+  () => (props.component.properties?.saturationCurrent as number) || undefined, // Let LEDStamper handle defaults
 )
 
 const forwardVoltage = computed(() => {

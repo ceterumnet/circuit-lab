@@ -10,6 +10,7 @@ import { CircuitAnalyzer } from './CircuitAnalyzer'
 import { WireStamper } from '../linear/WireStamper'
 import { VoltageSourceStamper } from '../linear/VoltageSourceStamper'
 import { ResistorStamper } from '../linear/ResistorStamper'
+import { VariableResistorStamper } from '../linear/VariableResistorStamper'
 
 /**
  * Non-linear diode stamper using Load Line Intersection approach
@@ -172,6 +173,15 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
           const resistance = resistorComponent.properties.resistance as number
           resistors.push({ resistance, component: resistorComponent })
           console.log(`  Found resistor ${resistorComponent.id}: ${resistance}Ω`)
+        }
+      } else if (stamper.type === 'variable_resistor') {
+        // CRITICAL FIX: Detect variable resistors as resistive components
+        const variableResistorStamper = stamper as VariableResistorStamper
+        const variableResistorComponent = variableResistorStamper.component as CircuitComponent
+        if (variableResistorComponent?.properties?.resistance) {
+          const resistance = variableResistorComponent.properties.resistance as number
+          resistors.push({ resistance, component: variableResistorComponent })
+          console.log(`  Found variable resistor ${variableResistorComponent.id}: ${resistance}Ω`)
         }
       }
     }
