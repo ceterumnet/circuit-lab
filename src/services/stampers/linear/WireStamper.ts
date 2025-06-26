@@ -2,7 +2,7 @@ import type { CircuitComponent } from '@/types/components'
 import type { ComponentStamper } from '@/services/stampers/shared'
 import type { Matrix } from 'mathjs'
 import { ResistiveStamper } from '@/services/stampers/shared'
-import { PotentiometerStamper } from '@/services/simulation'
+import { PotentiometerStamper } from '@/services/stampers'
 
 /**
  * Wire component stamper - PURE MNA: Uses G-matrix stamping like all passive components

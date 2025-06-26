@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest'
  */
 
 // Import the ACTUAL classes we need to test from simulation.ts
-import { DiodeCharacteristic, LoadLineIntersection } from '@/services/simulation'
+import { DiodeCharacteristic, LoadLineIntersection } from '@/services/stampers'
 
 describe('DiodeCharacteristic Unit Tests', () => {
   describe('I-V Curve Calculation', () => {
