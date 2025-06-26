@@ -147,7 +147,12 @@
           <p>{{ interactionStore.selectedComponentIds.length }} items selected</p>
           <p>Editing multiple items at once is not yet supported.</p>
         </div>
+
+        <!-- Parameter Analysis Panel when no component is selected -->
+        <parameter-analysis-panel v-else-if="circuitStore.currentCircuit.components.length > 0" />
+
         <div v-else class="no-selection">
+          <p>Add components to start building your circuit</p>
           <p>Select a component to edit its properties</p>
         </div>
       </div>
@@ -180,6 +185,7 @@ import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
 import ProbeProperties from '@/components/circuit/probes/ProbeProperties.vue'
 import CircuitSaveLoad from '@/components/circuit/CircuitSaveLoad.vue'
+import ParameterAnalysisPanel from '@/components/circuit/analysis/ParameterAnalysisPanel.vue'
 import type { CircuitComponent, Probe } from '@/types/components'
 
 const circuitStore = useCircuitStore()
