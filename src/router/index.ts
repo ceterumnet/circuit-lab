@@ -14,6 +14,11 @@ const router = createRouter({
       component: () => import('@/views/CircuitEditor.vue'),
     },
     {
+      path: '/design-system',
+      name: 'design-system',
+      component: () => import('@/components/design-system/DesignSystemDemo.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting

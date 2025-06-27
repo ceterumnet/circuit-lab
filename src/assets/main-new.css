@@ -51,7 +51,11 @@
 
   body {
     @apply bg-slate-50 text-slate-900;
-    @apply overflow-hidden; /* IDE-like fixed layout */
+  }
+
+  /* IDE-specific overflow behavior - only apply to IDE layouts */
+  .ide-layout {
+    @apply h-screen w-screen flex flex-col overflow-hidden;
   }
 
   /* Technical/monospace content */
@@ -61,10 +65,7 @@
 }
 
 @layer components {
-  /* IDE Layout Primitives */
-  .ide-layout {
-    @apply h-screen w-screen flex flex-col;
-  }
+  /* IDE Layout Primitives - styles already defined above in base layer */
 
   .ide-toolbar {
     @apply h-12 bg-white border-b border-slate-200 flex items-center px-4;
