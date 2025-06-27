@@ -8,7 +8,7 @@ const route = useRoute()
 <template>
   <div class="app">
     <!-- Simple header bar -->
-    <header class="app-header" v-if="route.name !== 'circuit'">
+    <!-- <header class="app-header" v-if="route.name !== 'circuit'">
       <div class="header-content">
         <h1 class="app-title">
           <RouterLink to="/circuit" class="title-link">Circuit Lab</RouterLink>
@@ -18,7 +18,7 @@ const route = useRoute()
           <RouterLink to="/about" class="nav-link">About</RouterLink>
         </nav>
       </div>
-    </header>
+    </header> -->
 
     <!-- Main content -->
     <main class="app-main">
