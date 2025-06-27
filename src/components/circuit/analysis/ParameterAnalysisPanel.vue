@@ -646,7 +646,7 @@ onUnmounted(() => {
 .range-controls {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-top: 0.5rem;
   padding: 0.75rem;
   background: #f8f9fa;
@@ -657,6 +657,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .range-input label {
@@ -666,10 +667,14 @@ onUnmounted(() => {
 }
 
 .range-input input {
-  padding: 0.375rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.25rem;
   border: 1px solid #ced4da;
   border-radius: 4px;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
+  box-sizing: border-box;
 }
 
 .range-input .unit {
@@ -796,5 +801,34 @@ onUnmounted(() => {
 .export-btn:hover {
   background: #007bff;
   color: white;
+}
+
+/* Responsive adjustments for narrow panels */
+@media (max-width: 500px) {
+  .range-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem;
+  }
+
+  .range-input {
+    gap: 0.1rem;
+  }
+
+  .range-input label {
+    font-size: 0.7rem;
+  }
+
+  .range-input input {
+    padding: 0.2rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* For very narrow workspace (collapsed state) */
+@container (max-width: 450px) {
+  .range-controls {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
 }
 </style>

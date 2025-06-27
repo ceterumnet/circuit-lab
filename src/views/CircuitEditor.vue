@@ -136,26 +136,13 @@
         </div>
       </div>
 
-      <!-- Component properties panel -->
-      <div class="properties-panel">
-        <component-properties
-          v-if="itemIsComponent(singleSelectedItem)"
-          :component="singleSelectedItem"
-        />
-        <probe-properties v-else-if="itemIsProbe(singleSelectedItem)" :probe="singleSelectedItem" />
-        <div v-else-if="interactionStore.selectedComponentIds.length > 1" class="no-selection">
-          <p>{{ interactionStore.selectedComponentIds.length }} items selected</p>
-          <p>Editing multiple items at once is not yet supported.</p>
-        </div>
-
-        <!-- Parameter Analysis Panel when no component is selected -->
-        <parameter-analysis-panel v-else-if="circuitStore.currentCircuit.components.length > 0" />
-
-        <div v-else class="no-selection">
-          <p>Add components to start building your circuit</p>
-          <p>Select a component to edit its properties</p>
-        </div>
-      </div>
+      <!-- Analysis Workspace -->
+      <analysis-workspace
+        :selected-component="itemIsComponent(singleSelectedItem) ? singleSelectedItem : null"
+        :selected-probe="itemIsProbe(singleSelectedItem) ? singleSelectedItem : null"
+        :multiple-selection="interactionStore.selectedComponentIds.length > 1"
+        :has-circuit="circuitStore.currentCircuit.components.length > 0"
+      />
     </div>
   </div>
 </template>
@@ -181,11 +168,9 @@ import {
 } from 'lucide-vue-next'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'
-import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ComponentPalette from '@/components/circuit/ComponentPalette.vue'
-import ProbeProperties from '@/components/circuit/probes/ProbeProperties.vue'
 import CircuitSaveLoad from '@/components/circuit/CircuitSaveLoad.vue'
-import ParameterAnalysisPanel from '@/components/circuit/analysis/ParameterAnalysisPanel.vue'
+import AnalysisWorkspace from '@/components/circuit/analysis/AnalysisWorkspace.vue'
 import type { CircuitComponent, Probe } from '@/types/components'
 
 const circuitStore = useCircuitStore()
@@ -599,25 +584,7 @@ async function runSimulation() {
   height: 100%;
 }
 
-.properties-panel {
-  width: 320px;
-  flex-shrink: 0;
-  background: #f8f9fa;
-  border-left: 1px solid #dee2e6;
-  padding: 1rem;
-  overflow: auto;
-  position: relative;
-  z-index: 10;
-}
-
-.no-selection {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #6c757d;
-  text-align: center;
-}
+/* Analysis workspace positioning handled by the component itself */
 
 .realtime-toggle {
   display: flex;
