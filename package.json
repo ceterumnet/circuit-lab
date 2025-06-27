@@ -17,6 +17,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "chart.js": "^4.5.0",
     "konva": "^9.3.20",
     "lucide-vue-next": "^0.516.0",
     "mathjs": "^14.5.2",

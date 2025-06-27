@@ -102,12 +102,19 @@
 
     <!-- Plot Container -->
     <div class="plot-container">
-      <canvas
-        ref="plotCanvas"
-        class="analysis-plot"
-        :width="plotWidth"
-        :height="plotHeight"
-      ></canvas>
+      <analysis-chart
+        v-if="chartDatasets.length > 0"
+        ref="analysisChart"
+        :datasets="chartDatasets"
+        :x-label="primaryParameterLabel"
+        :y-label="'Multiple Outputs'"
+        :title="`${primaryParameterLabel} vs Circuit Response`"
+      />
+      <div v-else class="no-data-message">
+        <div class="no-data-icon">📊</div>
+        <p>No analysis data available</p>
+        <p>Configure parameters and run analysis to see results</p>
+      </div>
     </div>
 
     <!-- Export Controls -->
@@ -124,6 +131,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
+import AnalysisChart from './AnalysisChart.vue'
 import type { DC_Result } from '@/services/simulation'
 
 // Component state
@@ -156,9 +164,7 @@ const currentPrimaryValue = ref(0)
 const currentOutputValues = ref<Record<string, number>>({})
 
 // Plot configuration
-const plotCanvas = ref<HTMLCanvasElement>()
-const plotWidth = ref(400)
-const plotHeight = ref(300)
+const analysisChart = ref()
 
 // Store access
 const circuitStore = useCircuitStore()
@@ -233,6 +239,28 @@ const primaryParameterLabel = computed(() => {
 const primaryParameterUnit = computed(() => {
   const param = availableParameters.value.find((p) => p.id === primaryParameter.value)
   return param?.unit || ''
+})
+
+// Chart datasets for the new Chart.js component
+const chartDatasets = computed(() => {
+  if (analysisResults.value.length === 0 || selectedOutputs.value.length === 0) {
+    return []
+  }
+
+  return selectedOutputs.value.map((outputId, index) => {
+    const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']
+    const outputDef = availableOutputs.value.find((o) => o.id === outputId)
+
+    return {
+      label: outputDef?.label || outputId,
+      unit: outputDef?.unit || '',
+      color: colors[index % colors.length],
+      data: analysisResults.value.map((result) => ({
+        x: result.primaryValue,
+        y: result.outputs[outputId] || 0,
+      })),
+    }
+  })
 })
 
 // Analysis control functions
@@ -446,103 +474,18 @@ function exportCSV() {
 }
 
 function exportImage() {
-  if (!plotCanvas.value) return
+  if (!analysisChart.value) return
 
-  const link = document.createElement('a')
-  link.download = 'parameter_analysis.png'
-  link.href = plotCanvas.value.toDataURL()
-  link.click()
-}
-
-// Plot rendering
-watch(
-  analysisResults,
-  () => {
-    if (analysisResults.value.length > 0) {
-      renderPlot()
-    }
-  },
-  { deep: true },
-)
-
-function renderPlot() {
-  if (!plotCanvas.value || analysisResults.value.length === 0) return
-
-  const ctx = plotCanvas.value.getContext('2d')
-  if (!ctx) return
-
-  // Clear canvas
-  ctx.clearRect(0, 0, plotWidth.value, plotHeight.value)
-
-  // Simple 2D line plot for primary parameter vs first selected output
-  if (selectedOutputs.value.length > 0) {
-    const outputId = selectedOutputs.value[0]
-    const data = analysisResults.value.map((r) => ({
-      x: r.primaryValue,
-      y: r.outputs[outputId] || 0,
-    }))
-
-    // Find data bounds
-    const xMin = Math.min(...data.map((d) => d.x))
-    const xMax = Math.max(...data.map((d) => d.x))
-    const yMin = Math.min(...data.map((d) => d.y))
-    const yMax = Math.max(...data.map((d) => d.y))
-
-    const margin = 40
-    const plotAreaWidth = plotWidth.value - 2 * margin
-    const plotAreaHeight = plotHeight.value - 2 * margin
-
-    // Draw axes
-    ctx.strokeStyle = '#333'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(margin, margin)
-    ctx.lineTo(margin, plotHeight.value - margin)
-    ctx.lineTo(plotWidth.value - margin, plotHeight.value - margin)
-    ctx.stroke()
-
-    // Draw data line
-    ctx.strokeStyle = '#007bff'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-
-    data.forEach((point, index) => {
-      const x = margin + ((point.x - xMin) / (xMax - xMin)) * plotAreaWidth
-      const y = plotHeight.value - margin - ((point.y - yMin) / (yMax - yMin)) * plotAreaHeight
-
-      if (index === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
-      }
-    })
-
-    ctx.stroke()
-
-    // Draw data points
-    ctx.fillStyle = '#007bff'
-    data.forEach((point) => {
-      const x = margin + ((point.x - xMin) / (xMax - xMin)) * plotAreaWidth
-      const y = plotHeight.value - margin - ((point.y - yMin) / (yMax - yMin)) * plotAreaHeight
-
-      ctx.beginPath()
-      ctx.arc(x, y, 3, 0, 2 * Math.PI)
-      ctx.fill()
-    })
-
-    // Add labels
-    ctx.fillStyle = '#333'
-    ctx.font = '12px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText(primaryParameterLabel.value, plotWidth.value / 2, plotHeight.value - 10)
-
-    ctx.save()
-    ctx.translate(15, plotHeight.value / 2)
-    ctx.rotate(-Math.PI / 2)
-    ctx.fillText(getOutputLabel(outputId), 0, 0)
-    ctx.restore()
+  const imageData = analysisChart.value.exportChart()
+  if (imageData) {
+    const link = document.createElement('a')
+    link.download = 'parameter_analysis.png'
+    link.href = imageData
+    link.click()
   }
 }
+
+// Chart rendering is now handled by the AnalysisChart component automatically
 
 // Lifecycle
 onMounted(() => {
@@ -773,13 +716,28 @@ onUnmounted(() => {
 
 .plot-container {
   margin: 1rem 0;
-  text-align: center;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.analysis-plot {
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  background: white;
+.no-data-message {
+  text-align: center;
+  color: #6c757d;
+  padding: 2rem;
+}
+
+.no-data-icon {
+  font-size: 3rem;
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+.no-data-message p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .export-controls {
