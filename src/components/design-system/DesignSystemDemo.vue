@@ -612,7 +612,7 @@
                       <div class="text-xs text-slate-600">Resize Component</div>
                     </div>
                     <div
-                      class="cursor-help p-4 bg-white border border-slate-200 rounded-lg text-center hover:bg-slate-50 transition-colors"
+                      class="cursor-help-hd p-4 bg-white border border-slate-200 rounded-lg text-center hover:bg-slate-50 transition-colors"
                     >
                       <div class="w-4 h-4 mx-auto mb-2 text-slate-600">
                         <HelpCircle class="w-4 h-4" />
@@ -653,51 +653,6 @@
                 </div>
               </div>
             </section>
-
-            <!-- SVG Extraction Tool -->
-            <section class="bg-green-50 border border-green-200 rounded-lg p-6">
-              <h3 class="text-xl font-semibold text-green-900 mb-4">🔍 SVG Extraction Tool</h3>
-              <p class="text-green-800 mb-4">
-                Click the button below to extract the actual SVG paths from the rendered Lucide
-                icons.
-              </p>
-              <button
-                @click="extractSVGs"
-                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors mb-4"
-              >
-                Extract SVG Paths
-              </button>
-              <div v-if="extractedSVGs.length > 0" class="space-y-4">
-                <div
-                  v-for="svg in extractedSVGs"
-                  :key="svg.name"
-                  class="bg-white p-4 rounded border"
-                >
-                  <h4 class="font-medium text-green-900 mb-2">{{ svg.name }}</h4>
-                  <pre
-                    class="text-xs bg-gray-100 p-2 rounded overflow-x-auto"
-                  ><code>{{ svg.content }}</code></pre>
-                </div>
-              </div>
-            </section>
-
-            <!-- Diagnostic Info -->
-            <section class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 class="text-xl font-semibold text-blue-900 mb-4">🔧 Troubleshooting Mode</h3>
-              <p class="text-blue-800 mb-4">
-                This is a simplified version to help identify visual issues. Complex inline SVG
-                cursors have been temporarily removed.
-              </p>
-              <div class="space-y-2 text-sm text-blue-700">
-                <div><strong>What to check:</strong></div>
-                <ul class="list-disc list-inside space-y-1 ml-4">
-                  <li>Do the SVG icons render correctly in the circuit cursor section?</li>
-                  <li>Do standard cursors (crosshair, grab, move, help) work when hovering?</li>
-                  <li>Are there any layout issues or overlapping elements?</li>
-                  <li>Do the hover states and transitions work properly?</li>
-                </ul>
-              </div>
-            </section>
           </div>
 
           <!-- Placeholder for Future Sections -->
@@ -718,30 +673,37 @@
 /* Custom High-DPI Cursor Definitions using actual Lucide SVG paths */
 .cursor-crosshair-hd {
   cursor:
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'%3e%3c/circle%3e%3cline x1='22' x2='18' y1='12' y2='12'%3e%3c/line%3e%3cline x1='6' x2='2' y1='12' y2='12'%3e%3c/line%3e%3cline x1='12' x2='12' y1='6' y2='2'%3e%3c/line%3e%3cline x1='12' x2='12' y1='22' y2='18'%3e%3c/line%3e%3c/svg%3e")
-      12 12,
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'%3e%3c/circle%3e%3cline x1='22' x2='18' y1='12' y2='12'%3e%3c/line%3e%3cline x1='6' x2='2' y1='12' y2='12'%3e%3c/line%3e%3cline x1='12' x2='12' y1='6' y2='2'%3e%3c/line%3e%3cline x1='12' x2='12' y1='22' y2='18'%3e%3c/line%3e%3c/svg%3e")
+      8 8,
     crosshair;
 }
 
 .cursor-grab-hd {
   cursor:
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M18 11.5V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1.4'%3e%3c/path%3e%3cpath d='M14 10V8a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2'%3e%3c/path%3e%3cpath d='M10 9.9V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v5'%3e%3c/path%3e%3cpath d='M6 14a2 2 0 0 0-2-2a2 2 0 0 0-2 2'%3e%3c/path%3e%3cpath d='M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0'%3e%3c/path%3e%3c/svg%3e")
-      12 12,
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M18 11.5V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1.4'%3e%3c/path%3e%3cpath d='M14 10V8a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2'%3e%3c/path%3e%3cpath d='M10 9.9V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v5'%3e%3c/path%3e%3cpath d='M6 14a2 2 0 0 0-2-2a2 2 0 0 0-2 2'%3e%3c/path%3e%3cpath d='M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0'%3e%3c/path%3e%3c/svg%3e")
+      8 8,
     grab;
 }
 
 .cursor-move-hd {
   cursor:
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M12 2v20'%3e%3c/path%3e%3cpath d='m15 19-3 3-3-3'%3e%3c/path%3e%3cpath d='m19 9 3 3-3 3'%3e%3c/path%3e%3cpath d='M2 12h20'%3e%3c/path%3e%3cpath d='m5 9-3 3 3 3'%3e%3c/path%3e%3cpath d='m9 5 3-3 3 3'%3e%3c/path%3e%3c/svg%3e")
-      12 12,
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M12 2v20'%3e%3c/path%3e%3cpath d='m15 19-3 3-3-3'%3e%3c/path%3e%3cpath d='m19 9 3 3-3 3'%3e%3c/path%3e%3cpath d='M2 12h20'%3e%3c/path%3e%3cpath d='m5 9-3 3 3 3'%3e%3c/path%3e%3cpath d='m9 5 3-3 3 3'%3e%3c/path%3e%3c/svg%3e")
+      8 8,
     move;
 }
 
 .cursor-nwse-resize-hd {
   cursor:
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M11 19H5v-6'%3e%3c/path%3e%3cpath d='M13 5h6v6'%3e%3c/path%3e%3cpath d='M19 5 5 19'%3e%3c/path%3e%3c/svg%3e")
-      12 12,
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M11 19H5v-6'%3e%3c/path%3e%3cpath d='M13 5h6v6'%3e%3c/path%3e%3cpath d='M19 5 5 19'%3e%3c/path%3e%3c/svg%3e")
+      8 8,
     nwse-resize;
+}
+
+.cursor-help-hd {
+  cursor:
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'%3e%3c/circle%3e%3cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'%3e%3c/path%3e%3cpath d='M12 17h.01'%3e%3c/path%3e%3c/svg%3e")
+      8 8,
+    help;
 }
 </style>
 
@@ -761,40 +723,6 @@ import ResistorSymbol from '@/components/circuit/symbols/ResistorSymbol.vue'
 import VoltageSourceSymbol from '@/components/circuit/symbols/VoltageSourceSymbol.vue'
 
 const activeSection = ref('colors')
-const extractedSVGs = ref<Array<{ name: string; content: string }>>([])
-
-const extractSVGs = () => {
-  const svgData: Array<{ name: string; content: string }> = []
-
-  // Find all Lucide icons in the Circuit-Specific Cursors section
-  const cursorIcons = [
-    { name: 'Crosshair', selector: 'svg' },
-    { name: 'Grab', selector: 'svg' },
-    { name: 'Move', selector: 'svg' },
-    { name: 'MoveDiagonal', selector: 'svg' },
-    { name: 'ArrowLeftRight', selector: 'svg' },
-    { name: 'ArrowUpDown', selector: 'svg' },
-  ]
-
-  cursorIcons.forEach((icon) => {
-    // Try to find the SVG element for this icon
-    const svgElements = document.querySelectorAll('svg')
-    svgElements.forEach((svg) => {
-      // Check if this SVG has the expected structure
-      if (svg.innerHTML && svg.innerHTML.includes('stroke')) {
-        const outerHTML = svg.outerHTML
-        if (!svgData.some((item) => item.content === outerHTML)) {
-          svgData.push({
-            name: icon.name,
-            content: outerHTML,
-          })
-        }
-      }
-    })
-  })
-
-  extractedSVGs.value = svgData
-}
 
 const primaryColors = [
   { name: 'primary-400', hex: '#60a5fa', token: '--color-primary-400', class: 'bg-blue-400' },
