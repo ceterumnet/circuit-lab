@@ -305,12 +305,30 @@ const probeValue = computed(() => {
     if (targetComponent?.type === 'wire' && targetComponent.properties) {
       const startCompId = targetComponent.properties.startComponentId as string
       const startTermId = targetComponent.properties.startTerminal as string
+      const endCompId = targetComponent.properties.endComponentId as string
+      const endTermId = targetComponent.properties.endTerminal as string
 
-      const fullTerminalId = `${startCompId}:${startTermId}`
-      const nodeIndex = termToNodeIndex.get(fullTerminalId)
+      // Get voltages at both ends of the wire
+      const startTerminalId = `${startCompId}:${startTermId}`
+      const endTerminalId = `${endCompId}:${endTermId}`
 
-      if (nodeIndex !== undefined && voltages[nodeIndex] !== undefined) {
-        return `${voltages[nodeIndex].toFixed(3)}V`
+      const startNodeIndex = termToNodeIndex.get(startTerminalId)
+      const endNodeIndex = termToNodeIndex.get(endTerminalId)
+
+      const startVoltage = startNodeIndex !== undefined ? voltages[startNodeIndex] : undefined
+      const endVoltage = endNodeIndex !== undefined ? voltages[endNodeIndex] : undefined
+
+      // Smart terminal selection: choose the higher voltage terminal
+      // This makes more intuitive sense for voltage probes in series circuits
+      // where users typically want to measure "how far up the voltage chain" they are
+      if (startVoltage !== undefined && endVoltage !== undefined) {
+        // Use the higher voltage (more positive) terminal
+        const voltage = Math.max(startVoltage, endVoltage)
+        return `${voltage.toFixed(3)}V`
+      } else if (startVoltage !== undefined) {
+        return `${startVoltage.toFixed(3)}V`
+      } else if (endVoltage !== undefined) {
+        return `${endVoltage.toFixed(3)}V`
       }
     } else if (targetComponent?.type === 'node') {
       const nodeDef = getComponentDefinition('node')

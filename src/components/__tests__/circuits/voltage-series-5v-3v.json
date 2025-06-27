@@ -1,0 +1,101 @@
+{
+  "id": "voltage-series-5v-3v",
+  "name": "Series 5V + 3V Voltage Sources",
+  "components": [
+    {
+      "id": "V1",
+      "type": "voltage_source",
+      "position": { "x": 100, "y": 100 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "voltage": 5.0,
+        "label": "V1"
+      }
+    },
+    {
+      "id": "V2",
+      "type": "voltage_source",
+      "position": { "x": 200, "y": 100 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "voltage": 3.0,
+        "label": "V2"
+      }
+    },
+    {
+      "id": "R1",
+      "type": "resistor",
+      "position": { "x": 300, "y": 100 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "resistance": 1000,
+        "label": "R1"
+      }
+    },
+    {
+      "id": "GND1",
+      "type": "ground",
+      "position": { "x": 200, "y": 200 },
+      "rotation": 0,
+      "selected": false
+    },
+    {
+      "id": "W1",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "V1",
+        "startTerminal": "positive",
+        "endComponentId": "V2",
+        "endTerminal": "negative"
+      }
+    },
+    {
+      "id": "W2",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "V2",
+        "startTerminal": "positive",
+        "endComponentId": "R1",
+        "endTerminal": "terminal1"
+      }
+    },
+    {
+      "id": "W3",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "R1",
+        "startTerminal": "terminal2",
+        "endComponentId": "GND1",
+        "endTerminal": "terminal"
+      }
+    },
+    {
+      "id": "W4",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "V1",
+        "startTerminal": "negative",
+        "endComponentId": "GND1",
+        "endTerminal": "terminal"
+      }
+    }
+  ],
+  "wires": [],
+  "probes": [],
+  "nodes": {}
+}
