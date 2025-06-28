@@ -69,14 +69,10 @@
                     'w-full text-left px-3 py-2 rounded-md transition-colors',
                     activeSection === 'components'
                       ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-slate-400 cursor-not-allowed',
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                   ]"
-                  disabled
                 >
                   Components & Forms
-                  <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded ml-2"
-                    >Phase 2</span
-                  >
                 </button>
               </li>
               <li>
@@ -655,6 +651,557 @@
             </section>
           </div>
 
+          <!-- Components & Forms Section -->
+          <div v-if="activeSection === 'components'" class="space-y-8">
+            <div>
+              <h2 class="text-3xl font-bold text-slate-900 mb-2">Components & Forms</h2>
+              <p class="text-lg text-slate-600">
+                Professional component library for circuit simulation interfaces, optimized for
+                technical accuracy and educational clarity.
+              </p>
+            </div>
+
+            <!-- Button System -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Button System</h3>
+              <p class="text-slate-600 mb-6">
+                Comprehensive button system with semantic variants for different action types and
+                contexts.
+              </p>
+
+              <!-- Button Variants -->
+              <div class="space-y-6">
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Primary Variants</h4>
+                  <div class="flex items-center gap-3 flex-wrap">
+                    <button class="btn btn-primary">
+                      <Play class="w-4 h-4 mr-2" />
+                      Start Simulation
+                    </button>
+                    <button class="btn btn-secondary">
+                      <Pause class="w-4 h-4 mr-2" />
+                      Pause Analysis
+                    </button>
+                    <button class="btn btn-ghost">
+                      <RotateCcw class="w-4 h-4 mr-2" />
+                      Reset Circuit
+                    </button>
+                  </div>
+                  <div class="mt-3 space-y-1 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.btn .btn-primary</code>
+                      - Primary actions (simulation, save)
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.btn .btn-secondary</code
+                      >
+                      - Secondary actions (pause, cancel)
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.btn .btn-ghost</code> -
+                      Subtle actions (reset, clear)
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Size & Icon Variants</h4>
+                  <div class="flex items-center gap-3 flex-wrap">
+                    <button class="btn btn-primary">Default Size</button>
+                    <button class="btn btn-primary btn-sm">Small Button</button>
+                    <button class="btn btn-icon">
+                      <Settings class="w-5 h-5" />
+                    </button>
+                    <button class="btn btn-secondary btn-icon">
+                      <Save class="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div class="mt-3 space-y-1 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.btn .btn-sm</code> -
+                      Compact buttons for dense layouts
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.btn .btn-icon</code> -
+                      Icon-only buttons for toolbars
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Button States</h4>
+                  <div class="flex items-center gap-3 flex-wrap">
+                    <button class="btn btn-primary">Normal</button>
+                    <button class="btn btn-primary" disabled>Disabled</button>
+                    <button class="btn btn-secondary">Normal Secondary</button>
+                    <button class="btn btn-secondary" disabled>Disabled Secondary</button>
+                  </div>
+                  <div class="mt-3 text-sm text-slate-500">
+                    <div>
+                      Disabled state automatically applies
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >opacity-50 cursor-not-allowed</code
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Form Components -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Form Components</h3>
+              <p class="text-slate-600 mb-6">
+                Consistent form patterns for component properties, circuit parameters, and analysis
+                controls.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Property Fields -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Property Fields</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                      <div class="property-field">
+                        <label class="property-label">Resistance Value</label>
+                        <input
+                          class="property-input"
+                          type="number"
+                          value="1000"
+                          placeholder="Enter value"
+                        />
+                      </div>
+                      <div class="property-field">
+                        <label class="property-label">Component Label</label>
+                        <input
+                          class="property-input"
+                          type="text"
+                          value="R1"
+                          placeholder="Component ID"
+                        />
+                      </div>
+                      <div class="property-field">
+                        <label class="property-label">Tolerance</label>
+                        <select class="property-input">
+                          <option value="5">5%</option>
+                          <option value="1">1%</option>
+                          <option value="0.1">0.1%</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="space-y-4">
+                      <div class="property-field">
+                        <label class="property-label">Calculated Voltage</label>
+                        <div class="property-value voltage-display">3.33 V</div>
+                      </div>
+                      <div class="property-field">
+                        <label class="property-label">Calculated Current</label>
+                        <div class="property-value current-display">3.33 mA</div>
+                      </div>
+                      <div class="property-field">
+                        <label class="property-label">Status</label>
+                        <div class="property-value">Connected</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.property-field</code> -
+                      Container for label + input pairs
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.property-label</code> -
+                      Consistent labeling
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.property-input</code> -
+                      Text inputs, selects, numbers with focus styles
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.property-value</code> -
+                      Read-only displays with monospace font
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Property Sections -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Property Panel Layout</h4>
+                  <div class="properties-panel w-full max-w-md">
+                    <div class="property-section">
+                      <div class="property-section-title">Component Properties</div>
+                      <div class="property-field">
+                        <label class="property-label">Resistance</label>
+                        <input class="property-input" type="number" value="2200" />
+                      </div>
+                      <div class="property-field">
+                        <label class="property-label">Power Rating</label>
+                        <input class="property-input" type="number" value="0.25" />
+                      </div>
+                    </div>
+                    <div class="property-section">
+                      <div class="property-section-title">Analysis Results</div>
+                      <div class="property-field">
+                        <label class="property-label">Node Voltage</label>
+                        <div class="property-value voltage-display">2.75 V</div>
+                      </div>
+                      <div class="property-field">
+                        <label class="property-label">Power Dissipation</label>
+                        <div class="property-value power-display">3.44 mW</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.properties-panel</code>
+                      - Right panel container
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.property-section</code>
+                      - Grouped property sections
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.property-section-title</code
+                      >
+                      - Section headers
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Measurement Displays -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Measurement Displays</h3>
+              <p class="text-slate-600 mb-6">
+                Specialized displays for electrical measurements with semantic colors and
+                professional formatting.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Live Measurements -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Electrical Measurements</h4>
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center p-4 bg-slate-50 rounded-lg">
+                      <div class="text-sm text-slate-600 mb-1">Node Voltage</div>
+                      <div class="voltage-display text-xl font-mono">5.00 V</div>
+                    </div>
+                    <div class="text-center p-4 bg-slate-50 rounded-lg">
+                      <div class="text-sm text-slate-600 mb-1">Branch Current</div>
+                      <div class="current-display text-xl font-mono">2.27 mA</div>
+                    </div>
+                    <div class="text-center p-4 bg-slate-50 rounded-lg">
+                      <div class="text-sm text-slate-600 mb-1">Resistance</div>
+                      <div class="resistance-display text-xl font-mono">2.20 kΩ</div>
+                    </div>
+                    <div class="text-center p-4 bg-slate-50 rounded-lg">
+                      <div class="text-sm text-slate-600 mb-1">Power</div>
+                      <div class="power-display text-xl font-mono">11.4 mW</div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.voltage-display</code> -
+                      Red color for voltage measurements
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.current-display</code> -
+                      Green color for current measurements
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.resistance-display</code
+                      >
+                      - Purple color for resistance values
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.power-display</code> -
+                      Orange color for power calculations
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Component Values -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Component Values in Context</h4>
+                  <div class="p-4 bg-slate-50 rounded-lg space-y-3">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-slate-600">R1 (2.2kΩ):</span>
+                      <div class="flex gap-4">
+                        <span class="voltage-display font-mono text-sm">V = 5.00V</span>
+                        <span class="current-display font-mono text-sm">I = 2.27mA</span>
+                        <span class="power-display font-mono text-sm">P = 11.4mW</span>
+                      </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-slate-600">R2 (1.0kΩ):</span>
+                      <div class="flex gap-4">
+                        <span class="voltage-display font-mono text-sm">V = 2.27V</span>
+                        <span class="current-display font-mono text-sm">I = 2.27mA</span>
+                        <span class="power-display font-mono text-sm">P = 5.15mW</span>
+                      </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-slate-600">LED1 (Red):</span>
+                      <div class="flex gap-4">
+                        <span class="voltage-display font-mono text-sm">Vf = 2.1V</span>
+                        <span class="current-display font-mono text-sm">If = 15.2mA</span>
+                        <span class="power-display font-mono text-sm">P = 31.9mW</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Simulation Status -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Simulation Status</h3>
+              <p class="text-slate-600 mb-6">
+                Status indicators providing clear visual feedback during circuit analysis and
+                simulation.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Status Variants -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Status Indicators</h4>
+                  <div class="flex items-center gap-4 flex-wrap">
+                    <div class="simulation-status idle">
+                      <div class="w-2 h-2 bg-slate-500 rounded-full"></div>
+                      Simulation Idle
+                    </div>
+                    <div class="simulation-status running">
+                      <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                      Analyzing Circuit
+                    </div>
+                    <div class="simulation-status success">
+                      <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                      Analysis Complete
+                    </div>
+                    <div class="simulation-status error">
+                      <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                      Simulation Error
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.simulation-status</code>
+                      - Base status indicator with rounded pill styling
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.idle .running .success .error</code
+                      >
+                      - State modifiers with semantic colors
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Status in Context -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Status in Application Context</h4>
+                  <div class="p-4 bg-slate-50 rounded-lg space-y-4">
+                    <!-- Toolbar Status -->
+                    <div class="flex items-center justify-between p-3 bg-white rounded border">
+                      <div class="flex items-center gap-3">
+                        <span class="text-sm font-medium">Circuit Simulation</span>
+                        <div class="simulation-status running">
+                          <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                          Running
+                        </div>
+                      </div>
+                      <div class="flex gap-2">
+                        <button class="btn btn-ghost btn-sm">
+                          <Pause class="w-4 h-4" />
+                        </button>
+                        <button class="btn btn-secondary btn-sm">Stop</button>
+                      </div>
+                    </div>
+
+                    <!-- Analysis Panel Status -->
+                    <div class="p-3 bg-white rounded border">
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">Parameter Analysis</span>
+                        <div class="simulation-status success">
+                          <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                          Complete
+                        </div>
+                      </div>
+                      <div class="text-xs text-slate-500">
+                        Swept R1 from 1kΩ to 10kΩ in 50 steps • Analysis time: 145ms
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Debug Components -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Debug Components</h3>
+              <p class="text-slate-600 mb-6">
+                Technical information displays for development and troubleshooting.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Debug Section -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Debug Information Display</h4>
+                  <div class="debug-section max-w-md">
+                    <div class="debug-title">Component Debug Information</div>
+                    <div class="debug-table">
+                      <div class="debug-row">
+                        <span class="debug-label">Component ID</span>
+                        <span class="debug-value">resistor_001</span>
+                      </div>
+                      <div class="debug-row">
+                        <span class="debug-label">Node A</span>
+                        <span class="debug-value">node_002</span>
+                      </div>
+                      <div class="debug-row">
+                        <span class="debug-label">Node B</span>
+                        <span class="debug-value">node_ground</span>
+                      </div>
+                      <div class="debug-row">
+                        <span class="debug-label">Matrix Row</span>
+                        <span class="debug-value">2</span>
+                      </div>
+                      <div class="debug-row">
+                        <span class="debug-label">Stamp Value</span>
+                        <span class="debug-value">4.55e-4</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.debug-section</code> -
+                      Debug information container
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.debug-title</code> -
+                      Section title styling
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.debug-table, .debug-row</code
+                      >
+                      - Key-value pair layout
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.debug-label, .debug-value</code
+                      >
+                      - Label and value styling
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Component Integration Examples -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Integration Examples</h3>
+              <p class="text-slate-600 mb-6">
+                Real-world examples showing how components work together in the circuit simulation
+                interface.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Component Palette Example -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Component Palette</h4>
+                  <div class="component-palette max-w-sm bg-white border rounded-lg">
+                    <div class="component-group">
+                      <div class="component-group-title">Basic Components</div>
+                      <div class="component-list">
+                        <div class="component-item active">
+                          <div class="component-icon text-purple-600">
+                            <ResistorSymbol class="w-5 h-5" />
+                          </div>
+                          <span class="component-label">Resistor</span>
+                        </div>
+                        <div class="component-item">
+                          <div class="component-icon text-red-600">
+                            <VoltageSourceSymbol class="w-5 h-5" />
+                          </div>
+                          <span class="component-label">Voltage Source</span>
+                        </div>
+                        <div class="component-item">
+                          <div class="component-icon text-slate-600">⏚</div>
+                          <span class="component-label">Ground</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.component-palette</code>
+                      - Left sidebar component browser
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.component-group</code> -
+                      Grouped component sections
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.component-item</code> -
+                      Individual selectable components
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.active</code> -
+                      Currently selected component styling
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Analysis Controls -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Analysis Control Panel</h4>
+                  <div class="p-4 bg-slate-50 rounded-lg max-w-lg">
+                    <div class="flex items-center justify-between mb-4">
+                      <h5 class="font-medium text-slate-900">Parameter Sweep</h5>
+                      <div class="simulation-status running">
+                        <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                        Running
+                      </div>
+                    </div>
+                    <div class="space-y-3">
+                      <div class="property-field">
+                        <label class="property-label">Sweep Parameter</label>
+                        <select class="property-input">
+                          <option>R1 - Resistance</option>
+                          <option>V1 - Voltage</option>
+                        </select>
+                      </div>
+                      <div class="grid grid-cols-2 gap-3">
+                        <div class="property-field">
+                          <label class="property-label">Min Value</label>
+                          <input class="property-input" type="number" value="100" />
+                        </div>
+                        <div class="property-field">
+                          <label class="property-label">Max Value</label>
+                          <input class="property-input" type="number" value="10000" />
+                        </div>
+                      </div>
+                      <div class="flex gap-2">
+                        <button class="btn btn-primary flex-1">
+                          <Play class="w-4 h-4 mr-2" />
+                          Start Analysis
+                        </button>
+                        <button class="btn btn-secondary">
+                          <Download class="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
           <!-- Placeholder for Future Sections -->
           <div v-else class="text-center py-12">
             <div class="text-slate-400 mb-4">
@@ -718,6 +1265,12 @@ import {
   ArrowUpDown,
   HelpCircle,
   X,
+  Play,
+  Pause,
+  RotateCcw,
+  Settings,
+  Save,
+  Download,
 } from 'lucide-vue-next'
 import ResistorSymbol from '@/components/circuit/symbols/ResistorSymbol.vue'
 import VoltageSourceSymbol from '@/components/circuit/symbols/VoltageSourceSymbol.vue'
