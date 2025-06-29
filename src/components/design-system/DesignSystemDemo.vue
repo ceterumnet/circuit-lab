@@ -99,14 +99,10 @@
                     'w-full text-left px-3 py-2 rounded-md transition-colors',
                     activeSection === 'layouts'
                       ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-slate-400 cursor-not-allowed',
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                   ]"
-                  disabled
                 >
                   Layouts & Containers
-                  <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded ml-2"
-                    >Phase 3</span
-                  >
                 </button>
               </li>
               <li>
@@ -131,7 +127,7 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="flex-1">
+        <main class="flex-1 min-w-0 overflow-x-auto">
           <!-- Colors Section -->
           <div v-if="activeSection === 'colors'" class="space-y-8">
             <div>
@@ -277,15 +273,16 @@
                     </div>
                     <div class="simulation-status running">
                       <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                      Running
+                      Running Analysis
                     </div>
+                    <div class="ml-auto text-sm text-slate-500">Circuit Lab v2.1.0</div>
                     <div class="simulation-status success">
                       <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                      Converged
+                      Analysis Complete
                     </div>
                     <div class="simulation-status error">
                       <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                      Error
+                      Simulation Error
                     </div>
                   </div>
                 </div>
@@ -976,7 +973,7 @@
                     </div>
                     <div class="simulation-status running">
                       <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                      Analyzing Circuit
+                      Running Analysis
                     </div>
                     <div class="simulation-status success">
                       <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
@@ -1198,6 +1195,832 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Layouts & Containers Section -->
+          <div v-if="activeSection === 'layouts'" class="space-y-8">
+            <div>
+              <h2 class="text-3xl font-bold text-slate-900 mb-2">Layouts & Containers</h2>
+              <p class="text-lg text-slate-600">
+                Professional IDE-style layout system optimized for circuit simulation interfaces and
+                technical applications.
+              </p>
+            </div>
+
+            <!-- IDE Layout System -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">IDE Layout System</h3>
+              <p class="text-slate-600 mb-6">
+                The foundational layout structure providing a professional development environment
+                feel with proper overflow handling and responsive behavior.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Full Layout Example -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Complete IDE Layout Structure</h4>
+                  <div class="border rounded-lg overflow-hidden">
+                    <div class="ide-layout h-96 relative" style="width: 100%">
+                      <!-- Toolbar -->
+                      <div class="ide-toolbar">
+                        <div class="flex items-center gap-4">
+                          <div class="flex items-center gap-2">
+                            <button class="btn btn-primary btn-sm">
+                              <Play class="w-4 h-4 mr-1" />
+                              Simulate
+                            </button>
+                            <button class="btn btn-secondary btn-sm">
+                              <Pause class="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div class="simulation-status running">
+                            <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                            Running Analysis
+                          </div>
+                          <div class="ml-auto text-sm text-slate-500">Circuit Lab v2.1.0</div>
+                        </div>
+                      </div>
+
+                      <!-- Main Content Area -->
+                      <div class="ide-main">
+                        <!-- Component Palette (Left Sidebar) -->
+                        <div class="component-palette">
+                          <div class="component-group">
+                            <div class="component-group-title">Components</div>
+                            <div class="component-list">
+                              <div class="component-item active">
+                                <div class="component-icon text-purple-600">
+                                  <ResistorSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Resistor</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-red-600">
+                                  <VoltageSourceSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Voltage Source</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-slate-600">⏚</div>
+                                <span class="component-label">Ground</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Circuit Canvas (Center) -->
+                        <div class="circuit-canvas-container">
+                          <div class="circuit-canvas flex items-center justify-center">
+                            <div class="text-center">
+                              <div class="text-6xl text-slate-300 mb-4">⚡</div>
+                              <div class="text-slate-500 font-medium">Circuit Canvas</div>
+                              <div class="text-sm text-slate-400">
+                                Grid background with 20px spacing
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Properties Panel (Right Sidebar) -->
+                        <div class="properties-panel">
+                          <div class="property-section">
+                            <div class="property-section-title">Component Properties</div>
+                            <div class="property-field">
+                              <label class="property-label">Resistance</label>
+                              <input class="property-input" type="number" value="2200" />
+                            </div>
+                            <div class="property-field">
+                              <label class="property-label">Tolerance</label>
+                              <select class="property-input">
+                                <option>5%</option>
+                                <option>1%</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="property-section">
+                            <div class="property-section-title">Analysis Results</div>
+                            <div class="property-field">
+                              <label class="property-label">Voltage</label>
+                              <div class="property-value voltage-display">3.33 V</div>
+                            </div>
+                            <div class="property-field">
+                              <label class="property-label">Current</label>
+                              <div class="property-value current-display">3.33 mA</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.ide-layout</code> -
+                      Full-screen container with flex column layout
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.ide-toolbar</code> -
+                      Fixed-height top toolbar with shadow
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.ide-main</code> -
+                      Flexible main content area with overflow handling
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Layout Components Breakdown -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Layout Component Hierarchy</h4>
+                  <div class="p-4 bg-slate-50 rounded-lg font-mono text-sm overflow-x-auto">
+                    <div class="space-y-1 min-w-max">
+                      <div>
+                        <span class="text-blue-600">.ide-layout</span>
+                        <span class="text-slate-500">// Full screen container</span>
+                      </div>
+                      <div class="ml-4">
+                        <span class="text-green-600">├── .ide-toolbar</span>
+                        <span class="text-slate-500">// Top navigation bar</span>
+                      </div>
+                      <div class="ml-4">
+                        <span class="text-green-600">└── .ide-main</span>
+                        <span class="text-slate-500">// Main content flex container</span>
+                      </div>
+                      <div class="ml-8">
+                        <span class="text-orange-600">├── .component-palette</span>
+                        <span class="text-slate-500">// Left sidebar (208px fixed)</span>
+                      </div>
+                      <div class="ml-8">
+                        <span class="text-orange-600">├── .circuit-canvas-container</span>
+                        <span class="text-slate-500">// Center area (flex-1)</span>
+                      </div>
+                      <div class="ml-12">
+                        <span class="text-purple-600">└── .circuit-canvas</span>
+                        <span class="text-slate-500">// Canvas with grid background</span>
+                      </div>
+                      <div class="ml-8">
+                        <span class="text-orange-600">└── .properties-panel</span>
+                        <span class="text-slate-500">// Right sidebar (320px fixed)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Panel Architecture -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Panel Architecture</h3>
+              <p class="text-slate-600 mb-6">
+                Flexible panel system for creating professional interfaces with consistent headers,
+                content areas, and overflow behavior.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Basic Panel Structure -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Basic Panel Structure</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="ide-panel">
+                      <div class="ide-panel-header">
+                        <h4 class="font-medium text-slate-900">Component Analysis</h4>
+                        <button class="btn btn-ghost btn-sm">
+                          <Settings class="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div class="ide-panel-content">
+                        <div class="space-y-3">
+                          <div class="property-field">
+                            <label class="property-label">Selected Component</label>
+                            <div class="property-value">R1 - 2.2kΩ Resistor</div>
+                          </div>
+                          <div class="property-field">
+                            <label class="property-label">Node Voltage</label>
+                            <div class="property-value voltage-display">3.45 V</div>
+                          </div>
+                          <div class="property-field">
+                            <label class="property-label">Power</label>
+                            <div class="property-value power-display">5.4mW</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="ide-panel">
+                      <div class="ide-panel-header">
+                        <h4 class="font-medium text-slate-900">Circuit Status</h4>
+                        <div class="simulation-status success">
+                          <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                          Solved
+                        </div>
+                      </div>
+                      <div class="ide-panel-content">
+                        <div class="space-y-3">
+                          <div class="debug-section">
+                            <div class="debug-title">Simulation Info</div>
+                            <div class="debug-table">
+                              <div class="debug-row">
+                                <span class="debug-label">Nodes</span>
+                                <span class="debug-value">4</span>
+                              </div>
+                              <div class="debug-row">
+                                <span class="debug-label">Components</span>
+                                <span class="debug-value">3</span>
+                              </div>
+                              <div class="debug-row">
+                                <span class="debug-label">Solve Time</span>
+                                <span class="debug-value">0.85ms</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.ide-panel</code> - Panel
+                      container with border and shadow
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.ide-panel-header</code>
+                      - Panel header with title and controls
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.ide-panel-content</code>
+                      - Scrollable content area with padding
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Specialized Panel Types -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Specialized Panel Types</h4>
+                  <div class="space-y-4">
+                    <!-- Component Palette -->
+                    <div>
+                      <h5 class="text-sm font-medium text-slate-700 mb-2">
+                        Component Palette (.component-palette)
+                      </h5>
+                      <div class="w-40 lg:w-52 bg-white border rounded-lg">
+                        <div class="component-group">
+                          <div class="component-group-title">Passive Components</div>
+                          <div class="component-list">
+                            <div class="component-item active">
+                              <div class="component-icon text-purple-600">
+                                <ResistorSymbol class="w-4 h-4 lg:w-5 lg:h-5" />
+                              </div>
+                              <span class="component-label text-xs lg:text-sm">Resistor</span>
+                            </div>
+                            <div class="component-item">
+                              <div class="component-icon text-blue-600">📏</div>
+                              <span class="component-label text-xs lg:text-sm">Capacitor</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="component-group">
+                          <div class="component-group-title">Sources</div>
+                          <div class="component-list">
+                            <div class="component-item">
+                              <div class="component-icon text-red-600">
+                                <VoltageSourceSymbol class="w-4 h-4 lg:w-5 lg:h-5" />
+                              </div>
+                              <span class="component-label text-xs lg:text-sm">Voltage</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Properties Panel -->
+                    <div>
+                      <h5 class="text-sm font-medium text-slate-700 mb-2">
+                        Properties Panel (.properties-panel)
+                      </h5>
+                      <div class="w-56 lg:w-80 bg-white border rounded-lg">
+                        <div class="property-section">
+                          <div class="property-section-title text-xs lg:text-sm">
+                            Resistor Properties
+                          </div>
+                          <div class="property-field">
+                            <label class="property-label">Resistance</label>
+                            <input
+                              class="property-input text-xs lg:text-sm"
+                              type="number"
+                              value="2200"
+                            />
+                          </div>
+                          <div class="property-field">
+                            <label class="property-label">Tolerance</label>
+                            <select class="property-input text-xs lg:text-sm">
+                              <option>5%</option>
+                              <option>1%</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div class="property-section">
+                          <div class="property-section-title text-xs lg:text-sm">Measurements</div>
+                          <div class="property-field">
+                            <label class="property-label">Voltage Drop</label>
+                            <div class="property-value voltage-display text-xs lg:text-sm">
+                              2.75 V
+                            </div>
+                          </div>
+                          <div class="property-field">
+                            <label class="property-label">Current</label>
+                            <div class="property-value current-display text-xs lg:text-sm">
+                              1.25 mA
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Canvas Container System -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">Canvas Container System</h3>
+              <p class="text-slate-600 mb-6">
+                Specialized containers for the circuit drawing area with professional grid
+                backgrounds and proper scaling behavior.
+              </p>
+
+              <div class="space-y-6">
+                <!-- Canvas Examples -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Circuit Canvas</h4>
+                  <div class="circuit-canvas-container h-64 border rounded-lg overflow-hidden">
+                    <div
+                      class="bg-white items-center justify-center"
+                      style="
+                        background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
+                        background-size: 20px 20px;
+                        width: 100%;
+                        height: 100%;
+                      "
+                    >
+                      <div class="text-center">
+                        <div class="flex items-center justify-center gap-4 mb-4">
+                          <div class="text-purple-600">
+                            <ResistorSymbol class="w-8 h-8" />
+                          </div>
+                          <div class="text-slate-400">──────</div>
+                          <div class="text-red-600">
+                            <VoltageSourceSymbol class="w-8 h-8" />
+                          </div>
+                          <div class="text-slate-400">──────</div>
+                          <div class="text-slate-600 text-2xl">⏚</div>
+                        </div>
+                        <div class="text-sm text-slate-500">
+                          Professional 20px grid background for precise component placement
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.circuit-canvas-container</code
+                      >
+                      - Flexible container with slate background
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.circuit-canvas</code> -
+                      White canvas with radial dot grid (20px spacing)
+                    </div>
+                    <div>
+                      Grid created using:
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >radial-gradient(circle, #e2e8f0 1px, transparent 1px)</code
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Canvas Variations -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Canvas Background Variations</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 class="text-sm font-medium text-slate-700 mb-2">Standard Grid (20px)</h5>
+                      <div
+                        class="h-32 bg-white border rounded-lg flex items-center justify-center"
+                        style="
+                          background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
+                          background-size: 20px 20px;
+                        "
+                      >
+                        <span class="text-xs text-slate-400">20px Grid Spacing</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 class="text-sm font-medium text-slate-700 mb-2">Plain Canvas</h5>
+                      <div class="h-32 bg-white border rounded-lg flex items-center justify-center">
+                        <span class="text-xs text-slate-400">No Grid Background</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Floating Panels & Analysis Workspace -->
+                <section class="bg-white rounded-lg border border-slate-200 p-6">
+                  <h3 class="text-xl font-semibold text-slate-900 mb-4">
+                    Floating Panels & Analysis Workspace
+                  </h3>
+                  <p class="text-slate-600 mb-6">
+                    Advanced floating panel system for analysis tools, modal dialogs, and overlay
+                    interfaces.
+                  </p>
+
+                  <div class="space-y-6">
+                    <!-- Floating Panel Example -->
+                    <div>
+                      <h4 class="font-medium text-slate-900 mb-3">Floating Panel</h4>
+                      <div class="relative p-8 bg-slate-50 rounded-lg min-h-48">
+                        <div class="floating-panel p-4 max-w-xs">
+                          <div class="flex items-center justify-between mb-3">
+                            <h5 class="font-medium text-slate-900">Component Information</h5>
+                            <button class="btn btn-ghost btn-sm p-1">
+                              <X class="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div class="space-y-2">
+                            <div class="debug-row">
+                              <span class="debug-label">Type</span>
+                              <span class="debug-value">Resistor</span>
+                            </div>
+                            <div class="debug-row">
+                              <span class="debug-label">Value</span>
+                              <span class="debug-value">2.2kΩ</span>
+                            </div>
+                            <div class="debug-row">
+                              <span class="debug-label">Power</span>
+                              <span class="debug-value power-display">5.4mW</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="absolute bottom-2 right-2 text-xs text-slate-400">
+                          Positioned floating panel
+                        </div>
+                      </div>
+                      <div class="mt-4 space-y-2 text-sm text-slate-500">
+                        <div>
+                          <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                            >.floating-panel</code
+                          >
+                          - Floating panel with shadow and border
+                        </div>
+                        <div>Uses: Component tooltips, quick info displays, context menus</div>
+                      </div>
+                    </div>
+
+                    <!-- Analysis Workspace -->
+                    <div>
+                      <h4 class="font-medium text-slate-900 mb-3">Analysis Workspace</h4>
+                      <div class="relative p-6 bg-slate-50 rounded-lg min-h-64">
+                        <div class="analysis-workspace">
+                          <div class="analysis-controls">
+                            <div class="flex items-center justify-between">
+                              <h4 class="font-medium text-slate-900">Parameter Analysis</h4>
+                              <div class="flex items-center gap-3">
+                                <div class="simulation-status running">
+                                  <div
+                                    class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"
+                                  ></div>
+                                  Running
+                                </div>
+                                <button class="btn btn-secondary btn-sm">Close</button>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-4 mt-3">
+                              <select class="property-input max-w-xs">
+                                <option>R1 - Resistance</option>
+                                <option>V1 - Voltage</option>
+                              </select>
+                              <button class="btn btn-primary btn-sm">
+                                <Play class="w-4 h-4 mr-2" />
+                                Start Sweep
+                              </button>
+                            </div>
+                          </div>
+                          <div class="analysis-content">
+                            <div class="chart-container">
+                              <div class="text-center text-slate-400">
+                                <div class="text-4xl mb-2">📊</div>
+                                <div class="text-sm">Chart.js visualization area</div>
+                                <div class="text-xs mt-1">Real-time parameter sweep results</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="absolute bottom-2 right-2 text-xs text-slate-400">
+                          Full-screen analysis overlay
+                        </div>
+                      </div>
+                      <div class="mt-4 space-y-2 text-sm text-slate-500">
+                        <div>
+                          <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                            >.analysis-workspace</code
+                          >
+                          - Full-screen overlay for analysis tools
+                        </div>
+                        <div>
+                          <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                            >.analysis-controls</code
+                          >
+                          - Control panel header
+                        </div>
+                        <div>
+                          <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                            >.analysis-content</code
+                          >
+                          - Main content area for charts
+                        </div>
+                        <div>
+                          <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                            >.chart-container</code
+                          >
+                          - Chart visualization container
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- Responsive Behavior -->
+                <section class="bg-white rounded-lg border border-slate-200 p-6">
+                  <h3 class="text-xl font-semibold text-slate-900 mb-4">Responsive Behavior</h3>
+                  <p class="text-slate-600 mb-6">
+                    Professional responsive patterns ensuring the IDE layout works across different
+                    screen sizes and device types.
+                  </p>
+
+                  <div class="space-y-6">
+                    <!-- Breakpoint Examples -->
+                    <div>
+                      <h4 class="font-medium text-slate-900 mb-3">Layout Adaptations</h4>
+                      <div class="space-y-4 overflow-x-auto">
+                        <!-- Desktop Layout -->
+                        <div>
+                          <h5 class="text-sm font-medium text-slate-700 mb-2">
+                            Desktop (1200px+) - Full Three-Panel Layout
+                          </h5>
+                          <div class="border rounded-lg p-3 bg-slate-50 min-w-max">
+                            <div class="flex text-xs gap-1">
+                              <div
+                                class="w-12 bg-blue-100 border border-blue-200 rounded p-1 text-center"
+                              >
+                                Palette<br />208px
+                              </div>
+                              <div
+                                class="w-32 bg-green-100 border border-green-200 rounded p-1 text-center"
+                              >
+                                Canvas Area (flex-1)
+                              </div>
+                              <div
+                                class="w-16 bg-orange-100 border border-orange-200 rounded p-1 text-center"
+                              >
+                                Properties<br />320px
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Tablet Layout -->
+                        <div>
+                          <h5 class="text-sm font-medium text-slate-700 mb-2">
+                            Tablet (768px - 1199px) - Collapsible Sidebars
+                          </h5>
+                          <div class="border rounded-lg p-3 bg-slate-50 min-w-max">
+                            <div class="flex text-xs gap-1">
+                              <div
+                                class="w-8 bg-blue-100 border border-blue-200 rounded p-1 text-center"
+                              >
+                                Icons
+                              </div>
+                              <div
+                                class="w-32 bg-green-100 border border-green-200 rounded p-1 text-center"
+                              >
+                                Canvas Area (flex-1)
+                              </div>
+                              <div
+                                class="w-12 bg-orange-100 border border-orange-200 rounded p-1 text-center"
+                              >
+                                Modal<br />Props
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Mobile Layout -->
+                        <div>
+                          <h5 class="text-sm font-medium text-slate-700 mb-2">
+                            Mobile (&lt;768px) - Canvas-First with Modal Panels
+                          </h5>
+                          <div class="border rounded-lg p-3 bg-slate-50 min-w-max">
+                            <div class="space-y-1 w-48">
+                              <div
+                                class="bg-slate-200 border border-slate-300 rounded p-1 text-xs text-center"
+                              >
+                                Collapsible Toolbar
+                              </div>
+                              <div
+                                class="bg-green-100 border border-green-200 rounded p-2 text-xs text-center"
+                              >
+                                Full-Width Canvas
+                              </div>
+                              <div class="text-xs text-slate-500 text-center">
+                                Palette & Properties as modal overlays
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Responsive Features -->
+                    <div>
+                      <h4 class="font-medium text-slate-900 mb-3">Key Responsive Features</h4>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-lg">
+                          <h5 class="font-medium text-slate-700 mb-2">Panel Collapsing</h5>
+                          <ul class="text-sm text-slate-600 space-y-1">
+                            <li>• Component palette becomes icon-only</li>
+                            <li>• Properties panel slides to overlay</li>
+                            <li>• Canvas area maximizes available space</li>
+                            <li>• Toolbar items group and hide</li>
+                          </ul>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg">
+                          <h5 class="font-medium text-slate-700 mb-2">Touch Optimizations</h5>
+                          <ul class="text-sm text-slate-600 space-y-1">
+                            <li>• Larger touch targets for components</li>
+                            <li>• Gesture-based canvas navigation</li>
+                            <li>• Modal panels for property editing</li>
+                            <li>• Simplified toolbar controls</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- Container Utilities -->
+                <section class="bg-white rounded-lg border border-slate-200 p-6">
+                  <h3 class="text-xl font-semibold text-slate-900 mb-4">Container Utilities</h3>
+                  <p class="text-slate-600 mb-6">
+                    Additional utility containers and helper classes for specialized layout needs.
+                  </p>
+
+                  <div class="space-y-6">
+                    <!-- Scrollable Areas -->
+                    <div>
+                      <h4 class="font-medium text-slate-900 mb-3">Scrollable Areas</h4>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h5 class="text-sm font-medium text-slate-700 mb-2">Custom Scrollbars</h5>
+                          <div
+                            class="h-32 overflow-auto scrollbar-thin border rounded-lg p-3 bg-slate-50"
+                          >
+                            <div class="space-y-2">
+                              <div class="component-item">
+                                <div class="component-icon text-purple-600">
+                                  <ResistorSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Resistor 1kΩ</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-purple-600">
+                                  <ResistorSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Resistor 2.2kΩ</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-purple-600">
+                                  <ResistorSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Resistor 10kΩ</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-red-600">
+                                  <VoltageSourceSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Voltage Source 5V</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-red-600">
+                                  <VoltageSourceSymbol class="w-5 h-5" />
+                                </div>
+                                <span class="component-label">Voltage Source 12V</span>
+                              </div>
+                              <div class="component-item">
+                                <div class="component-icon text-slate-600">⏚</div>
+                                <span class="component-label">Ground Reference</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-2 text-xs text-slate-500">
+                            <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                              >.scrollbar-thin</code
+                            >
+                            - Custom thin scrollbars
+                          </div>
+                        </div>
+                        <div>
+                          <h5 class="text-sm font-medium text-slate-700 mb-2">
+                            Debug Information Scroll
+                          </h5>
+                          <div class="h-32 overflow-auto scrollbar-thin border rounded-lg">
+                            <div class="debug-section">
+                              <div class="debug-title">Circuit Analysis Debug</div>
+                              <div class="debug-table">
+                                <div class="debug-row">
+                                  <span class="debug-label">Node 0</span>
+                                  <span class="debug-value">5.000V</span>
+                                </div>
+                                <div class="debug-row">
+                                  <span class="debug-label">Node 1</span>
+                                  <span class="debug-value">3.333V</span>
+                                </div>
+                                <div class="debug-row">
+                                  <span class="debug-label">Node 2</span>
+                                  <span class="debug-value">0.0000V</span>
+                                </div>
+                                <div class="debug-row">
+                                  <span class="debug-label">R1 Current</span>
+                                  <span class="debug-value">1.667mA</span>
+                                </div>
+                                <div class="debug-row">
+                                  <span class="debug-label">R2 Current</span>
+                                  <span class="debug-value">3.333mA</span>
+                                </div>
+                                <div class="debug-row">
+                                  <span class="debug-label">Matrix Size</span>
+                                  <span class="debug-value">3x3</span>
+                                </div>
+                                <div class="debug-row">
+                                  <span class="debug-label">Solve Time</span>
+                                  <span class="debug-value">0.85ms</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mt-4 space-y-2 text-sm text-slate-500">
+                        <div>
+                          <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                            >.scrollbar-thin</code
+                          >
+                          - Thin custom scrollbars with slate colors
+                        </div>
+                        <div>
+                          Applied to: Component lists, debug panels, property sections, analysis
+                          results
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Tooltip Positioning -->
+                    <div>
+                      <h4 class="font-medium text-slate-900 mb-3">Tooltip System</h4>
+                      <div class="relative p-6 bg-slate-50 rounded-lg">
+                        <div class="flex items-center justify-center gap-8">
+                          <button class="btn btn-primary relative group">
+                            Hover Me
+                            <div
+                              class="tooltip opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-1/2 transform -translate-x-1/2 mb-2"
+                            >
+                              Primary action button
+                            </div>
+                          </button>
+                          <div class="text-purple-600 relative group cursor-help">
+                            <ResistorSymbol class="w-8 h-8" />
+                            <div
+                              class="tooltip opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-1/2 transform -translate-x-1/2 mb-2"
+                            >
+                              2.2kΩ Resistor
+                            </div>
+                          </div>
+                        </div>
+                        <div class="mt-4 space-y-2 text-sm text-slate-500">
+                          <div>
+                            <code class="bg-slate-100 px-2 py-1 rounded text-xs">.tooltip</code> -
+                            Dark tooltip with pointer-events-none
+                          </div>
+                          <div>
+                            Used for: Component information, button explanations, measurement
+                            details
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
             </section>
           </div>

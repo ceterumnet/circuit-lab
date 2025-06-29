@@ -55,7 +55,7 @@
 
   /* IDE-specific overflow behavior - only apply to IDE layouts */
   .ide-layout {
-    @apply h-screen w-screen flex flex-col overflow-hidden;
+    @apply h-screen flex flex-col overflow-hidden;
   }
 
   /* Technical/monospace content */
@@ -285,7 +285,7 @@
 
   /* Debug information */
   .debug-section {
-    @apply mt-4 p-3 bg-slate-50 rounded-md border border-slate-200;
+    @apply mt-0 p-3 bg-slate-50 rounded-md border border-slate-200;
   }
 
   .debug-title {
