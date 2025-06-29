@@ -1,144 +1,179 @@
 <template>
-  <div class="component-properties">
+  <div class="properties-panel">
     <div v-if="componentDefinition">
-      <div class="property-item">
-        <label>ID:</label>
-        <span class="property-value">{{ component.id }}</span>
+      <!-- Component Information Section -->
+      <div class="property-section">
+        <div class="property-section-title">Component Information</div>
+        <div class="property-field">
+          <label class="property-label">ID</label>
+          <div class="property-value">{{ component.id }}</div>
+        </div>
+        <div class="property-field">
+          <label class="property-label">Type</label>
+          <div class="property-value">{{ componentDefinition.name }}</div>
+        </div>
+        <div class="property-field">
+          <label for="component-label" class="property-label">Label</label>
+          <input
+            id="component-label"
+            v-model="editableLabel"
+            type="text"
+            class="property-input"
+            @blur="updateLabel"
+          />
+        </div>
       </div>
 
-      <div class="property-item">
-        <label>Type:</label>
-        <span class="property-value">{{ componentDefinition.name }}</span>
-      </div>
+      <!-- Component Properties Section -->
+      <div class="property-section">
+        <div class="property-section-title">Properties</div>
 
-      <div class="property-item">
-        <label for="component-label">Label:</label>
-        <input
-          id="component-label"
-          v-model="editableLabel"
-          type="text"
-          class="property-input"
-          @blur="updateLabel"
-        />
-      </div>
+        <!-- Dynamically generated properties -->
+        <div
+          v-for="propDef in componentDefinition.properties"
+          :key="propDef.key"
+          class="property-field"
+        >
+          <label :for="`prop-${propDef.key}`" class="property-label">{{ propDef.label }}</label>
 
-      <!-- Dynamically generated properties -->
-      <div
-        v-for="propDef in componentDefinition.properties"
-        :key="propDef.key"
-        class="property-item"
-      >
-        <label :for="`prop-${propDef.key}`">{{ propDef.label }}:</label>
+          <!-- Number Input with Slider for Variable Components -->
+          <div v-if="propDef.type === 'number'" class="value-input-group">
+            <!-- Slider for resistance on variable resistors and wiper position on potentiometers -->
+            <div v-if="shouldShowSlider(propDef.key)" class="slider-container">
+              <input
+                :id="`slider-${propDef.key}`"
+                v-model.number="editableProperties[propDef.key]"
+                type="range"
+                class="property-slider"
+                :min="getSliderMin(propDef.key)"
+                :max="getSliderMax(propDef.key)"
+                :step="getSliderStep(propDef.key)"
+                @input="updatePropertyRealTime(propDef.key)"
+              />
+              <div class="slider-labels">
+                <span class="slider-label-min">{{
+                  formatSliderValue(getSliderMin(propDef.key), propDef.unit)
+                }}</span>
+                <span class="slider-label-max">{{
+                  formatSliderValue(getSliderMax(propDef.key), propDef.unit)
+                }}</span>
+              </div>
+            </div>
 
-        <!-- Number Input with Slider for Variable Components -->
-        <div v-if="propDef.type === 'number'" class="value-input-group">
-          <!-- Slider for resistance on variable resistors and wiper position on potentiometers -->
-          <div v-if="shouldShowSlider(propDef.key)" class="slider-container">
-            <input
-              :id="`slider-${propDef.key}`"
-              v-model.number="editableProperties[propDef.key]"
-              type="range"
-              class="property-slider"
-              :min="getSliderMin(propDef.key)"
-              :max="getSliderMax(propDef.key)"
-              :step="getSliderStep(propDef.key)"
-              @input="updatePropertyRealTime(propDef.key)"
-            />
-            <div class="slider-labels">
-              <span class="slider-label-min">{{
-                formatSliderValue(getSliderMin(propDef.key), propDef.unit)
-              }}</span>
-              <span class="slider-label-max">{{
-                formatSliderValue(getSliderMax(propDef.key), propDef.unit)
+            <!-- Number input -->
+            <div class="flex items-center gap-2">
+              <input
+                :id="`prop-${propDef.key}`"
+                v-model.number="editableProperties[propDef.key]"
+                type="number"
+                class="property-input"
+                :class="{ 'text-center font-medium': shouldShowSlider(propDef.key) }"
+                @blur="updateProperty(propDef.key)"
+                @input="updatePropertyRealTime(propDef.key)"
+              />
+              <span v-if="propDef.unit" class="text-sm text-slate-500 font-medium">{{
+                propDef.unit
               }}</span>
             </div>
           </div>
 
-          <!-- Number input -->
-          <input
+          <!-- Select Dropdown -->
+          <select
+            v-else-if="propDef.type === 'select'"
             :id="`prop-${propDef.key}`"
-            v-model.number="editableProperties[propDef.key]"
-            type="number"
+            v-model="editableProperties[propDef.key]"
             class="property-input"
-            :class="{ 'with-slider': shouldShowSlider(propDef.key) }"
+            @change="updateProperty(propDef.key)"
+          >
+            <option v-for="option in propDef.options" :key="option" :value="option">
+              {{ option }}
+            </option>
+          </select>
+
+          <!-- String Input -->
+          <input
+            v-else
+            :id="`prop-${propDef.key}`"
+            v-model="editableProperties[propDef.key]"
+            type="text"
+            class="property-input"
             @blur="updateProperty(propDef.key)"
-            @input="updatePropertyRealTime(propDef.key)"
           />
-          <span v-if="propDef.unit" class="unit-span">{{ propDef.unit }}</span>
         </div>
 
-        <!-- Select Dropdown -->
-        <select
-          v-else-if="propDef.type === 'select'"
-          :id="`prop-${propDef.key}`"
-          v-model="editableProperties[propDef.key]"
-          class="property-input"
-          @change="updateProperty(propDef.key)"
-        >
-          <option v-for="option in propDef.options" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
-
-        <!-- String Input -->
-        <input
-          v-else
-          :id="`prop-${propDef.key}`"
-          v-model="editableProperties[propDef.key]"
-          type="text"
-          class="property-input"
-          @blur="updateProperty(propDef.key)"
-        />
+        <!-- Common properties for non-wire components -->
+        <div v-if="component.type !== 'wire'" class="property-field">
+          <label for="rotation" class="property-label">Rotation</label>
+          <div class="flex items-center gap-2">
+            <input
+              id="rotation"
+              v-model="editableRotation"
+              type="number"
+              class="property-input"
+              min="0"
+              max="360"
+              step="90"
+              @blur="updateRotation"
+            />
+            <span class="text-sm text-slate-500 font-medium">°</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Common properties for non-wire components -->
-      <div v-if="component.type !== 'wire'" class="property-item">
-        <label for="rotation">Rotation:</label>
-        <input
-          id="rotation"
-          v-model="editableRotation"
-          type="number"
-          class="property-input"
-          min="0"
-          max="360"
-          step="90"
-          @blur="updateRotation"
-        />
+      <!-- Analysis Results Section (if simulation data available) -->
+      <div v-if="simulationDebugInfo" class="property-section">
+        <div class="property-section-title">Analysis Results</div>
+        <div v-if="simulationDebugInfo.voltage !== undefined" class="property-field">
+          <label class="property-label">Node Voltage</label>
+          <div class="property-value voltage-display">
+            {{ simulationDebugInfo.voltage.toFixed(3) }}V
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.current !== undefined" class="property-field">
+          <label class="property-label">Current</label>
+          <div class="property-value current-display">
+            {{ (simulationDebugInfo.current * 1000).toFixed(3) }}mA
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.powerDissipation !== undefined" class="property-field">
+          <label class="property-label">Power Dissipation</label>
+          <div class="property-value power-display">
+            {{ (simulationDebugInfo.powerDissipation * 1000).toFixed(3) }}mW
+          </div>
+        </div>
       </div>
 
-      <!-- Component Debug Information -->
-      <div class="debug-section">
-        <h4 class="debug-title">🔍 Debug Information</h4>
+      <!-- Debug Information Section -->
+      <div class="property-section">
+        <div class="property-section-title">🔍 Debug Information</div>
 
         <!-- Basic Component Info -->
-        <div class="debug-table">
-          <div class="debug-row">
-            <span class="debug-label">Position:</span>
-            <span class="debug-value"
-              >{{ component.position.x.toFixed(1) }}, {{ component.position.y.toFixed(1) }}</span
-            >
+        <div class="property-field">
+          <label class="property-label">Position</label>
+          <div class="property-value">
+            {{ component.position.x.toFixed(1) }}, {{ component.position.y.toFixed(1) }}
           </div>
-          <div class="debug-row">
-            <span class="debug-label">Rotation:</span>
-            <span class="debug-value">{{ component.rotation }}°</span>
-          </div>
-          <div class="debug-row">
-            <span class="debug-label">Selected:</span>
-            <span class="debug-value">{{ component.selected ? 'Yes' : 'No' }}</span>
-          </div>
+        </div>
+        <div class="property-field">
+          <label class="property-label">Rotation</label>
+          <div class="property-value">{{ component.rotation }}°</div>
+        </div>
+        <div class="property-field">
+          <label class="property-label">Selected</label>
+          <div class="property-value">{{ component.selected ? 'Yes' : 'No' }}</div>
         </div>
 
         <!-- Terminal Information -->
-        <div v-if="componentDefinition?.terminals" class="debug-subsection">
-          <h5 class="debug-subtitle">Terminals</h5>
-          <div class="debug-table">
+        <div v-if="componentDefinition?.terminals" class="mt-4">
+          <h5 class="text-xs font-semibold text-slate-700 mb-2">Terminals</h5>
+          <div class="space-y-1">
             <div
               v-for="terminal in componentDefinition.terminals"
               :key="terminal.id"
-              class="debug-row"
+              class="flex justify-between items-center py-1 px-2 bg-slate-50 rounded text-xs"
             >
-              <span class="debug-label">{{ terminal.id }}:</span>
-              <span class="debug-value"
+              <span class="font-medium text-slate-600">{{ terminal.id }}:</span>
+              <span class="font-mono text-slate-500"
                 >{{ terminal.type }} at {{ terminal.position.x }}, {{ terminal.position.y }}</span
               >
             </div>
@@ -146,70 +181,55 @@
         </div>
 
         <!-- Wire-specific Debug Info -->
-        <div v-if="component.type === 'wire'" class="debug-subsection">
-          <h5 class="debug-subtitle">Wire Connections</h5>
-          <div class="debug-table">
-            <div class="debug-row">
-              <span class="debug-label">Start:</span>
-              <span class="debug-value">{{ wireDebugInfo.startConnection }}</span>
-            </div>
-            <div class="debug-row">
-              <span class="debug-label">End:</span>
-              <span class="debug-value">{{ wireDebugInfo.endConnection }}</span>
-            </div>
-            <div class="debug-row">
-              <span class="debug-label">Length:</span>
-              <span class="debug-value">{{ wireDebugInfo.length.toFixed(2) }}px</span>
-            </div>
+        <div v-if="component.type === 'wire'" class="mt-4">
+          <h5 class="text-xs font-semibold text-slate-700 mb-2">Wire Connections</h5>
+          <div class="property-field">
+            <label class="property-label">Start Connection</label>
+            <div class="property-value">{{ wireDebugInfo.startConnection }}</div>
           </div>
-        </div>
-
-        <!-- Simulation Data -->
-        <div v-if="simulationDebugInfo" class="debug-subsection">
-          <h5 class="debug-subtitle">Simulation Data</h5>
-          <div class="debug-table">
-            <div v-if="simulationDebugInfo.nodeIndex !== undefined" class="debug-row">
-              <span class="debug-label">Node Index:</span>
-              <span class="debug-value">{{ simulationDebugInfo.nodeIndex }}</span>
-            </div>
-            <div v-if="simulationDebugInfo.voltage !== undefined" class="debug-row">
-              <span class="debug-label">Node Voltage:</span>
-              <span class="debug-value">{{ simulationDebugInfo.voltage.toFixed(6) }}V</span>
-            </div>
-            <div v-if="simulationDebugInfo.current !== undefined" class="debug-row">
-              <span class="debug-label">Current:</span>
-              <span class="debug-value">{{ simulationDebugInfo.current.toFixed(6) }}A</span>
-            </div>
-            <div v-if="simulationDebugInfo.powerDissipation !== undefined" class="debug-row">
-              <span class="debug-label">Power:</span>
-              <span class="debug-value"
-                >{{ simulationDebugInfo.powerDissipation.toFixed(6) }}W</span
-              >
-            </div>
+          <div class="property-field">
+            <label class="property-label">End Connection</label>
+            <div class="property-value">{{ wireDebugInfo.endConnection }}</div>
+          </div>
+          <div class="property-field">
+            <label class="property-label">Length</label>
+            <div class="property-value">{{ wireDebugInfo.length.toFixed(2) }}px</div>
           </div>
         </div>
 
         <!-- Connected Components -->
-        <div v-if="connectedComponents.length > 0" class="debug-subsection">
-          <h5 class="debug-subtitle">Connected To</h5>
-          <div class="debug-table">
-            <div v-for="connection in connectedComponents" :key="connection.id" class="debug-row">
-              <span class="debug-label">{{ connection.id }}:</span>
-              <span class="debug-value">{{ connection.type }} via {{ connection.via }}</span>
+        <div v-if="connectedComponents.length > 0" class="mt-4">
+          <h5 class="text-xs font-semibold text-slate-700 mb-2">Connected To</h5>
+          <div class="space-y-1">
+            <div
+              v-for="connection in connectedComponents"
+              :key="connection.id"
+              class="flex justify-between items-center py-1 px-2 bg-slate-50 rounded text-xs"
+            >
+              <span class="font-medium text-slate-600">{{ connection.id }}:</span>
+              <span class="font-mono text-slate-500"
+                >{{ connection.type }} via {{ connection.via }}</span
+              >
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Delete button for all components -->
-      <div class="property-item">
-        <button class="delete-button" @click="deleteComponent">
+      <!-- Actions Section -->
+      <div class="property-section">
+        <div class="property-section-title">Actions</div>
+        <button
+          class="btn btn-secondary w-full text-red-600 hover:bg-red-50 hover:border-red-200"
+          @click="deleteComponent"
+        >
           🗑️ Delete {{ componentDefinition.name }}
         </button>
       </div>
     </div>
-    <div v-else class="property-item">
-      <span>No definition found for component type: {{ component.type }}</span>
+    <div v-else class="property-section">
+      <div class="text-center text-slate-500 py-4">
+        No definition found for component type: {{ component.type }}
+      </div>
     </div>
   </div>
 </template>
@@ -499,161 +519,33 @@ const connectedComponents = computed(() => {
 </script>
 
 <style scoped>
-.component-properties {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  padding: 1rem;
+/* Properties Panel - Design System Styling */
+.properties-panel {
+  padding: 0;
+  background: transparent;
 }
 
-.property-item {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0.75rem;
-}
-
-.property-item:last-child {
-  margin-bottom: 0;
-}
-
-.property-item label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #495057;
-  margin-bottom: 0.25rem;
-}
-
-.property-input:focus {
-  outline: none;
-  border-color: #80bdff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.property-value {
-  padding: 0.375rem 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-
+/* Value input group for sliders and number inputs */
 .value-input-group {
   display: flex;
-  align-items: center;
-}
-
-.unit-span {
-  margin-left: 0.5rem;
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-
-.delete-button {
-  padding: 0.5rem 1rem;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  width: 100%;
-}
-
-.delete-button:hover {
-  background: #c82333;
-}
-
-.delete-button:active {
-  background: #a71e2a;
-}
-
-.property-input {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease-in-out;
-  position: relative;
-  z-index: 20;
-}
-
-/* Debug section styles */
-.debug-section {
-  margin-top: 1.5rem;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 0.375rem;
-}
-
-.debug-title {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #495057;
-}
-
-.debug-subtitle {
-  margin: 0.75rem 0 0.5rem 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #6c757d;
-}
-
-.debug-subsection {
-  margin-top: 0.75rem;
-}
-
-.debug-table {
-  display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
-.debug-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.debug-row:last-child {
-  border-bottom: none;
-}
-
-.debug-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6c757d;
-  flex-shrink: 0;
-  min-width: 4rem;
-}
-
-.debug-value {
-  font-size: 0.75rem;
-  color: #495057;
-  font-family: monospace;
-  text-align: right;
-  word-break: break-all;
-}
-
-/* Slider styles */
+/* Slider styles with design system colors */
 .slider-container {
-  margin-bottom: 0.5rem;
+  width: 100%;
 }
 
 .property-slider {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: #dee2e6;
+  background: #e2e8f0;
   outline: none;
   -webkit-appearance: none;
   margin: 0.25rem 0;
+  cursor: pointer;
 }
 
 .property-slider::-webkit-slider-thumb {
@@ -662,7 +554,7 @@ const connectedComponents = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #007bff;
+  background: #3b82f6;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -672,50 +564,37 @@ const connectedComponents = computed(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #007bff;
+  background: #3b82f6;
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.property-slider:focus {
-  background: #adb5bd;
+.property-slider:hover {
+  background: #cbd5e1;
 }
 
 .property-slider:focus::-webkit-slider-thumb {
-  background: #0056b3;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  background: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 .property-slider:focus::-moz-range-thumb {
-  background: #0056b3;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  background: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 .slider-labels {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #6c757d;
+  color: #64748b;
   margin-top: 0.25rem;
 }
 
 .slider-label-min,
 .slider-label-max {
-  font-family: monospace;
-}
-
-.property-input.with-slider {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-}
-
-.property-input.with-slider:focus {
-  background: white;
-  border-color: #80bdff;
 }
 </style>

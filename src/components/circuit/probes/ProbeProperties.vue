@@ -1,111 +1,129 @@
 <template>
-  <div class="probe-properties">
-    <div class="property-item">
-      <label>ID:</label>
-      <span class="property-value">{{ probe.id }}</span>
+  <div class="properties-panel">
+    <!-- Probe Information Section -->
+    <div class="property-section">
+      <div class="property-section-title">Probe Information</div>
+      <div class="property-field">
+        <label class="property-label">ID</label>
+        <div class="property-value">{{ probe.id }}</div>
+      </div>
+      <div class="property-field">
+        <label class="property-label">Type</label>
+        <div class="property-value">
+          {{ probe.type === 'voltage' ? 'Voltage' : 'Current' }} Probe
+        </div>
+      </div>
+      <div class="property-field">
+        <label class="property-label">Target</label>
+        <div class="property-value">{{ probe.targetId }}</div>
+      </div>
     </div>
 
-    <div class="property-item">
-      <label>Type:</label>
-      <span class="property-value"
-        >{{ probe.type === 'voltage' ? 'Voltage' : 'Current' }} Probe</span
-      >
+    <!-- Measurement Results Section -->
+    <div class="property-section">
+      <div class="property-section-title">Measurement Results</div>
+
+      <!-- Current direction info (read-only, automatically determined) -->
+      <div v-if="probe.type === 'current'" class="property-field">
+        <label class="property-label">Flow Direction</label>
+        <div class="property-value flex items-center gap-2">
+          <span>{{
+            physicalCurrentInfo.flowsStartToEnd ? '→ Start to End' : '← End to Start'
+          }}</span>
+          <small class="text-xs text-slate-500 italic">(Automatically determined)</small>
+        </div>
+      </div>
+
+      <div class="property-field">
+        <label class="property-label">Measured Value</label>
+        <div
+          class="property-value"
+          :class="{
+            'voltage-display': probe.type === 'voltage',
+            'current-display': probe.type === 'current',
+          }"
+        >
+          {{ probeValue }}
+        </div>
+      </div>
     </div>
 
-    <div class="property-item">
-      <label>Target:</label>
-      <span class="property-value">{{ probe.targetId }}</span>
-    </div>
-
-    <!-- Current direction info (read-only, automatically determined) -->
-    <div v-if="probe.type === 'current'" class="property-item">
-      <label>Flow Direction:</label>
-      <span class="property-value direction-indicator">
-        {{ physicalCurrentInfo.flowsStartToEnd ? '→ Start to End' : '← End to Start' }}
-        <small class="direction-note">(Automatically determined)</small>
-      </span>
-    </div>
-
-    <div class="property-item">
-      <label>Value:</label>
-      <span class="property-value">{{ probeValue }}</span>
-    </div>
-
-    <!-- Probe Debug Information -->
-    <div class="debug-section">
-      <h4 class="debug-title">🔍 Debug Information</h4>
+    <!-- Debug Information Section -->
+    <div class="property-section">
+      <div class="property-section-title">🔍 Debug Information</div>
 
       <!-- Basic Probe Info -->
-      <div class="debug-table">
-        <div class="debug-row">
-          <span class="debug-label">Position:</span>
-          <span class="debug-value"
-            >{{ probe.position.x.toFixed(1) }}, {{ probe.position.y.toFixed(1) }}</span
-          >
+      <div class="property-field">
+        <label class="property-label">Position</label>
+        <div class="property-value">
+          {{ probe.position.x.toFixed(1) }}, {{ probe.position.y.toFixed(1) }}
         </div>
-        <div class="debug-row">
-          <span class="debug-label">Target Type:</span>
-          <span class="debug-value">{{ targetComponent?.type || 'Unknown' }}</span>
-        </div>
-        <div class="debug-row">
-          <span class="debug-label">Measurement:</span>
-          <span class="debug-value">{{
-            probe.type === 'voltage' ? 'Node Voltage' : 'Branch Current'
-          }}</span>
+      </div>
+      <div class="property-field">
+        <label class="property-label">Target Type</label>
+        <div class="property-value">{{ targetComponent?.type || 'Unknown' }}</div>
+      </div>
+      <div class="property-field">
+        <label class="property-label">Measurement</label>
+        <div class="property-value">
+          {{ probe.type === 'voltage' ? 'Node Voltage' : 'Branch Current' }}
         </div>
       </div>
 
       <!-- Current Probe Specific Debug -->
-      <div v-if="probe.type === 'current'" class="debug-subsection">
-        <h5 class="debug-subtitle">Current Probe Details</h5>
-        <div class="debug-table">
-          <div class="debug-row">
-            <span class="debug-label">Wire Start:</span>
-            <span class="debug-value">{{ wireDebugInfo.startConnection }}</span>
+      <div v-if="probe.type === 'current'" class="mt-4">
+        <h5 class="text-xs font-semibold text-slate-700 mb-2">Current Probe Details</h5>
+        <div class="property-field">
+          <label class="property-label">Start Connection</label>
+          <div class="property-value">{{ wireDebugInfo.startConnection }}</div>
+        </div>
+        <div class="property-field">
+          <label class="property-label">End Connection</label>
+          <div class="property-value">{{ wireDebugInfo.endConnection }}</div>
+        </div>
+        <div class="property-field">
+          <label class="property-label">Simulation Current</label>
+          <div class="property-value">
+            {{
+              wireDebugInfo.simulationCurrent !== undefined
+                ? wireDebugInfo.simulationCurrent.toFixed(6) + 'A'
+                : 'N/A'
+            }}
           </div>
-          <div class="debug-row">
-            <span class="debug-label">Wire End:</span>
-            <span class="debug-value">{{ wireDebugInfo.endConnection }}</span>
+        </div>
+        <div class="property-field">
+          <label class="property-label">Physical Direction</label>
+          <div class="property-value">
+            {{ physicalCurrentInfo.flowsStartToEnd ? 'Start → End' : 'End ← Start' }}
           </div>
-          <div class="debug-row">
-            <span class="debug-label">Sim Current:</span>
-            <span class="debug-value"
-              >{{ wireDebugInfo.simulationCurrent?.toFixed(6) || 'N/A' }}A</span
-            >
-          </div>
-          <div class="debug-row">
-            <span class="debug-label">Raw Sign:</span>
-            <span class="debug-value">{{
-              wireDebugInfo.simulationCurrent && wireDebugInfo.simulationCurrent >= 0 ? '+' : '-'
-            }}</span>
-          </div>
-          <div class="debug-row">
-            <span class="debug-label">Physical Dir:</span>
-            <span class="debug-value">{{
-              physicalCurrentInfo.flowsStartToEnd ? 'Start→End' : 'End→Start'
-            }}</span>
-          </div>
+        </div>
+        <div class="property-field">
+          <label class="property-label">Current Magnitude</label>
+          <div class="property-value">{{ physicalCurrentInfo.magnitude.toFixed(6) }}A</div>
         </div>
       </div>
 
       <!-- Voltage Probe Specific Debug -->
-      <div v-if="probe.type === 'voltage'" class="debug-subsection">
-        <h5 class="debug-subtitle">Voltage Probe Details</h5>
-        <div class="debug-table">
-          <div class="debug-row">
-            <span class="debug-label">Node Index:</span>
-            <span class="debug-value">{{ voltageDebugInfo.nodeIndex || 'N/A' }}</span>
-          </div>
-          <div class="debug-row">
-            <span class="debug-label">Reference:</span>
-            <span class="debug-value">Ground (0V)</span>
+      <div v-if="probe.type === 'voltage'" class="mt-4">
+        <h5 class="text-xs font-semibold text-slate-700 mb-2">Voltage Probe Details</h5>
+        <div class="property-field">
+          <label class="property-label">Node Index</label>
+          <div class="property-value">
+            {{ voltageDebugInfo.nodeIndex !== undefined ? voltageDebugInfo.nodeIndex : 'N/A' }}
           </div>
         </div>
       </div>
     </div>
 
-    <div class="property-item">
-      <button class="delete-button" @click="deleteProbe">🗑️ Delete Probe</button>
+    <!-- Actions Section -->
+    <div class="property-section">
+      <div class="property-section-title">Actions</div>
+      <button
+        class="btn btn-secondary w-full text-red-600 hover:bg-red-50 hover:border-red-200"
+        @click="deleteProbe"
+      >
+        🗑️ Delete Probe
+      </button>
     </div>
   </div>
 </template>
@@ -329,152 +347,9 @@ function deleteProbe() {
 </script>
 
 <style scoped>
-.probe-properties {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  padding: 1rem;
-}
-
-.property-item {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0.75rem;
-}
-
-.property-item:last-child {
-  margin-bottom: 0;
-}
-
-.property-item label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #495057;
-  margin-bottom: 0.25rem;
-}
-
-.property-value {
-  padding: 0.375rem 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-
-.direction-toggle {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.direction-btn {
-  flex: 1;
-  padding: 0.375rem 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.direction-btn:hover {
-  background: #e9ecef;
-  border-color: #adb5bd;
-}
-
-.direction-btn.active {
-  background: #007bff;
-  border-color: #007bff;
-  color: white;
-}
-
-.delete-button {
-  padding: 0.5rem 1rem;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  width: 100%;
-}
-
-.delete-button:hover {
-  background: #c82333;
-}
-
-.direction-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.direction-note {
-  color: #6c757d;
-  font-style: italic;
-}
-
-/* Debug section styles */
-.debug-section {
-  margin-top: 1.5rem;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 0.375rem;
-}
-
-.debug-title {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #495057;
-}
-
-.debug-subtitle {
-  margin: 0.75rem 0 0.5rem 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #6c757d;
-}
-
-.debug-subsection {
-  margin-top: 0.75rem;
-}
-
-.debug-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.debug-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.debug-row:last-child {
-  border-bottom: none;
-}
-
-.debug-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6c757d;
-  flex-shrink: 0;
-  min-width: 4rem;
-}
-
-.debug-value {
-  font-size: 0.75rem;
-  color: #495057;
-  font-family: monospace;
-  text-align: right;
-  word-break: break-all;
+/* Properties Panel - Design System Styling */
+.properties-panel {
+  padding: 0;
+  background: transparent;
 }
 </style>

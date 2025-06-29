@@ -1,20 +1,25 @@
 <template>
-  <div class="parameter-analysis-panel">
-    <div class="panel-header">
-      <h3>📊 Parameter Analysis</h3>
-      <button class="toggle-btn" :class="{ active: isAnalysisActive }" @click="toggleAnalysis">
+  <div class="properties-panel">
+    <!-- Analysis Control Section -->
+    <div class="property-section">
+      <div class="property-section-title">📊 Parameter Analysis</div>
+      <button
+        class="btn w-full"
+        :class="isAnalysisActive ? 'btn-secondary' : 'btn-primary'"
+        @click="toggleAnalysis"
+      >
         {{ isAnalysisActive ? '⏸️ Pause' : '▶️ Start' }} Analysis
       </button>
     </div>
 
-    <!-- Parameter Selection -->
-    <div class="parameter-section">
-      <h4>🎛️ Sweep Parameters</h4>
+    <!-- Parameter Selection Section -->
+    <div class="property-section">
+      <div class="property-section-title">🎛️ Sweep Parameters</div>
 
       <!-- Primary Parameter -->
-      <div class="parameter-control">
-        <label>Primary Parameter:</label>
-        <select v-model="primaryParameter" @change="onParameterChange">
+      <div class="property-field">
+        <label class="property-label">Primary Parameter</label>
+        <select v-model="primaryParameter" class="property-input" @change="onParameterChange">
           <option value="">Select component...</option>
           <option v-for="param in availableParameters" :key="param.id" :value="param.id">
             {{ param.label }}
@@ -23,32 +28,41 @@
       </div>
 
       <!-- Primary Parameter Range -->
-      <div v-if="primaryParameter" class="range-controls">
-        <div class="range-input">
-          <label>Min:</label>
-          <input
-            v-model.number="primaryRange.min"
-            type="number"
-            :step="primaryRange.step"
-            @input="onRangeChange"
-          />
-          <span class="unit">{{ primaryParameterUnit }}</span>
+      <div v-if="primaryParameter" class="space-y-3 mt-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="property-field">
+            <label class="property-label">Min Value</label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="primaryRange.min"
+                type="number"
+                class="property-input"
+                :step="primaryRange.step"
+                @input="onRangeChange"
+              />
+              <span class="text-sm text-slate-500 font-medium">{{ primaryParameterUnit }}</span>
+            </div>
+          </div>
+          <div class="property-field">
+            <label class="property-label">Max Value</label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="primaryRange.max"
+                type="number"
+                class="property-input"
+                :step="primaryRange.step"
+                @input="onRangeChange"
+              />
+              <span class="text-sm text-slate-500 font-medium">{{ primaryParameterUnit }}</span>
+            </div>
+          </div>
         </div>
-        <div class="range-input">
-          <label>Max:</label>
-          <input
-            v-model.number="primaryRange.max"
-            type="number"
-            :step="primaryRange.step"
-            @input="onRangeChange"
-          />
-          <span class="unit">{{ primaryParameterUnit }}</span>
-        </div>
-        <div class="range-input">
-          <label>Steps:</label>
+        <div class="property-field">
+          <label class="property-label">Analysis Steps</label>
           <input
             v-model.number="primaryRange.steps"
             type="number"
+            class="property-input"
             min="5"
             max="100"
             @input="onRangeChange"
@@ -57,72 +71,99 @@
       </div>
     </div>
 
-    <!-- Output Selection -->
-    <div class="output-section">
-      <h4>📈 Analysis Outputs</h4>
-      <div class="output-controls">
-        <label v-for="output in availableOutputs" :key="output.id" class="output-checkbox">
+    <!-- Output Selection Section -->
+    <div class="property-section">
+      <div class="property-section-title">📈 Analysis Outputs</div>
+      <div class="space-y-2">
+        <label
+          v-for="output in availableOutputs"
+          :key="output.id"
+          class="flex items-center gap-3 cursor-pointer"
+        >
           <input
             v-model="selectedOutputs"
             :value="output.id"
             type="checkbox"
+            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
             @change="onOutputChange"
           />
-          {{ output.label }} ({{ output.unit }})
+          <span class="text-sm text-slate-700">{{ output.label }} ({{ output.unit }})</span>
         </label>
       </div>
     </div>
 
-    <!-- Real-time Current Values -->
-    <div v-if="isAnalysisActive" class="current-values">
-      <h4>🔍 Current Analysis Point</h4>
-      <div class="value-display">
-        <div v-if="primaryParameter" class="current-param">
-          <strong>{{ primaryParameterLabel }}:</strong>
-          {{ formatValue(currentPrimaryValue, primaryParameterUnit) }}
+    <!-- Real-time Current Values Section -->
+    <div v-if="isAnalysisActive" class="property-section">
+      <div class="property-section-title">🔍 Current Analysis Point</div>
+      <div class="space-y-2">
+        <div v-if="primaryParameter" class="property-field">
+          <label class="property-label">{{ primaryParameterLabel }}</label>
+          <div class="property-value">
+            {{ formatValue(currentPrimaryValue, primaryParameterUnit) }}
+          </div>
         </div>
-        <div v-for="output in selectedOutputs" :key="output" class="current-output">
-          <strong>{{ getOutputLabel(output) }}:</strong>
-          {{ formatValue(currentOutputValues[output], getOutputUnit(output)) }}
+        <div v-for="output in selectedOutputs" :key="output" class="property-field">
+          <label class="property-label">{{ getOutputLabel(output) }}</label>
+          <div
+            class="property-value"
+            :class="{
+              'voltage-display': output.includes('voltage'),
+              'current-display': output.includes('current'),
+              'power-display': output.includes('power'),
+              'resistance-display': output.includes('resistance'),
+            }"
+          >
+            {{ formatValue(currentOutputValues[output], getOutputUnit(output)) }}
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Analysis Status -->
-    <div class="analysis-status">
-      <div v-if="isAnalysisRunning" class="status running">
-        <div class="spinner"></div>
-        Running sweep... {{ analysisProgress }}%
-      </div>
-      <div v-else-if="analysisResults.length > 0" class="status completed">
-        ✅ Analysis complete ({{ analysisResults.length }} points)
-      </div>
-      <div v-else class="status idle">Configure parameters and click Start Analysis</div>
-    </div>
-
-    <!-- Plot Container -->
-    <div class="plot-container">
-      <analysis-chart
-        v-if="chartDatasets.length > 0"
-        ref="analysisChart"
-        :datasets="chartDatasets"
-        :x-label="primaryParameterLabel"
-        :y-label="'Multiple Outputs'"
-        :title="`${primaryParameterLabel} vs Circuit Response`"
-      />
-      <div v-else class="no-data-message">
-        <div class="no-data-icon">📊</div>
-        <p>No analysis data available</p>
-        <p>Configure parameters and run analysis to see results</p>
+    <!-- Analysis Status Section -->
+    <div class="property-section">
+      <div class="property-section-title">Analysis Status</div>
+      <div class="analysis-status-card">
+        <div v-if="isAnalysisRunning" class="simulation-status running">
+          <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+          Running sweep... {{ analysisProgress }}%
+        </div>
+        <div v-else-if="analysisResults.length > 0" class="simulation-status success">
+          <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+          Analysis complete ({{ analysisResults.length }} points)
+        </div>
+        <div v-else class="simulation-status idle">
+          <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
+          Configure parameters and click Start Analysis
+        </div>
       </div>
     </div>
 
-    <!-- Export Controls -->
-    <div v-if="analysisResults.length > 0" class="export-section">
-      <h4>💾 Export Results</h4>
-      <div class="export-controls">
-        <button @click="exportCSV" class="export-btn">📊 Export CSV</button>
-        <button @click="exportImage" class="export-btn">🖼️ Export Plot</button>
+    <!-- Plot Container Section -->
+    <div class="property-section">
+      <div class="property-section-title">Analysis Results</div>
+      <div class="plot-container">
+        <analysis-chart
+          v-if="chartDatasets.length > 0"
+          ref="analysisChart"
+          :datasets="chartDatasets"
+          :x-label="primaryParameterLabel"
+          :y-label="'Multiple Outputs'"
+          :title="`${primaryParameterLabel} vs Circuit Response`"
+        />
+        <div v-else class="info-panel">
+          <div class="info-icon">📊</div>
+          <h4 class="text-lg font-semibold text-slate-900 mb-2">No Analysis Data</h4>
+          <p class="text-slate-600">Configure parameters and run analysis to see results</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Controls Section -->
+    <div v-if="analysisResults.length > 0" class="property-section">
+      <div class="property-section-title">💾 Export Results</div>
+      <div class="flex gap-2">
+        <button @click="exportCSV" class="btn btn-secondary flex-1">📊 Export CSV</button>
+        <button @click="exportImage" class="btn btn-secondary flex-1">🖼️ Export Plot</button>
       </div>
     </div>
   </div>
@@ -501,217 +542,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.parameter-analysis-panel {
-  background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+/* Properties Panel - Design System Styling */
+.properties-panel {
+  padding: 0;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  container-type: inline-size;
 }
 
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e9ecef;
-}
-
-.panel-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.toggle-btn {
-  padding: 0.5rem 1rem;
-  border: 2px solid #6c757d;
-  border-radius: 6px;
-  background: white;
-  color: #6c757d;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.toggle-btn:hover {
-  background: #6c757d;
-  color: white;
-}
-
-.toggle-btn.active {
-  border-color: #28a745;
-  color: #28a745;
-  background: #f8fff9;
-}
-
-.toggle-btn.active:hover {
-  background: #28a745;
-  color: white;
-}
-
-.parameter-section,
-.output-section,
-.current-values,
-.export-section {
-  margin-bottom: 1.5rem;
-}
-
-.parameter-section h4,
-.output-section h4,
-.current-values h4,
-.export-section h4 {
-  margin: 0 0 0.75rem 0;
-  color: #495057;
-  font-size: 1rem;
-}
-
-.parameter-control {
-  margin-bottom: 1rem;
-}
-
-.parameter-control label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #495057;
-}
-
-.parameter-control select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-
-.range-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 6px;
-}
-
-.range-input {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.range-input label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #6c757d;
-}
-
-.range-input input {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  padding: 0.25rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  box-sizing: border-box;
-}
-
-.range-input .unit {
-  font-size: 0.75rem;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.output-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.output-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #495057;
-  cursor: pointer;
-}
-
-.output-checkbox input {
-  margin: 0;
-}
-
-.current-values {
-  background: #f8fff9;
-  border: 1px solid #d4edda;
-  border-radius: 6px;
-  padding: 1rem;
-}
-
-.value-display {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.current-param,
-.current-output {
-  font-size: 0.875rem;
-  font-family: monospace;
-}
-
-.analysis-status {
-  margin-bottom: 1rem;
-}
-
-.status {
-  padding: 0.75rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.status.idle {
-  background: #f8f9fa;
-  color: #6c757d;
-  border: 1px solid #dee2e6;
-}
-
-.status.running {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.status.completed {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffeaa7;
-  border-top: 2px solid #856404;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.analysis-status-card {
+  padding: 0;
+  background: transparent;
 }
 
 .plot-container {
@@ -720,73 +561,31 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fefefe;
 }
 
-.no-data-message {
+/* Info panel for empty states */
+.info-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  color: #6c757d;
   padding: 2rem;
 }
 
-.no-data-icon {
-  font-size: 3rem;
-  opacity: 0.5;
+.info-icon {
+  font-size: 2.5rem;
   margin-bottom: 1rem;
+  opacity: 0.6;
 }
 
-.no-data-message p {
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.export-controls {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.export-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #007bff;
-  border-radius: 4px;
-  background: white;
-  color: #007bff;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.export-btn:hover {
-  background: #007bff;
-  color: white;
-}
-
-/* Responsive adjustments for narrow panels */
-@media (max-width: 500px) {
-  .range-controls {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.25rem;
-  }
-
-  .range-input {
-    gap: 0.1rem;
-  }
-
-  .range-input label {
-    font-size: 0.7rem;
-  }
-
-  .range-input input {
-    padding: 0.2rem;
-    font-size: 0.75rem;
-  }
-}
-
-/* For very narrow workspace (collapsed state) */
+/* Responsive grid adjustments */
 @container (max-width: 450px) {
-  .range-controls {
+  .grid-cols-2 {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
   }
 }
 </style>

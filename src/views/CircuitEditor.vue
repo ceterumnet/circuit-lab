@@ -1,143 +1,188 @@
 <template>
-  <div class="circuit-editor">
-    <div class="editor-layout">
-      <component-palette class="sidebar" />
+  <div class="ide-layout">
+    <!-- IDE Toolbar -->
+    <div class="ide-toolbar">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-semibold text-slate-900">
+            {{ circuitStore.currentCircuit.name }}
+          </h2>
+        </div>
 
-      <!-- Main canvas area -->
-      <div class="canvas-area">
-        <div class="canvas-header">
-          <h2>{{ circuitStore.currentCircuit.name }}</h2>
-          <div class="canvas-actions">
-            <!-- Save/Load toggle -->
+        <div class="flex items-center gap-2">
+          <!-- Save/Load toggle -->
+          <button
+            class="btn btn-secondary btn-sm"
+            :class="{ 'btn-primary': showSaveLoad }"
+            @click="showSaveLoad = !showSaveLoad"
+            title="Save/Load circuits"
+          >
+            <Save class="w-4 h-4 mr-2" />
+            Save/Load
+          </button>
+
+          <!-- Undo/Redo buttons -->
+          <div class="flex items-center gap-1">
             <button
-              class="save-load-toggle"
-              :class="{ active: showSaveLoad }"
-              @click="showSaveLoad = !showSaveLoad"
-              title="Save/Load circuits"
+              class="btn btn-icon"
+              :disabled="!historyActions.canUndo.value"
+              @click="historyActions.undo()"
+              title="Undo (Ctrl+Z)"
             >
-              <Save class="icon" />
-              Save/Load
+              <Undo2 class="w-4 h-4" />
             </button>
-
-            <!-- Undo/Redo buttons -->
-            <div class="history-controls">
-              <button
-                class="history-button"
-                :disabled="!historyActions.canUndo.value"
-                @click="historyActions.undo()"
-                title="Undo (Ctrl+Z)"
-              >
-                <Undo2 class="icon" />
-              </button>
-              <button
-                class="history-button"
-                :disabled="!historyActions.canRedo.value"
-                @click="historyActions.redo()"
-                title="Redo (Ctrl+Y)"
-              >
-                <Redo2 class="icon" />
-              </button>
-            </div>
-
-            <!-- Real-time simulation toggle -->
             <button
-              class="realtime-toggle"
-              :class="{
-                active: circuitStore.isRealTimeSimulation,
-                disabled: circuitStore.isSimulating,
-              }"
-              :disabled="circuitStore.isSimulating"
-              @click="circuitStore.toggleRealTimeSimulation()"
-              :title="
-                circuitStore.isRealTimeSimulation
-                  ? 'Disable real-time simulation'
-                  : 'Enable real-time simulation'
-              "
+              class="btn btn-icon"
+              :disabled="!historyActions.canRedo.value"
+              @click="historyActions.redo()"
+              title="Redo (Ctrl+Y)"
             >
-              <Zap v-if="circuitStore.isRealTimeSimulation" class="icon" />
-              <ZapOff v-else class="icon" />
-              <span>{{ circuitStore.isRealTimeSimulation ? 'Live' : 'Manual' }}</span>
+              <Redo2 class="w-4 h-4" />
             </button>
+          </div>
 
-            <!-- Explicit simulate button (only shown when real-time is disabled) -->
-            <button
-              v-if="!circuitStore.isRealTimeSimulation"
-              class="simulate-button"
-              :class="{
-                simulating: circuitStore.isSimulating,
-                'has-errors': circuitStore.simulationErrors.length > 0,
-                'has-results': circuitStore.hasValidSimulation,
-              }"
-              :disabled="circuitStore.isSimulating"
-              @click="runSimulation"
-            >
-              <Loader2 v-if="circuitStore.isSimulating" class="icon spinning" />
-              <CheckCircle v-else-if="circuitStore.hasValidSimulation" class="icon" />
-              <Play v-else class="icon" />
-              <span v-if="circuitStore.isSimulating">Simulating...</span>
-              <span v-else-if="circuitStore.hasValidSimulation">Re-simulate</span>
-              <span v-else>Simulate</span>
-            </button>
+          <!-- Real-time simulation toggle -->
+          <button
+            class="btn btn-secondary btn-sm"
+            :class="{
+              'btn-primary': circuitStore.isRealTimeSimulation,
+              'opacity-50 cursor-not-allowed': circuitStore.isSimulating,
+            }"
+            :disabled="circuitStore.isSimulating"
+            @click="circuitStore.toggleRealTimeSimulation()"
+            :title="
+              circuitStore.isRealTimeSimulation
+                ? 'Disable real-time simulation'
+                : 'Enable real-time simulation'
+            "
+          >
+            <Zap v-if="circuitStore.isRealTimeSimulation" class="w-4 h-4 mr-2" />
+            <ZapOff v-else class="w-4 h-4 mr-2" />
+            <span>{{ circuitStore.isRealTimeSimulation ? 'Live' : 'Manual' }}</span>
+          </button>
 
-            <!-- Real-time simulation indicator (only shown when real-time is enabled) -->
+          <!-- Explicit simulate button (only shown when real-time is disabled) -->
+          <button
+            v-if="!circuitStore.isRealTimeSimulation"
+            class="btn btn-primary btn-sm"
+            :class="{
+              'opacity-50 cursor-not-allowed': circuitStore.isSimulating,
+            }"
+            :disabled="circuitStore.isSimulating"
+            @click="runSimulation"
+          >
+            <Loader2 v-if="circuitStore.isSimulating" class="w-4 h-4 mr-2 animate-spin" />
+            <CheckCircle v-else-if="circuitStore.hasValidSimulation" class="w-4 h-4 mr-2" />
+            <Play v-else class="w-4 h-4 mr-2" />
+            <span v-if="circuitStore.isSimulating">Simulating...</span>
+            <span v-else-if="circuitStore.hasValidSimulation">Re-simulate</span>
+            <span v-else>Simulate</span>
+          </button>
+        </div>
+
+        <!-- Status indicators -->
+        <div class="flex items-center gap-3">
+          <!-- Real-time simulation indicator (only shown when real-time is enabled) -->
+          <div
+            v-if="circuitStore.isRealTimeSimulation"
+            class="simulation-status"
+            :class="{
+              running: circuitStore.isSimulating,
+              success: circuitStore.hasValidSimulation && !circuitStore.isSimulating,
+              idle: !circuitStore.isSimulating && !circuitStore.hasValidSimulation,
+            }"
+          >
+            <Loader2 v-if="circuitStore.isSimulating" class="w-3 h-3 animate-spin" />
             <div
-              v-if="circuitStore.isRealTimeSimulation"
-              class="realtime-indicator"
-              :class="{
-                simulating: circuitStore.isSimulating,
-                'has-errors': circuitStore.simulationErrors.length > 0,
-                'has-results': circuitStore.hasValidSimulation,
-              }"
-            >
-              <Loader2 v-if="circuitStore.isSimulating" class="icon spinning" />
-              <CheckCircle v-else-if="circuitStore.hasValidSimulation" class="icon" />
-              <Zap v-else class="icon" />
-              <span v-if="circuitStore.isSimulating">Auto-simulating...</span>
-              <span v-else-if="circuitStore.hasValidSimulation">Live simulation</span>
-              <span v-else>Live simulation</span>
-            </div>
+              v-else-if="circuitStore.hasValidSimulation"
+              class="w-3 h-3 bg-emerald-500 rounded-full"
+            ></div>
+            <div v-else class="w-3 h-3 bg-slate-500 rounded-full"></div>
+            <span v-if="circuitStore.isSimulating" class="text-sm">Auto-simulating...</span>
+            <span v-else-if="circuitStore.hasValidSimulation" class="text-sm">Live simulation</span>
+            <span v-else class="text-sm">Live simulation</span>
+          </div>
 
-            <div v-if="circuitStore.simulationErrors.length > 0" class="simulation-errors">
-              <AlertTriangle class="error-icon" />
-              <div class="error-tooltip">
-                <ul>
-                  <li v-for="error in circuitStore.simulationErrors" :key="error">{{ error }}</li>
-                </ul>
-              </div>
+          <!-- Error indicators -->
+          <div v-if="circuitStore.simulationErrors.length > 0" class="simulation-status error">
+            <AlertTriangle class="w-3 h-3" />
+            <div class="error-tooltip">
+              <ul>
+                <li v-for="error in circuitStore.simulationErrors" :key="error">{{ error }}</li>
+              </ul>
             </div>
+          </div>
 
-            <div v-if="circuitStore.simulationWarnings.length > 0" class="simulation-warnings">
-              <Info class="warning-icon" />
-              <div class="warning-tooltip">
-                <ul>
-                  <li v-for="warning in circuitStore.simulationWarnings" :key="warning">
-                    {{ warning }}
-                  </li>
-                </ul>
-              </div>
+          <!-- Warning indicators -->
+          <div v-if="circuitStore.simulationWarnings.length > 0" class="simulation-status warning">
+            <Info class="w-3 h-3" />
+            <div class="warning-tooltip">
+              <ul>
+                <li v-for="warning in circuitStore.simulationWarnings" :key="warning">
+                  {{ warning }}
+                </li>
+              </ul>
             </div>
-            <span class="component-count">Components: {{ circuitStore.componentCount }}</span>
-            <span v-if="interactionStore.wireCreationState.isActive" class="wiring-mode">
-              🔌 Click to complete wire
-            </span>
-            <span v-else-if="interactionStore.componentToPlace" class="placement-mode">
-              📍 Click to place {{ getComponentName(interactionStore.componentToPlace) }}
-            </span>
           </div>
         </div>
 
-        <!-- Save/Load Panel -->
-        <div v-if="showSaveLoad" class="save-load-overlay">
-          <circuit-save-load />
-        </div>
-
-        <div class="canvas-container">
-          <circuit-canvas class="circuit-canvas" />
+        <!-- Right side indicators -->
+        <div class="ml-auto flex items-center gap-4">
+          <span class="text-sm text-slate-500">Components: {{ circuitStore.componentCount }}</span>
+          <span
+            v-if="interactionStore.wireCreationState.isActive"
+            class="text-sm text-blue-600 font-medium"
+          >
+            🔌 Click to complete wire
+          </span>
+          <span
+            v-else-if="interactionStore.componentToPlace"
+            class="text-sm text-blue-600 font-medium"
+          >
+            📍 Click to place {{ getComponentName(interactionStore.componentToPlace) }}
+          </span>
+          <div class="text-sm text-slate-500">Circuit Lab v2.1.0</div>
         </div>
       </div>
+    </div>
 
-      <!-- Analysis Workspace -->
+    <!-- Save/Load Panel -->
+    <div v-if="showSaveLoad" class="save-load-overlay">
+      <circuit-save-load />
+    </div>
+
+    <!-- IDE Main Content -->
+    <div class="ide-main">
+      <!-- Component Palette (Left Sidebar) -->
+      <component-palette class="component-palette" :style="{ width: `${leftPanelWidth}px` }" />
+
+      <!-- Left Resize Handle -->
+      <div
+        class="resize-handle resize-handle-vertical group cursor-col-resize-hd"
+        :class="{ resizing: isResizing && resizeTarget === 'left' }"
+        @mousedown="startResize('left', $event)"
+      >
+        <div class="resize-handle-indicator"></div>
+      </div>
+
+      <!-- Circuit Canvas (Center) -->
+      <div class="circuit-canvas-container">
+        <circuit-canvas class="circuit-canvas" />
+      </div>
+
+      <!-- Right Resize Handle -->
+      <div
+        class="resize-handle resize-handle-vertical group cursor-col-resize-hd"
+        :class="{ resizing: isResizing && resizeTarget === 'right' }"
+        @mousedown="startResize('right', $event)"
+      >
+        <div class="resize-handle-indicator"></div>
+      </div>
+
+      <!-- Analysis Workspace (Right Sidebar) -->
       <analysis-workspace
+        class="properties-panel"
+        :style="{ width: `${rightPanelWidth}px` }"
         :selected-component="itemIsComponent(singleSelectedItem) ? singleSelectedItem : null"
         :selected-probe="itemIsProbe(singleSelectedItem) ? singleSelectedItem : null"
         :multiple-selection="interactionStore.selectedComponentIds.length > 1"
@@ -148,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useInteractionStore } from '@/stores/interaction'
 import { useHistoryStore } from '@/stores/history'
@@ -181,9 +226,20 @@ const historyActions = useCircuitHistory()
 // Local component state
 const showSaveLoad = ref(false)
 
+// Resizable panels functionality
+const leftPanelWidth = ref(208) // Default component-palette width (w-52 = 208px)
+const rightPanelWidth = ref(320) // Default properties-panel width (w-80 = 320px)
+const isResizing = ref(false)
+const resizeTarget = ref<'left' | 'right' | null>(null)
+const initialMouseX = ref(0)
+const initialPanelWidth = ref(0)
+
 // Initialize history only once in the main editor
 onMounted(() => {
   historyStore.initializeHistory(circuitStore.currentCircuit)
+
+  // Load panel widths from localStorage
+  loadPanelWidths()
 
   // Set up keyboard shortcuts only in the main editor
   document.addEventListener('keydown', handleKeyDown)
@@ -191,6 +247,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
+
+  // Cleanup resize event listeners
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
 })
 
 // Keyboard shortcuts handler
@@ -264,316 +324,110 @@ function getComponentName(componentType: string): string {
 async function runSimulation() {
   await circuitStore.startSimulation()
 }
+
+// Start resize operation
+function startResize(target: 'left' | 'right', event: MouseEvent) {
+  event.preventDefault()
+  isResizing.value = true
+  resizeTarget.value = target
+  initialMouseX.value = event.clientX
+  initialPanelWidth.value = target === 'left' ? leftPanelWidth.value : rightPanelWidth.value
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  document.body.style.cursor =
+    "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M8 3 4 7l4 4'%3e%3c/path%3e%3cpath d='M4 7h16'%3e%3c/path%3e%3cpath d='m16 21 4-4-4-4'%3e%3c/path%3e%3cpath d='M20 17H4'%3e%3c/path%3e%3c/svg%3e\") 8 8, col-resize"
+  document.body.style.userSelect = 'none'
+}
+
+// Handle mouse movement during resize
+function handleMouseMove(event: MouseEvent) {
+  if (!isResizing.value || !resizeTarget.value) return
+
+  const minWidth = 150
+  const maxWidth = 500
+  const deltaX = event.clientX - initialMouseX.value
+
+  if (resizeTarget.value === 'left') {
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, initialPanelWidth.value + deltaX))
+    leftPanelWidth.value = newWidth
+  } else {
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, initialPanelWidth.value - deltaX))
+    rightPanelWidth.value = newWidth
+  }
+}
+
+// End resize operation
+function handleMouseUp() {
+  isResizing.value = false
+  resizeTarget.value = null
+
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// Load panel widths from localStorage
+function loadPanelWidths() {
+  const saved = localStorage.getItem('circuit-lab-panel-widths')
+  if (saved) {
+    try {
+      const { left, right } = JSON.parse(saved)
+      if (left && left >= 150 && left <= 500) leftPanelWidth.value = left
+      if (right && right >= 150 && right <= 500) rightPanelWidth.value = right
+    } catch (e) {
+      console.warn('Failed to load panel widths from localStorage:', e)
+    }
+  }
+}
+
+// Save panel widths to localStorage
+watchEffect(() => {
+  localStorage.setItem(
+    'circuit-lab-panel-widths',
+    JSON.stringify({
+      left: leftPanelWidth.value,
+      right: rightPanelWidth.value,
+    }),
+  )
+})
 </script>
 
 <style scoped>
-.circuit-editor {
+/* IDE Layout System - Professional Circuit Simulator */
+.ide-layout {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #f8fafc;
   overflow: hidden;
 }
 
-.editor-layout {
+.ide-toolbar {
   display: flex;
-  flex: 1;
-  width: 100%;
-  overflow-x: hidden;
-  overflow-y: visible;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  min-height: 64px;
 }
 
-.sidebar {
-  flex-shrink: 0;
-}
-
-.canvas-area {
+.ide-main {
   flex: 1;
   display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 
-.canvas-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: white;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.canvas-header h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #343a40;
-}
-
-.canvas-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.save-load-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  color: #495057;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-
-.save-load-toggle:hover {
-  background: #e9ecef;
-  border-color: #adb5bd;
-}
-
-.save-load-toggle.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: white;
-}
-
-.save-load-overlay {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 1000;
-  margin: 16px;
-}
-
-.simulate-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: 2px solid #007bff;
-  border-radius: 6px;
-  background: white;
-  color: #007bff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.simulate-button .icon {
-  width: 16px;
-  height: 16px;
+.component-palette {
   flex-shrink: 0;
+  /* Width set dynamically via inline styles for resizable panels */
 }
 
-.simulate-button .spinning {
-  animation: spin 1s linear infinite;
-}
-
-.simulate-button:hover:not(:disabled) {
-  background: #007bff;
-  color: white;
-}
-
-.simulate-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.simulate-button.simulating {
-  border-color: #ffc107;
-  color: #ffc107;
-  animation: pulse 1.5s infinite;
-}
-
-.simulate-button.has-errors {
-  border-color: #dc3545;
-  color: #dc3545;
-}
-
-.simulate-button.has-results {
-  border-color: #28a745;
-  color: #28a745;
-}
-
-.history-controls {
-  display: flex;
-  gap: 0.25rem;
-  margin-right: 0.5rem;
-}
-
-.history-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  background: white;
-  color: #495057;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.history-button .icon {
-  width: 16px;
-  height: 16px;
-}
-
-.history-button:hover:not(:disabled) {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-  color: #343a40;
-}
-
-.history-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: #f8f9fa;
-  color: #adb5bd;
-}
-
-.simulation-errors {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.error-icon {
-  width: 20px;
-  height: 20px;
-  color: #dc3545;
-  cursor: pointer;
-}
-
-.error-tooltip {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 0.5rem;
-  background: #fff;
-  border: 2px solid #dc3545;
-  border-radius: 6px;
-  padding: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 250px;
-  z-index: 1000;
-  display: none;
-}
-
-.simulation-errors:hover .error-tooltip {
-  display: block;
-}
-
-.error-tooltip ul {
-  margin: 0;
-  padding-left: 1.2rem;
-  font-size: 0.875rem;
-  color: #dc3545;
-  line-height: 1.4;
-}
-
-.error-tooltip li {
-  margin-bottom: 0.25rem;
-}
-
-.simulation-warnings {
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin-left: 0.5rem;
-}
-
-.warning-icon {
-  width: 20px;
-  height: 20px;
-  color: #ffc107;
-  cursor: pointer;
-}
-
-.warning-tooltip {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 0.5rem;
-  background: #fff;
-  border: 2px solid #ffc107;
-  border-radius: 6px;
-  padding: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 250px;
-  z-index: 1000;
-  display: none;
-}
-
-.simulation-warnings:hover .warning-tooltip {
-  display: block;
-}
-
-.warning-tooltip ul {
-  margin: 0;
-  padding-left: 1.2rem;
-  font-size: 0.875rem;
-  color: #856404;
-  line-height: 1.4;
-}
-
-.warning-tooltip li {
-  margin-bottom: 0.25rem;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.component-count {
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-
-.wiring-mode {
-  font-size: 0.875rem;
-  color: #dc3545;
-  font-weight: 500;
-  background: #ffe6e6;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.placement-mode {
-  font-size: 0.875rem;
-  color: #007bff;
-  font-weight: 500;
-  background: #e6f3ff;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.canvas-container {
+.circuit-canvas-container {
   flex: 1;
   overflow: hidden;
   position: relative;
@@ -584,91 +438,109 @@ async function runSimulation() {
   height: 100%;
 }
 
-/* Analysis workspace positioning handled by the component itself */
+.properties-panel {
+  flex-shrink: 0;
+  /* Width set dynamically via inline styles for resizable panels */
+}
 
-.realtime-toggle {
+/* Save/Load Overlay */
+.save-load-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Simulation Status Indicators */
+.simulation-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
-  font-weight: 600;
-  border: 2px solid #6c757d;
-  border-radius: 6px;
-  background: white;
-  color: #6c757d;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-right: 0.5rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  position: relative;
 }
 
-.realtime-toggle .icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.simulation-status.running {
+  background: #fef3c7;
+  color: #f59e0b;
 }
 
-.realtime-toggle:hover:not(:disabled) {
-  background: #6c757d;
+.simulation-status.success {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.simulation-status.idle {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.simulation-status.error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.simulation-status.warning {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+/* Tooltips */
+.error-tooltip,
+.warning-tooltip {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: #1e293b;
   color: white;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  display: none;
+  z-index: 1000;
+  min-width: 200px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-.realtime-toggle.active {
-  border-color: #28a745;
-  color: #28a745;
-  background: #f8fff9;
+.error-tooltip {
+  background: #dc2626;
 }
 
-.realtime-toggle.active:hover:not(:disabled) {
-  background: #28a745;
-  color: white;
+.warning-tooltip {
+  background: #f59e0b;
+  color: #1f2937;
 }
 
-.realtime-toggle:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.error-tooltip ul,
+.warning-tooltip ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.realtime-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: 2px solid #28a745;
-  border-radius: 6px;
-  background: #f8fff9;
-  color: #28a745;
-  margin-right: 0.5rem;
+.error-tooltip li,
+.warning-tooltip li {
+  margin-bottom: 0.25rem;
 }
 
-.realtime-indicator .icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.error-tooltip li:last-child,
+.warning-tooltip li:last-child {
+  margin-bottom: 0;
 }
 
-.realtime-indicator .spinning {
-  animation: spin 1s linear infinite;
-}
-
-.realtime-indicator.simulating {
-  border-color: #ffc107;
-  color: #ffc107;
-  background: #fffbf0;
-  animation: pulse 1.5s infinite;
-}
-
-.realtime-indicator.has-errors {
-  border-color: #dc3545;
-  color: #dc3545;
-  background: #fff5f5;
-}
-
-.realtime-indicator.has-results {
-  border-color: #28a745;
-  color: #28a745;
-  background: #f8fff9;
+.simulation-status:hover .error-tooltip,
+.simulation-status:hover .warning-tooltip {
+  display: block;
 }
 </style>

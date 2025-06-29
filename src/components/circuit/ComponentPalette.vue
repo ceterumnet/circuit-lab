@@ -1,40 +1,46 @@
 <template>
   <div class="component-palette">
-    <div class="category-group">
-      <h4>Analysis</h4>
-      <div class="component-buttons">
-        <button
-          :class="['component-btn', { active: probingType === 'voltage' }]"
+    <div class="component-group">
+      <div class="component-group-title">Analysis</div>
+      <div class="component-list">
+        <div
+          :class="['component-item', { active: probingType === 'voltage' }]"
           @click="toggleProbeType('voltage')"
           title="Voltage Probe"
         >
-          <ProbeSymbol type="voltage" class="component-icon" />
+          <div class="component-icon">
+            <ProbeSymbol type="voltage" class="w-5 h-5" />
+          </div>
           <span class="component-label">Voltage Probe</span>
-        </button>
-        <button
-          :class="['component-btn', { active: probingType === 'current' }]"
+        </div>
+        <div
+          :class="['component-item', { active: probingType === 'current' }]"
           @click="toggleProbeType('current')"
           title="Current Probe"
         >
-          <ProbeSymbol type="current" class="component-icon" />
+          <div class="component-icon">
+            <ProbeSymbol type="current" class="w-5 h-5" />
+          </div>
           <span class="component-label">Current Probe</span>
-        </button>
+        </div>
       </div>
     </div>
 
-    <div class="category-group">
-      <h4>Components</h4>
-      <div class="component-buttons">
-        <button
+    <div class="component-group">
+      <div class="component-group-title">Components</div>
+      <div class="component-list">
+        <div
           v-for="componentDef in availableComponents"
           :key="componentDef.type"
-          :class="['component-btn', { active: selectedComponent === componentDef.type }]"
+          :class="['component-item', { active: selectedComponent === componentDef.type }]"
           @click="selectComponent(componentDef.type)"
           :title="getComponentTooltip(componentDef)"
         >
-          <component :is="getIconComponent(componentDef.icon)" class="component-icon" />
+          <div class="component-icon" :class="getComponentIconColor(componentDef.type)">
+            <component :is="getIconComponent(componentDef.icon)" class="w-5 h-5" />
+          </div>
           <span class="component-label">{{ componentDef.name }}</span>
-        </button>
+        </div>
       </div>
     </div>
   </div>
@@ -111,6 +117,24 @@ function getIconComponent(iconName?: string) {
   return iconMap[iconName as keyof typeof iconMap] || NodeSymbol
 }
 
+function getComponentIconColor(componentType: string) {
+  // Use circuit semantic colors from design system
+  const colorMap: Record<string, string> = {
+    resistor: 'text-purple-600',
+    'variable-resistor': 'text-purple-600',
+    potentiometer: 'text-purple-600',
+    'voltage-source': 'text-red-600',
+    'current-source': 'text-blue-600',
+    diode: 'text-orange-600',
+    led: 'text-orange-600',
+    switch: 'text-slate-600',
+    ground: 'text-green-600',
+    node: 'text-slate-600',
+  }
+
+  return colorMap[componentType] || 'text-slate-600'
+}
+
 function getComponentTooltip(componentDef: ComponentDefinition) {
   if (
     selectedComponent.value === componentDef.type &&
@@ -123,66 +147,96 @@ function getComponentTooltip(componentDef: ComponentDefinition) {
 </script>
 
 <style scoped>
+/* Component Palette - Professional Design System */
 .component-palette {
-  width: 200px;
-  background: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+  height: 100%;
+  background: white;
+  border-right: 1px solid #e2e8f0;
   padding: 1rem;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.category-group {
-  margin-bottom: 1.5rem;
+.component-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.category-group h4 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.875rem;
+.component-group-title {
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #6c757d;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  padding: 0 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
 }
 
-.component-buttons {
+.component-list {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.component-btn {
+.component-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border: 1px solid #dee2e6;
+  gap: 0.75rem;
+  padding: 0.75rem 0.5rem;
   border-radius: 0.375rem;
-  background: white;
-  color: #212529;
+  background: transparent;
+  color: #334155;
   font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
 }
 
-.component-btn:hover {
-  background: #e9ecef;
-  border-color: #adb5bd;
+.component-item:hover {
+  background: #f1f5f9;
+  color: #1e293b;
 }
 
-.component-btn.active {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
+.component-item.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .component-icon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .component-label {
   font-weight: 500;
+  flex: 1;
+}
+
+/* Scrollbar styling */
+.component-palette::-webkit-scrollbar {
+  width: 4px;
+}
+
+.component-palette::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.component-palette::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.component-palette::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>
