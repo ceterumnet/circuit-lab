@@ -50,7 +50,10 @@
 
     <!-- Debug Information Section -->
     <div class="property-section">
-      <div class="property-section-title">🔍 Debug Information</div>
+      <div class="property-section-title flex items-center gap-2">
+        <Search class="w-4 h-4" />
+        Debug Information
+      </div>
 
       <!-- Basic Probe Info -->
       <div class="property-field">
@@ -119,10 +122,11 @@
     <div class="property-section">
       <div class="property-section-title">Actions</div>
       <button
-        class="btn btn-secondary w-full text-red-600 hover:bg-red-50 hover:border-red-200"
+        class="btn btn-secondary w-full text-red-600 hover:bg-red-50 hover:border-red-200 flex items-center justify-center gap-2"
         @click="deleteProbe"
       >
-        🗑️ Delete Probe
+        <Trash2 class="w-4 h-4" />
+        Delete Probe
       </button>
     </div>
   </div>
@@ -130,6 +134,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Search, Trash2 } from 'lucide-vue-next'
 import { useCircuitStore } from '@/stores/circuit'
 import { useCircuitHistory } from '@/composables/useCircuitHistory'
 import type { Probe } from '@/types/components'

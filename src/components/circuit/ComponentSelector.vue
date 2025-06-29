@@ -26,7 +26,11 @@
         <div v-if="filteredComponents.length === 0" class="no-results">No components found</div>
       </div>
       <div class="selector-footer">
-        <span class="help-text">↑↓ Navigate • Enter Select • Esc Cancel</span>
+        <span class="help-text flex items-center gap-2">
+          <ArrowUp class="w-3 h-3" />
+          <ArrowDown class="w-3 h-3" />
+          Navigate • Enter Select • Esc Cancel
+        </span>
       </div>
     </div>
   </div>
@@ -34,6 +38,7 @@
 
 <script setup lang="ts">
 import { computed, ref, nextTick, watch } from 'vue'
+import { ArrowUp, ArrowDown } from 'lucide-vue-next'
 import { useInteractionStore } from '@/stores/interaction'
 import { getAllComponents } from '@/registry/components'
 import type { ComponentDefinition } from '@/types/components'

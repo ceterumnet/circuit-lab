@@ -92,7 +92,7 @@
   }
 
   .ide-panel-content {
-    @apply p-4 flex-1 overflow-auto;
+    @apply flex-1 overflow-auto;
   }
 
   /* Circuit Canvas Area */
@@ -109,8 +109,7 @@
 
   /* Component Palette */
   .component-palette {
-    width: var(--component-palette-width, 208px);
-    @apply bg-white border-r border-slate-200 flex flex-col;
+    @apply bg-white border-r border-slate-200 flex flex-col flex-shrink-0;
   }
 
   .component-group {
@@ -145,8 +144,7 @@
 
   /* Properties Panel */
   .properties-panel {
-    width: var(--properties-panel-width, 320px);
-    @apply bg-white border-l border-slate-200 flex flex-col;
+    @apply bg-white border-l border-slate-200 flex flex-col flex-shrink-0;
   }
 
   .property-section {

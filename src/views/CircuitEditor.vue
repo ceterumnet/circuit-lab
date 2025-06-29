@@ -131,15 +131,17 @@
           <span class="text-sm text-slate-500">Components: {{ circuitStore.componentCount }}</span>
           <span
             v-if="interactionStore.wireCreationState.isActive"
-            class="text-sm text-blue-600 font-medium"
+            class="text-sm text-blue-600 font-medium flex items-center gap-1"
           >
-            🔌 Click to complete wire
+            <Cable class="w-4 h-4" />
+            Click to complete wire
           </span>
           <span
             v-else-if="interactionStore.componentToPlace"
-            class="text-sm text-blue-600 font-medium"
+            class="text-sm text-blue-600 font-medium flex items-center gap-1"
           >
-            📍 Click to place {{ getComponentName(interactionStore.componentToPlace) }}
+            <MapPin class="w-4 h-4" />
+            Click to place {{ getComponentName(interactionStore.componentToPlace) }}
           </span>
           <div class="text-sm text-slate-500">Circuit Lab v2.1.0</div>
         </div>
@@ -210,6 +212,8 @@ import {
   Info,
   Zap,
   ZapOff,
+  Cable,
+  MapPin,
 } from 'lucide-vue-next'
 
 import CircuitCanvas from '@/components/circuit/CircuitCanvas.vue'

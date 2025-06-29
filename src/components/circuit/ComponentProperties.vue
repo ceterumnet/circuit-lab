@@ -145,7 +145,10 @@
 
       <!-- Debug Information Section -->
       <div class="property-section">
-        <div class="property-section-title">🔍 Debug Information</div>
+        <div class="property-section-title flex items-center gap-2">
+          <Search class="w-4 h-4" />
+          Debug Information
+        </div>
 
         <!-- Basic Component Info -->
         <div class="property-field">
@@ -222,7 +225,8 @@
           class="btn btn-secondary w-full text-red-600 hover:bg-red-50 hover:border-red-200"
           @click="deleteComponent"
         >
-          🗑️ Delete {{ componentDefinition.name }}
+          <Trash2 class="w-4 h-4 mr-2" />
+          Delete {{ componentDefinition.name }}
         </button>
       </div>
     </div>
@@ -236,6 +240,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { Search, Trash2 } from 'lucide-vue-next'
 import { useCircuitStore } from '@/stores/circuit'
 import { useHistoryStore } from '@/stores/history'
 import type { CircuitComponent } from '@/types/components'
