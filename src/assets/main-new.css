@@ -109,7 +109,8 @@
 
   /* Component Palette */
   .component-palette {
-    @apply w-52 bg-white border-r border-slate-200 flex flex-col;
+    width: var(--component-palette-width, 208px);
+    @apply bg-white border-r border-slate-200 flex flex-col;
   }
 
   .component-group {
@@ -144,7 +145,8 @@
 
   /* Properties Panel */
   .properties-panel {
-    @apply w-80 bg-white border-l border-slate-200 flex flex-col;
+    width: var(--properties-panel-width, 320px);
+    @apply bg-white border-l border-slate-200 flex flex-col;
   }
 
   .property-section {
@@ -307,6 +309,34 @@
 
   .debug-value {
     @apply text-slate-700 font-mono;
+  }
+
+  /* Resize Handles */
+  .resize-handle {
+    @apply relative flex items-center justify-center;
+    @apply bg-transparent hover:bg-slate-100 transition-colors duration-150;
+    @apply select-none;
+  }
+
+  .resize-handle-vertical {
+    @apply w-1;
+  }
+
+  .resize-handle-indicator {
+    @apply w-0.5 h-8 bg-slate-300 rounded-full opacity-0;
+    @apply transition-opacity duration-150;
+  }
+
+  .resize-handle:hover .resize-handle-indicator {
+    @apply opacity-100;
+  }
+
+  .resize-handle.resizing {
+    @apply bg-slate-200;
+  }
+
+  .resize-handle.resizing .resize-handle-indicator {
+    @apply opacity-100;
   }
 }
 

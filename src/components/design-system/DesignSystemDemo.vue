@@ -571,7 +571,7 @@
                 <!-- Circuit Canvas Example (Standard Cursors) -->
                 <div class="p-4 bg-slate-50 rounded-lg">
                   <h4 class="font-medium text-slate-900 mb-3">Circuit Canvas Tools</h4>
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div
                       class="cursor-crosshair-hd p-4 bg-white border border-slate-200 rounded-lg text-center hover:bg-slate-50 transition-colors"
                     >
@@ -603,6 +603,14 @@
                         <MoveDiagonal class="w-4 h-4" />
                       </div>
                       <div class="text-xs text-slate-600">Resize Component</div>
+                    </div>
+                    <div
+                      class="cursor-col-resize-hd p-4 bg-white border border-slate-200 rounded-lg text-center hover:bg-slate-50 transition-colors"
+                    >
+                      <div class="w-4 h-4 mx-auto mb-2 text-slate-600">
+                        <ArrowLeftRight class="w-4 h-4" />
+                      </div>
+                      <div class="text-xs text-slate-600">Resize Panel</div>
                     </div>
                     <div
                       class="cursor-help-hd p-4 bg-white border border-slate-200 rounded-lg text-center hover:bg-slate-50 transition-colors"
@@ -1270,6 +1278,15 @@
                           </div>
                         </div>
 
+                        <!-- Left Resize Handle -->
+                        <div
+                          class="resize-handle resize-handle-vertical group cursor-col-resize-hd"
+                          :class="{ resizing: isResizing && resizeTarget === 'left' }"
+                          @mousedown="startResize('left', $event)"
+                        >
+                          <div class="resize-handle-indicator"></div>
+                        </div>
+
                         <!-- Circuit Canvas (Center) -->
                         <div class="circuit-canvas-container">
                           <div class="circuit-canvas flex items-center justify-center">
@@ -1281,6 +1298,15 @@
                               </div>
                             </div>
                           </div>
+                        </div>
+
+                        <!-- Right Resize Handle -->
+                        <div
+                          class="resize-handle resize-handle-vertical group cursor-col-resize-hd"
+                          :class="{ resizing: isResizing && resizeTarget === 'right' }"
+                          @mousedown="startResize('right', $event)"
+                        >
+                          <div class="resize-handle-indicator"></div>
                         </div>
 
                         <!-- Properties Panel (Right Sidebar) -->
@@ -1349,7 +1375,15 @@
                       </div>
                       <div class="ml-8">
                         <span class="text-orange-600">├── .component-palette</span>
-                        <span class="text-slate-500">// Left sidebar (208px fixed)</span>
+                        <span class="text-slate-500"
+                          >// Left sidebar (resizable, default 208px)</span
+                        >
+                      </div>
+                      <div class="ml-8">
+                        <span class="text-teal-600">├── .resize-handle</span>
+                        <span class="text-slate-500"
+                          >// Left resize handle with col-resize cursor</span
+                        >
                       </div>
                       <div class="ml-8">
                         <span class="text-orange-600">├── .circuit-canvas-container</span>
@@ -1360,9 +1394,62 @@
                         <span class="text-slate-500">// Canvas with grid background</span>
                       </div>
                       <div class="ml-8">
-                        <span class="text-orange-600">└── .properties-panel</span>
-                        <span class="text-slate-500">// Right sidebar (320px fixed)</span>
+                        <span class="text-teal-600">├── .resize-handle</span>
+                        <span class="text-slate-500"
+                          >// Right resize handle with col-resize cursor</span
+                        >
                       </div>
+                      <div class="ml-8">
+                        <span class="text-orange-600">└── .properties-panel</span>
+                        <span class="text-slate-500"
+                          >// Right sidebar (resizable, default 320px)</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Resizable Panels Feature -->
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Resizable Panels</h4>
+                  <div class="p-4 bg-slate-50 rounded-lg">
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-slate-600">Component Palette Width:</span>
+                        <span class="text-sm font-mono text-slate-900">{{ leftPanelWidth }}px</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm text-slate-600">Properties Panel Width:</span>
+                        <span class="text-sm font-mono text-slate-900"
+                          >{{ rightPanelWidth }}px</span
+                        >
+                      </div>
+                      <div class="text-xs text-slate-500 mt-2">
+                        <strong>How to use:</strong> Hover over the thin vertical lines between
+                        panels to see resize handles. Drag to adjust panel widths. Settings are
+                        automatically saved to localStorage.
+                      </div>
+                      <div class="text-xs text-slate-500">
+                        <strong>Constraints:</strong> Min width: 150px, Max width: 500px
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-slate-500">
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs">.resize-handle</code> -
+                      Interactive resize handle with hover states
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.resize-handle-vertical</code
+                      >
+                      - Vertical resize handle with col-resize cursor
+                    </div>
+                    <div>
+                      <code class="bg-slate-100 px-2 py-1 rounded text-xs"
+                        >.resize-handle-indicator</code
+                      >
+                      - Visual indicator shown on hover
                     </div>
                   </div>
                 </div>
@@ -2069,6 +2156,13 @@
     nwse-resize;
 }
 
+.cursor-col-resize-hd {
+  cursor:
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M8 3 4 7l4 4'%3e%3c/path%3e%3cpath d='M4 7h16'%3e%3c/path%3e%3cpath d='m16 21 4-4-4-4'%3e%3c/path%3e%3cpath d='M20 17H4'%3e%3c/path%3e%3c/svg%3e")
+      8 8,
+    col-resize;
+}
+
 .cursor-help-hd {
   cursor:
     url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'%3e%3c/circle%3e%3cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'%3e%3c/path%3e%3cpath d='M12 17h.01'%3e%3c/path%3e%3c/svg%3e")
@@ -2078,7 +2172,7 @@
 </style>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, watchEffect } from 'vue'
 import {
   Crosshair,
   Grab,
@@ -2099,6 +2193,109 @@ import ResistorSymbol from '@/components/circuit/symbols/ResistorSymbol.vue'
 import VoltageSourceSymbol from '@/components/circuit/symbols/VoltageSourceSymbol.vue'
 
 const activeSection = ref('colors')
+
+// Resizable panels functionality
+const leftPanelWidth = ref(208) // Default component-palette width (w-52 = 208px)
+const rightPanelWidth = ref(320) // Default properties-panel width (w-80 = 320px)
+const isResizing = ref(false)
+const resizeTarget = ref<'left' | 'right' | null>(null)
+const initialMouseX = ref(0)
+const initialPanelWidth = ref(0)
+
+// Apply CSS custom properties for panel widths
+const updatePanelWidths = () => {
+  document.documentElement.style.setProperty(
+    '--component-palette-width',
+    `${leftPanelWidth.value}px`,
+  )
+  document.documentElement.style.setProperty(
+    '--properties-panel-width',
+    `${rightPanelWidth.value}px`,
+  )
+}
+
+// Start resize operation
+const startResize = (target: 'left' | 'right', event: MouseEvent) => {
+  event.preventDefault()
+  isResizing.value = true
+  resizeTarget.value = target
+  initialMouseX.value = event.clientX
+  initialPanelWidth.value = target === 'left' ? leftPanelWidth.value : rightPanelWidth.value
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  document.body.style.cursor =
+    "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M8 3 4 7l4 4'%3e%3c/path%3e%3cpath d='M4 7h16'%3e%3c/path%3e%3cpath d='m16 21 4-4-4-4'%3e%3c/path%3e%3cpath d='M20 17H4'%3e%3c/path%3e%3c/svg%3e\") 8 8, col-resize"
+  document.body.style.userSelect = 'none'
+}
+
+// Handle mouse movement during resize
+const handleMouseMove = (event: MouseEvent) => {
+  if (!isResizing.value || !resizeTarget.value) return
+
+  const minWidth = 150
+  const maxWidth = 500
+  const deltaX = event.clientX - initialMouseX.value
+
+  if (resizeTarget.value === 'left') {
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, initialPanelWidth.value + deltaX))
+    leftPanelWidth.value = newWidth
+  } else {
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, initialPanelWidth.value - deltaX))
+    rightPanelWidth.value = newWidth
+  }
+
+  updatePanelWidths()
+}
+
+// End resize operation
+const handleMouseUp = () => {
+  isResizing.value = false
+  resizeTarget.value = null
+
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// Load panel widths from localStorage
+const loadPanelWidths = () => {
+  const saved = localStorage.getItem('circuit-lab-panel-widths')
+  if (saved) {
+    try {
+      const { left, right } = JSON.parse(saved)
+      if (left && left >= 150 && left <= 500) leftPanelWidth.value = left
+      if (right && right >= 150 && right <= 500) rightPanelWidth.value = right
+      updatePanelWidths()
+    } catch (e) {
+      console.warn('Failed to load panel widths from localStorage:', e)
+    }
+  }
+}
+
+// Save panel widths to localStorage
+watchEffect(() => {
+  localStorage.setItem(
+    'circuit-lab-panel-widths',
+    JSON.stringify({
+      left: leftPanelWidth.value,
+      right: rightPanelWidth.value,
+    }),
+  )
+})
+
+// Initialize on mount
+onMounted(() => {
+  loadPanelWidths()
+  updatePanelWidths()
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+})
 
 const primaryColors = [
   { name: 'primary-400', hex: '#60a5fa', token: '--color-primary-400', class: 'bg-blue-400' },
@@ -2297,8 +2494,8 @@ const circuitCursors = [
       },
       {
         name: 'Column Resize',
-        class: 'cursor-col-resize',
-        css: 'cursor: col-resize',
+        class: 'cursor-col-resize-hd',
+        css: "cursor: url('data:image/svg+xml;utf8,<svg...>') 8 8, col-resize",
         usage: 'Adjust panel widths',
         lucideIcon: 'ArrowLeftRight',
         component: ArrowLeftRight,
