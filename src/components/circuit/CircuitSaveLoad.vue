@@ -1,5 +1,13 @@
 <template>
   <div class="save-load-panel">
+    <!-- Header with Close Button -->
+    <div class="panel-header">
+      <h2 class="panel-title">Save / Load Circuit</h2>
+      <button class="close-button" @click="$emit('close')" title="Close">
+        <X class="icon" />
+      </button>
+    </div>
+
     <!-- Save Section -->
     <div class="section">
       <h3>Save Circuit</h3>
@@ -78,7 +86,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useHistoryStore } from '@/stores/history'
-import { Save, FolderOpen, Trash2, Download, Upload, Database } from 'lucide-vue-next'
+import { Save, FolderOpen, Trash2, Download, Upload, X } from 'lucide-vue-next'
+
+// Define emits
+const emit = defineEmits<{
+  close: []
+  operationComplete: [operation: string]
+}>()
 
 const circuitStore = useCircuitStore()
 const historyStore = useHistoryStore()
@@ -115,6 +129,8 @@ function handleSave() {
     historyStore.saveState(circuitStore.currentCircuit, `Save circuit: ${name}`)
     // Trigger UI refresh
     refreshTrigger.value++
+    // Emit operation complete event
+    emit('operationComplete', 'save')
   } else {
     showStatus('Failed to save circuit', 'error')
   }
@@ -128,6 +144,8 @@ function handleLoad(name: string) {
     // Reinitialize history after loading
     historyStore.clearHistory()
     historyStore.initializeHistory(circuitStore.currentCircuit)
+    // Emit operation complete event
+    emit('operationComplete', 'load')
   } else {
     showStatus(`Failed to load circuit "${name}"`, 'error')
   }
@@ -185,6 +203,8 @@ function handleFileImport(event: Event) {
         // Reinitialize history after importing
         historyStore.clearHistory()
         historyStore.initializeHistory(circuitStore.currentCircuit)
+        // Emit operation complete event
+        emit('operationComplete', 'import')
       } else {
         showStatus('Failed to import circuit - invalid format', 'error')
       }
@@ -220,7 +240,7 @@ function formatDate(isoString: string): string {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 16px;
+  padding: 0;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -228,10 +248,56 @@ function formatDate(isoString: string): string {
   max-width: 400px;
 }
 
+/* Panel Header */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 8px 8px 0 0;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
 .section {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 0 16px;
+}
+
+.section:first-of-type {
+  padding-top: 16px;
+}
+
+.section:last-of-type {
+  padding-bottom: 16px;
 }
 
 .section h3 {
@@ -421,6 +487,7 @@ function formatDate(isoString: string): string {
 
 /* Status Messages */
 .status-message {
+  margin: 0 16px 16px 16px;
   padding: 12px;
   border-radius: 6px;
   font-size: 14px;

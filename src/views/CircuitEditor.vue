@@ -147,8 +147,8 @@
     </div>
 
     <!-- Save/Load Panel -->
-    <div v-if="showSaveLoad" class="save-load-overlay">
-      <circuit-save-load />
+    <div v-if="showSaveLoad" class="save-load-overlay" @click="handleOverlayClick">
+      <circuit-save-load @close="closeSaveLoad" @operation-complete="handleOperationComplete" />
     </div>
 
     <!-- IDE Main Content -->
@@ -325,6 +325,24 @@ async function runSimulation() {
   await circuitStore.startSimulation()
 }
 
+// Save/Load dialog handlers
+function closeSaveLoad() {
+  showSaveLoad.value = false
+}
+
+function handleOperationComplete(operation: string) {
+  console.log(`Operation completed: ${operation}`)
+  // Close immediately after successful operations
+  closeSaveLoad()
+}
+
+function handleOverlayClick(event: MouseEvent) {
+  // Close dialog if user clicks on the overlay background (not the dialog itself)
+  if (event.target === event.currentTarget) {
+    closeSaveLoad()
+  }
+}
+
 // Start resize operation
 function startResize(target: 'left' | 'right', event: MouseEvent) {
   event.preventDefault()
@@ -455,6 +473,11 @@ watchEffect(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  cursor: pointer;
+}
+
+.save-load-overlay > * {
+  cursor: default;
 }
 
 /* Simulation Status Indicators */
