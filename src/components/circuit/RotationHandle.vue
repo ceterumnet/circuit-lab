@@ -110,37 +110,53 @@
       }"
     />
 
-    <!-- Rotation handle circle -->
-    <v-circle
+    <!-- Rotation handle group -->
+    <v-group
       :config="{
         x: handlePosition.x,
         y: handlePosition.y,
-        radius: isDragging ? 10 : 8,
-        fill: isDragging ? '#0056b3' : '#007bff',
-        stroke: '#ffffff',
-        strokeWidth: 2,
         draggable: true,
         name: 'rotation-handle',
       }"
       @dragstart="handleDragStart"
       @dragmove="handleDragMove"
       @dragend="handleDragEnd"
+      @mousedown="handleMouseDown"
+      @click="handleClick"
       @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
-    />
+      :scaleX="isDragging ? 1.2 : 1"
+      :scaleY="isDragging ? 1.2 : 1"
+    >
+      <!-- Rotation handle circle -->
+      <v-circle
+        :config="{
+          x: 0,
+          y: 0,
+          radius: 8,
+          fill: isDragging ? '#0056b3' : '#007bff',
+          stroke: '#ffffff',
+          strokeWidth: 2,
+        }"
+      />
 
-    <!-- Rotation handle icon (rotate symbol) -->
-    <v-text
-      :config="{
-        x: handlePosition.x - 6,
-        y: handlePosition.y - 6,
-        text: '↻',
-        fontSize: isDragging ? 14 : 12,
-        fill: '#ffffff',
-        fontFamily: 'Arial, sans-serif',
-        listening: false,
-      }"
-    />
+      <!-- Rotation handle icon (rotate symbol) -->
+      <v-path
+        :config="{
+          x: -6.9,
+          y: -7.2,
+          data: 'M11.5 20.5C6.80558 20.5 3 16.6944 3 12C3 7.30558 6.80558 3.5 11.5 3.5C16.1944 3.5 20 7.30558 20 12C20 13.5433 19.5887 14.9905 18.8698 16.238M22.5 15L18.8698 16.238M17.1747 12.3832L18.5289 16.3542L18.8698 16.238',
+          stroke: '#ffffff',
+          strokeWidth: isDragging ? 1.5 : 1.2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          fill: '',
+          scaleX: 0.6,
+          scaleY: 0.6,
+          listening: false,
+        }"
+      />
+    </v-group>
   </v-group>
 </template>
 
@@ -206,6 +222,9 @@ const initialHandleAngle = ref(0) // Angle of handle relative to component rotat
 const hasStartedRotating = ref(false)
 
 function handleDragStart(e: KonvaEventObject<DragEvent>) {
+  e.evt.preventDefault()
+  e.evt.stopPropagation()
+
   isDragging.value = true
   initialRotation.value = props.component.rotation
   hasStartedRotating.value = false
@@ -230,6 +249,9 @@ function handleDragStart(e: KonvaEventObject<DragEvent>) {
 }
 
 function handleDragMove(e: KonvaEventObject<DragEvent>) {
+  e.evt.preventDefault()
+  e.evt.stopPropagation()
+
   if (!isDragging.value) return
 
   const stage = e.target.getStage()
@@ -279,7 +301,10 @@ function handleDragMove(e: KonvaEventObject<DragEvent>) {
   emit('rotate', props.component.id, normalizedAngle)
 }
 
-function handleDragEnd() {
+function handleDragEnd(e: KonvaEventObject<DragEvent>) {
+  e.evt.preventDefault()
+  e.evt.stopPropagation()
+
   if (!isDragging.value) return
 
   // Only snap if we actually started rotating
@@ -300,6 +325,16 @@ function handleDragEnd() {
   initialGrabAngle.value = 0
   initialHandleAngle.value = 0
   hasStartedRotating.value = false
+}
+
+function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
+  e.evt.preventDefault()
+  e.evt.stopPropagation()
+}
+
+function handleClick(e: KonvaEventObject<MouseEvent>) {
+  e.evt.preventDefault()
+  e.evt.stopPropagation()
 }
 
 function handleMouseEnter(e: KonvaEventObject<MouseEvent>) {
