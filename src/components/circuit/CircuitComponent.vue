@@ -13,6 +13,32 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- Capacitor component -->
+    <capacitor-component
+      v-else-if="component.type === 'capacitor'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
+    <!-- Inductor component -->
+    <inductor-component
+      v-else-if="component.type === 'inductor'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Voltage source component -->
     <voltage-source-component
       v-else-if="component.type === 'voltage_source'"
@@ -149,6 +175,8 @@
 import { computed } from 'vue'
 import type { CircuitComponent, Position } from '@/types/components'
 import ResistorComponent from '@/components/circuit/components/ResistorComponent.vue'
+import CapacitorComponent from '@/components/circuit/components/CapacitorComponent.vue'
+import InductorComponent from '@/components/circuit/components/InductorComponent.vue'
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import CurrentSourceComponent from '@/components/circuit/components/CurrentSourceComponent.vue'
 import SwitchComponent from '@/components/circuit/components/SwitchComponent.vue'

@@ -12,6 +12,8 @@ export { NodeStamper } from './linear/NodeStamper'
 export { SwitchStamper } from './linear/SwitchStamper'
 export { VariableResistorStamper } from './linear/VariableResistorStamper'
 export { PotentiometerStamper } from './linear/PotentiometerStamper'
+export { CapacitorStamper } from './linear/CapacitorStamper'
+export { InductorStamper } from './linear/InductorStamper'
 
 // Non-linear stampers and utilities
 export { DiodeCharacteristic } from './nonlinear/DiodeCharacteristic'

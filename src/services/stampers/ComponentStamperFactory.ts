@@ -11,6 +11,8 @@ import { NodeStamper } from './linear/NodeStamper'
 import { SwitchStamper } from './linear/SwitchStamper'
 import { VariableResistorStamper } from './linear/VariableResistorStamper'
 import { PotentiometerStamper } from './linear/PotentiometerStamper'
+import { CapacitorStamper } from './linear/CapacitorStamper'
+import { InductorStamper } from './linear/InductorStamper'
 
 // Non-linear stampers
 import { DiodeStamper } from './nonlinear/DiodeStamper'
@@ -28,6 +30,8 @@ export class ComponentStamperFactory {
     ['switch', SwitchStamper],
     ['variable_resistor', VariableResistorStamper],
     ['potentiometer', PotentiometerStamper],
+    ['capacitor', CapacitorStamper],
+    ['inductor', InductorStamper],
     ['diode', DiodeStamper],
     ['led', LEDStamper],
     ['ground', GroundStamper],

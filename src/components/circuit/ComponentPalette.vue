@@ -64,6 +64,8 @@ import LEDSymbol from './symbols/LEDSymbol.vue'
 import GroundSymbol from './symbols/GroundSymbol.vue'
 import NodeSymbol from './symbols/NodeSymbol.vue'
 import WireSymbol from './symbols/WireSymbol.vue'
+import CapacitorSymbol from './symbols/CapacitorSymbol.vue'
+import InductorSymbol from './symbols/InductorSymbol.vue'
 import ProbeSymbol from './symbols/ProbeSymbol.vue'
 
 const interactionStore = useInteractionStore()
@@ -112,6 +114,8 @@ function getIconComponent(iconName?: string) {
     GroundSymbol: GroundSymbol,
     NodeSymbol: NodeSymbol,
     WireSymbol: WireSymbol,
+    CapacitorSymbol: CapacitorSymbol,
+    InductorSymbol: InductorSymbol,
   }
 
   return iconMap[iconName as keyof typeof iconMap] || NodeSymbol
@@ -123,6 +127,8 @@ function getComponentIconColor(componentType: string) {
     resistor: 'text-purple-600',
     'variable-resistor': 'text-purple-600',
     potentiometer: 'text-purple-600',
+    capacitor: 'text-purple-600',
+    inductor: 'text-purple-600',
     'voltage-source': 'text-red-600',
     'current-source': 'text-blue-600',
     diode: 'text-orange-600',

@@ -173,6 +173,36 @@ const ledDefinition: ComponentDefinition = {
   icon: 'LEDSymbol', // Professional LED symbol with light rays
 }
 
+const capacitorDefinition: ComponentDefinition = {
+  type: 'capacitor',
+  name: 'Capacitor',
+  category: 'passive',
+  complexity: 'simple',
+  terminals: [
+    { id: 'terminal1', position: { x: -30, y: 0 }, type: 'io' },
+    { id: 'terminal2', position: { x: 30, y: 0 }, type: 'io' },
+  ],
+  properties: [
+    { key: 'capacitance', type: 'number', label: 'Capacitance', unit: 'F', default: 1e-6 },
+  ],
+  icon: 'CapacitorSymbol', // Professional parallel plates capacitor symbol
+}
+
+const inductorDefinition: ComponentDefinition = {
+  type: 'inductor',
+  name: 'Inductor',
+  category: 'passive',
+  complexity: 'simple',
+  terminals: [
+    { id: 'terminal1', position: { x: -30, y: 0 }, type: 'io' },
+    { id: 'terminal2', position: { x: 30, y: 0 }, type: 'io' },
+  ],
+  properties: [
+    { key: 'inductance', type: 'number', label: 'Inductance', unit: 'H', default: 1e-3 },
+  ],
+  icon: 'InductorSymbol', // Professional coil inductor symbol
+}
+
 // Register all components
 ComponentRegistry.set('resistor', resistorDefinition)
 ComponentRegistry.set('voltage_source', voltageSourceDefinition)
@@ -185,6 +215,8 @@ ComponentRegistry.set('potentiometer', potentiometerDefinition)
 ComponentRegistry.set('diode', diodeDefinition)
 ComponentRegistry.set('led', ledDefinition)
 ComponentRegistry.set('wire', wireDefinition)
+ComponentRegistry.set('capacitor', capacitorDefinition)
+ComponentRegistry.set('inductor', inductorDefinition)
 
 // Export definitions for backwards compatibility
 export {
@@ -199,6 +231,8 @@ export {
   potentiometerDefinition,
   diodeDefinition,
   ledDefinition,
+  capacitorDefinition,
+  inductorDefinition,
 }
 
 // Utility functions
