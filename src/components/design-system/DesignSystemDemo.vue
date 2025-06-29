@@ -2520,6 +2520,293 @@
               </div>
             </section>
 
+            <!-- Professional Oscilloscope Demo -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">
+                Professional Digital Oscilloscope
+              </h3>
+              <p class="text-slate-600 mb-6">
+                Advanced real-time waveform visualization with professional instrumentation
+                controls, demonstrating complex signal analysis capabilities for electronics
+                education.
+              </p>
+
+              <!-- Oscilloscope Display -->
+              <div class="oscilloscope-container">
+                <!-- Oscilloscope Screen -->
+                <div class="oscilloscope-screen">
+                  <div class="scope-header">
+                    <div class="scope-title">Circuit Lab Oscilloscope DSO-2000</div>
+                    <div class="scope-status">
+                      <div class="flex items-center gap-4">
+                        <div class="acquisition-status" :class="{ running: isOscilloscopeRunning }">
+                          <div
+                            class="w-2 h-2 rounded-full"
+                            :class="
+                              isOscilloscopeRunning ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                            "
+                          ></div>
+                          {{ isOscilloscopeRunning ? 'RUN' : 'STOP' }}
+                        </div>
+                        <div class="trigger-status">
+                          <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                          TRIG
+                        </div>
+                        <div class="sample-rate">{{ currentSampleRate }} MS/s</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Waveform Display Area -->
+                  <div class="scope-display">
+                    <div class="oscilloscope-chart">
+                      <AnalysisChart
+                        :datasets="oscilloscopeData"
+                        x-label="Time"
+                        y-label="Amplitude"
+                        title=""
+                        :point-radius="0"
+                        :point-hover-radius="0"
+                        :point-border-width="0"
+                        :dark-theme="true"
+                        class="scope-chart-inner"
+                      />
+                    </div>
+
+                    <!-- Channel Labels Overlay -->
+                    <div class="channel-labels">
+                      <div
+                        v-for="channel in enabledChannels"
+                        :key="channel.id"
+                        class="channel-label"
+                        :style="{ color: channel.color }"
+                      >
+                        {{ channel.id }}: {{ channel.voltage_scale }}
+                      </div>
+                    </div>
+
+                    <!-- Measurement Cursors -->
+                    <div class="measurement-cursors" v-if="cursorsEnabled">
+                      <div class="cursor-info">
+                        <div class="text-xs bg-black bg-opacity-75 text-white px-2 py-1 rounded">
+                          ΔT: {{ timeDelta.toFixed(2) }}μs | ΔV: {{ voltageDelta.toFixed(2) }}V
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Trigger Indicator -->
+                  <div class="trigger-indicator">
+                    <div class="trigger-level" :style="{ top: `${triggerPosition}%` }">
+                      <div class="trigger-arrow">▶</div>
+                      <div class="trigger-line"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="oscilloscope-controls">
+                  <!-- Acquisition Controls -->
+                  <div class="control-section">
+                    <h4 class="control-title">Acquisition</h4>
+                    <div class="control-buttons">
+                      <button
+                        class="scope-button primary"
+                        :class="{ active: isOscilloscopeRunning }"
+                        @click="toggleOscilloscope"
+                      >
+                        {{ isOscilloscopeRunning ? 'STOP' : 'RUN' }}
+                      </button>
+                      <button class="scope-button secondary" @click="singleTrigger">SINGLE</button>
+                      <button class="scope-button secondary" @click="autoScale">AUTO</button>
+                    </div>
+                  </div>
+
+                  <!-- Timebase Controls -->
+                  <div class="control-section">
+                    <h4 class="control-title">Timebase</h4>
+                    <div class="control-group">
+                      <label class="control-label">Time/Div</label>
+                      <select class="scope-select" v-model="timebaseScale" @change="updateTimebase">
+                        <option value="1us">1μs/div</option>
+                        <option value="10us">10μs/div</option>
+                        <option value="100us">100μs/div</option>
+                        <option value="1ms">1ms/div</option>
+                        <option value="10ms">10ms/div</option>
+                        <option value="100ms">100ms/div</option>
+                        <option value="1s">1s/div</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Channel 1 Controls -->
+                  <div class="control-section">
+                    <h4 class="control-title" style="color: #3b82f6">Channel 1</h4>
+                    <div class="control-group">
+                      <label class="control-label">
+                        <input
+                          type="checkbox"
+                          v-model="channels.ch1.enabled"
+                          @change="updateChannels"
+                        />
+                        Enable
+                      </label>
+                      <label class="control-label">Volts/Div</label>
+                      <select class="scope-select" v-model="channels.ch1.voltage_scale">
+                        <option value="10mV">10mV/div</option>
+                        <option value="50mV">50mV/div</option>
+                        <option value="100mV">100mV/div</option>
+                        <option value="500mV">500mV/div</option>
+                        <option value="1V">1V/div</option>
+                        <option value="2V">2V/div</option>
+                        <option value="5V">5V/div</option>
+                      </select>
+                    </div>
+                    <div class="control-group">
+                      <label class="control-label">Signal Type</label>
+                      <select
+                        class="scope-select"
+                        v-model="channels.ch1.signal_type"
+                        @change="updateWaveforms"
+                      >
+                        <option value="sine">Sine Wave</option>
+                        <option value="square">Square Wave</option>
+                        <option value="triangle">Triangle Wave</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="pwm">PWM Signal</option>
+                        <option value="noise">White Noise</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Channel 2 Controls -->
+                  <div class="control-section">
+                    <h4 class="control-title" style="color: #f59e0b">Channel 2</h4>
+                    <div class="control-group">
+                      <label class="control-label">
+                        <input
+                          type="checkbox"
+                          v-model="channels.ch2.enabled"
+                          @change="updateChannels"
+                        />
+                        Enable
+                      </label>
+                      <label class="control-label">Volts/Div</label>
+                      <select class="scope-select" v-model="channels.ch2.voltage_scale">
+                        <option value="10mV">10mV/div</option>
+                        <option value="50mV">50mV/div</option>
+                        <option value="100mV">100mV/div</option>
+                        <option value="500mV">500mV/div</option>
+                        <option value="1V">1V/div</option>
+                        <option value="2V">2V/div</option>
+                        <option value="5V">5V/div</option>
+                      </select>
+                    </div>
+                    <div class="control-group">
+                      <label class="control-label">Signal Type</label>
+                      <select
+                        class="scope-select"
+                        v-model="channels.ch2.signal_type"
+                        @change="updateWaveforms"
+                      >
+                        <option value="sine">Sine Wave</option>
+                        <option value="square">Square Wave</option>
+                        <option value="triangle">Triangle Wave</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="pwm">PWM Signal</option>
+                        <option value="noise">White Noise</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Trigger Controls -->
+                  <div class="control-section">
+                    <h4 class="control-title">Trigger</h4>
+                    <div class="control-group">
+                      <label class="control-label">Source</label>
+                      <select class="scope-select" v-model="triggerSource">
+                        <option value="ch1">CH1</option>
+                        <option value="ch2">CH2</option>
+                        <option value="ext">External</option>
+                        <option value="line">Line</option>
+                      </select>
+                    </div>
+                    <div class="control-group">
+                      <label class="control-label">Slope</label>
+                      <select class="scope-select" v-model="triggerSlope">
+                        <option value="rising">Rising ↗</option>
+                        <option value="falling">Falling ↘</option>
+                      </select>
+                    </div>
+                    <div class="control-group">
+                      <label class="control-label">Level</label>
+                      <input
+                        type="range"
+                        class="scope-range"
+                        v-model="triggerLevel"
+                        min="-5"
+                        max="5"
+                        step="0.1"
+                        @input="updateTriggerPosition"
+                      />
+                      <span class="range-value">{{ triggerLevel }}V</span>
+                    </div>
+                  </div>
+
+                  <!-- Measurement Tools -->
+                  <div class="control-section">
+                    <h4 class="control-title">Measurements</h4>
+                    <div class="control-group">
+                      <label class="control-label">
+                        <input type="checkbox" v-model="cursorsEnabled" />
+                        Cursors
+                      </label>
+                      <button class="scope-button secondary btn-sm" @click="clearMeasurements">
+                        Clear
+                      </button>
+                    </div>
+                    <div class="measurement-display">
+                      <div class="measurement-item">
+                        <span class="measurement-label">Freq:</span>
+                        <span class="measurement-value"
+                          >{{ measuredFrequency.toFixed(1) }} kHz</span
+                        >
+                      </div>
+                      <div class="measurement-item">
+                        <span class="measurement-label">Vpp:</span>
+                        <span class="measurement-value">{{ measuredVpp.toFixed(2) }} V</span>
+                      </div>
+                      <div class="measurement-item">
+                        <span class="measurement-label">Vrms:</span>
+                        <span class="measurement-value">{{ measuredVrms.toFixed(2) }} V</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Educational Circuit Examples -->
+              <div class="mt-6 p-4 bg-slate-50 rounded-lg">
+                <h5 class="text-sm font-medium text-slate-700 mb-3">
+                  Educational Circuit Analysis Examples
+                </h5>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="example-circuit" @click="loadExample('rc_charging')">
+                    <h6 class="font-medium text-blue-600">RC Charging Circuit</h6>
+                    <p class="text-xs text-slate-600">Exponential rise and fall characteristics</p>
+                  </div>
+                  <div class="example-circuit" @click="loadExample('filter_response')">
+                    <h6 class="font-medium text-green-600">Low-Pass Filter</h6>
+                    <p class="text-xs text-slate-600">Input vs output frequency response</p>
+                  </div>
+                  <div class="example-circuit" @click="loadExample('pwm_motor')">
+                    <h6 class="font-medium text-purple-600">PWM Motor Control</h6>
+                    <p class="text-xs text-slate-600">Variable duty cycle demonstration</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <!-- Implementation Examples -->
             <section class="bg-white rounded-lg border border-slate-200 p-6">
               <h3 class="text-xl font-semibold text-slate-900 mb-4">Implementation Examples</h3>
@@ -2689,6 +2976,417 @@ const chartDatasets = [
     url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'%3e%3c/circle%3e%3cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'%3e%3c/path%3e%3cpath d='M12 17h.01'%3e%3c/path%3e%3c/svg%3e")
       8 8,
     help;
+}
+
+/* Professional Oscilloscope Styling */
+.oscilloscope-container {
+  display: flex;
+  gap: 1.5rem;
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid #4b5563;
+}
+
+.oscilloscope-screen {
+  flex: 2;
+  background: #000000;
+  border-radius: 0.5rem;
+  border: 2px solid #6b7280;
+  position: relative;
+  min-height: 400px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.scope-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(90deg, #374151 0%, #4b5563 100%);
+  border-bottom: 1px solid #6b7280;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+
+.scope-title {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+}
+
+.scope-status {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.acquisition-status,
+.trigger-status {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #cbd5e0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.acquisition-status.running {
+  color: #68d391;
+}
+
+.sample-rate {
+  font-size: 0.75rem;
+  color: #a0aec0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.scope-display {
+  position: relative;
+  height: 300px;
+  background: #000000;
+  border-radius: 0 0 0.375rem 0.375rem;
+  overflow: hidden;
+  border-top: 1px solid #374151;
+}
+
+/* Professional oscilloscope display container with grid */
+.oscilloscope-chart {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.15) 1px, transparent 1px),
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size:
+    40px 30px,
+    40px 30px,
+    8px 6px,
+    8px 6px;
+  background-position:
+    -1px -1px,
+    -1px -1px,
+    -1px -1px,
+    -1px -1px;
+}
+
+/* Force the Chart.js canvas to have black background */
+.scope-chart-inner {
+  width: 100% !important;
+  height: 100% !important;
+  background: #000000 !important;
+}
+
+/* Override Chart.js default styling for dark theme */
+.scope-chart-inner canvas {
+  background: #000000 !important;
+}
+
+/* Hide point markers for oscilloscope traces */
+.scope-chart-inner .chartjs-point {
+  display: none !important;
+}
+
+/* Ensure smooth continuous lines without point markers */
+.scope-chart-inner canvas .chartjs-dataset-0 .chartjs-point,
+.scope-chart-inner canvas .chartjs-dataset-1 .chartjs-point {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure chart text is visible on black background */
+.scope-chart-inner .chartjs-tooltip {
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: #ffffff !important;
+}
+
+.scope-chart-inner .chartjs-tooltip-key {
+  border-color: #ffffff !important;
+}
+
+.channel-labels {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10;
+}
+
+.channel-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+.measurement-cursors {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
+.cursor-info {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.trigger-indicator {
+  position: absolute;
+  right: 0;
+  top: 2.5rem;
+  bottom: 0;
+  width: 1rem;
+  pointer-events: none;
+}
+
+.trigger-level {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  transition: top 0.2s ease;
+}
+
+.trigger-arrow {
+  color: #fbbf24;
+  font-size: 0.75rem;
+  filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.8));
+}
+
+.trigger-line {
+  width: 100%;
+  height: 1px;
+  background: #fbbf24;
+  box-shadow: 0 0 4px rgba(251, 191, 36, 0.6);
+}
+
+.oscilloscope-controls {
+  flex: 1;
+  background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  min-width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.control-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #6b7280;
+}
+
+.control-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.control-title {
+  color: #f3f4f6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.scope-button {
+  background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+  color: #f9fafb;
+  border: 1px solid #6b7280;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.scope-button:hover {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+  border-color: #9ca3af;
+}
+
+.scope-button.primary {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  border-color: #ef4444;
+}
+
+.scope-button.primary:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+}
+
+.scope-button.primary.active {
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  border-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.scope-button.secondary {
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  border-color: #4b5563;
+}
+
+.scope-button.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.625rem;
+}
+
+.control-group {
+  margin-bottom: 0.75rem;
+}
+
+.control-label {
+  display: block;
+  color: #d1d5db;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.control-label input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #6b7280;
+  background: #374151;
+}
+
+.scope-select {
+  width: 100%;
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  color: #f9fafb;
+  border: 1px solid #4b5563;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.scope-select:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+}
+
+.scope-select option {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0.375rem 0.5rem;
+}
+
+.scope-range {
+  width: 100%;
+  height: 0.25rem;
+  background: #4b5563;
+  border-radius: 0.125rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.scope-range::-webkit-slider-thumb {
+  width: 1rem;
+  height: 1rem;
+  background: #60a5fa;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-appearance: none;
+  box-shadow: 0 0 4px rgba(96, 165, 250, 0.6);
+}
+
+.range-value {
+  color: #fbbf24;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: 0.5rem;
+}
+
+.measurement-display {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.measurement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.measurement-item:last-child {
+  margin-bottom: 0;
+}
+
+.measurement-label {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.measurement-value {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.example-circuit {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.example-circuit:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Scrollbar styling for control panel */
+.oscilloscope-controls::-webkit-scrollbar {
+  width: 0.375rem;
+}
+
+.oscilloscope-controls::-webkit-scrollbar-track {
+  background: #374151;
+  border-radius: 0.1875rem;
+}
+
+.oscilloscope-controls::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 0.1875rem;
+}
+
+.oscilloscope-controls::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 </style>
 
@@ -3079,7 +3777,346 @@ const animateLiveSweep = () => {
 
 onMounted(() => {
   animateLiveSweep()
+  startOscilloscopeAnimation()
 })
+
+// Oscilloscope System Implementation
+const isOscilloscopeRunning = ref(true)
+const currentSampleRate = ref(250) // MS/s
+const timebaseScale = ref('100us')
+const triggerSource = ref('ch1')
+const triggerSlope = ref('rising')
+const triggerLevel = ref(0.0)
+const triggerPosition = ref(50) // percentage from top
+const cursorsEnabled = ref(false)
+const timeDelta = ref(5.2)
+const voltageDelta = ref(2.1)
+
+// Oscilloscope Channels Configuration
+const channels = ref({
+  ch1: {
+    enabled: true,
+    voltage_scale: '1V',
+    signal_type: 'sine',
+    frequency: 10, // kHz
+    amplitude: 2.5, // V
+    offset: 0.0,
+    color: '#3B82F6', // Professional blue
+  },
+  ch2: {
+    enabled: true,
+    voltage_scale: '1V',
+    signal_type: 'square',
+    frequency: 5, // kHz
+    amplitude: 1.8, // V
+    offset: 0.5,
+    color: '#F59E0B', // Professional amber/orange
+  },
+})
+
+// Computed Properties
+const enabledChannels = computed(() => {
+  const enabled = []
+  if (channels.value.ch1.enabled) {
+    enabled.push({
+      id: 'CH1',
+      ...channels.value.ch1,
+      voltage_scale: channels.value.ch1.voltage_scale,
+    })
+  }
+  if (channels.value.ch2.enabled) {
+    enabled.push({
+      id: 'CH2',
+      ...channels.value.ch2,
+      voltage_scale: channels.value.ch2.voltage_scale,
+    })
+  }
+  return enabled
+})
+
+// Waveform Generation Functions
+const generateSineWave = (
+  frequency: number,
+  amplitude: number,
+  offset: number,
+  points: number = 500,
+) => {
+  const data = []
+  const timeStep = 0.0001 // 100μs timebase
+  for (let i = 0; i < points; i++) {
+    const t = i * timeStep
+    const y = amplitude * Math.sin(2 * Math.PI * frequency * 1000 * t) + offset
+    data.push({ x: t * 1000000, y }) // Convert to microseconds
+  }
+  return data
+}
+
+const generateSquareWave = (
+  frequency: number,
+  amplitude: number,
+  offset: number,
+  points: number = 500,
+) => {
+  const data = []
+  const timeStep = 0.0001
+  for (let i = 0; i < points; i++) {
+    const t = i * timeStep
+    const y = amplitude * Math.sign(Math.sin(2 * Math.PI * frequency * 1000 * t)) + offset
+    data.push({ x: t * 1000000, y })
+  }
+  return data
+}
+
+const generateTriangleWave = (
+  frequency: number,
+  amplitude: number,
+  offset: number,
+  points: number = 500,
+) => {
+  const data = []
+  const timeStep = 0.0001
+  for (let i = 0; i < points; i++) {
+    const t = i * timeStep
+    const phase = (2 * Math.PI * frequency * 1000 * t) % (2 * Math.PI)
+    let y
+    if (phase < Math.PI) {
+      y = amplitude * ((2 * phase) / Math.PI - 1)
+    } else {
+      y = amplitude * (3 - (2 * phase) / Math.PI)
+    }
+    data.push({ x: t * 1000000, y: y + offset })
+  }
+  return data
+}
+
+const generateSawtoothWave = (
+  frequency: number,
+  amplitude: number,
+  offset: number,
+  points: number = 500,
+) => {
+  const data = []
+  const timeStep = 0.0001
+  for (let i = 0; i < points; i++) {
+    const t = i * timeStep
+    const phase = (2 * Math.PI * frequency * 1000 * t) % (2 * Math.PI)
+    const y = amplitude * (phase / Math.PI - 1) + offset
+    data.push({ x: t * 1000000, y })
+  }
+  return data
+}
+
+const generatePWMWave = (
+  frequency: number,
+  amplitude: number,
+  offset: number,
+  dutyCycle: number = 0.3,
+  points: number = 500,
+) => {
+  const data = []
+  const timeStep = 0.0001
+  for (let i = 0; i < points; i++) {
+    const t = i * timeStep
+    const phase = (frequency * 1000 * t) % 1
+    const y = (phase < dutyCycle ? amplitude : 0) + offset
+    data.push({ x: t * 1000000, y })
+  }
+  return data
+}
+
+const generateWhiteNoise = (amplitude: number, offset: number, points: number = 500) => {
+  const data = []
+  const timeStep = 0.0001
+  for (let i = 0; i < points; i++) {
+    const t = i * timeStep
+    const y = amplitude * (Math.random() - 0.5) * 2 + offset
+    data.push({ x: t * 1000000, y })
+  }
+  return data
+}
+
+// Channel interface for type safety
+interface OscilloscopeChannel {
+  enabled: boolean
+  voltage_scale: string
+  signal_type: string
+  frequency: number
+  amplitude: number
+  offset: number
+  color: string
+}
+
+// Generate waveform data based on channel settings
+const generateWaveformData = (channel: OscilloscopeChannel) => {
+  const { signal_type, frequency, amplitude, offset } = channel
+
+  switch (signal_type) {
+    case 'sine':
+      return generateSineWave(frequency, amplitude, offset)
+    case 'square':
+      return generateSquareWave(frequency, amplitude, offset)
+    case 'triangle':
+      return generateTriangleWave(frequency, amplitude, offset)
+    case 'sawtooth':
+      return generateSawtoothWave(frequency, amplitude, offset)
+    case 'pwm':
+      return generatePWMWave(frequency, amplitude, offset)
+    case 'noise':
+      return generateWhiteNoise(amplitude, offset)
+    default:
+      return generateSineWave(frequency, amplitude, offset)
+  }
+}
+
+// Oscilloscope Data for Chart Display
+const oscilloscopeData = computed(() => {
+  const datasets = []
+
+  if (channels.value.ch1.enabled) {
+    datasets.push({
+      label: 'CH1',
+      unit: 'V',
+      color: channels.value.ch1.color,
+      data: generateWaveformData(channels.value.ch1),
+      pointRadius: 0, // No point markers
+      pointHoverRadius: 0, // No hover points
+      pointBorderWidth: 0, // No point borders
+      pointHitRadius: 0, // No hit detection area
+      tension: 0.1, // Smooth line curves
+      fill: false, // No area fill
+    })
+  }
+
+  if (channels.value.ch2.enabled) {
+    datasets.push({
+      label: 'CH2',
+      unit: 'V',
+      color: channels.value.ch2.color,
+      data: generateWaveformData(channels.value.ch2),
+      pointRadius: 0, // No point markers
+      pointHoverRadius: 0, // No hover points
+      pointBorderWidth: 0, // No point borders
+      pointHitRadius: 0, // No hit detection area
+      tension: 0.1, // Smooth line curves
+      fill: false, // No area fill
+    })
+  }
+
+  return datasets
+})
+
+// Measurement Calculations
+const measuredFrequency = computed(() => {
+  return channels.value.ch1.frequency || 10
+})
+
+const measuredVpp = computed(() => {
+  return channels.value.ch1.amplitude * 2 || 5.0
+})
+
+const measuredVrms = computed(() => {
+  return channels.value.ch1.amplitude / Math.sqrt(2) || 1.77
+})
+
+// Oscilloscope Control Functions
+const toggleOscilloscope = () => {
+  isOscilloscopeRunning.value = !isOscilloscopeRunning.value
+}
+
+const singleTrigger = () => {
+  // Trigger single acquisition
+  isOscilloscopeRunning.value = false
+  setTimeout(() => {
+    isOscilloscopeRunning.value = true
+    setTimeout(() => {
+      isOscilloscopeRunning.value = false
+    }, 100)
+  }, 50)
+}
+
+const autoScale = () => {
+  // Auto-scale channels to optimal viewing
+  channels.value.ch1.amplitude = 2.0
+  channels.value.ch2.amplitude = 1.5
+  triggerLevel.value = 0.0
+}
+
+const updateTimebase = () => {
+  // Update timebase scaling - would affect data generation in real implementation
+  console.log('Timebase updated to:', timebaseScale.value)
+}
+
+const updateChannels = () => {
+  // Channel enable/disable - triggers reactive updates automatically
+}
+
+const updateWaveforms = () => {
+  // Signal type changes - triggers reactive updates automatically
+}
+
+const updateTriggerPosition = () => {
+  // Convert trigger level to position percentage (assuming ±5V range)
+  triggerPosition.value = 50 - (triggerLevel.value / 5.0) * 40
+}
+
+const clearMeasurements = () => {
+  cursorsEnabled.value = false
+  timeDelta.value = 0
+  voltageDelta.value = 0
+}
+
+const loadExample = (exampleType: string) => {
+  switch (exampleType) {
+    case 'rc_charging':
+      channels.value.ch1.signal_type = 'square'
+      channels.value.ch1.frequency = 1
+      channels.value.ch1.amplitude = 5.0
+      channels.value.ch2.signal_type = 'sine' // Represents exponential, but sine for demo
+      channels.value.ch2.frequency = 1
+      channels.value.ch2.amplitude = 3.16
+      timebaseScale.value = '1ms'
+      break
+    case 'filter_response':
+      channels.value.ch1.signal_type = 'square'
+      channels.value.ch1.frequency = 50
+      channels.value.ch1.amplitude = 3.0
+      channels.value.ch2.signal_type = 'sine'
+      channels.value.ch2.frequency = 50
+      channels.value.ch2.amplitude = 1.5
+      timebaseScale.value = '10us'
+      break
+    case 'pwm_motor':
+      channels.value.ch1.signal_type = 'pwm'
+      channels.value.ch1.frequency = 20
+      channels.value.ch1.amplitude = 12.0
+      channels.value.ch2.signal_type = 'triangle'
+      channels.value.ch2.frequency = 20
+      channels.value.ch2.amplitude = 8.0
+      timebaseScale.value = '100us'
+      break
+  }
+}
+
+// Animation System
+const startOscilloscopeAnimation = () => {
+  // Simulate real-time waveform updates
+  setInterval(() => {
+    if (isOscilloscopeRunning.value) {
+      // Slight frequency variations to simulate real signals
+      channels.value.ch1.frequency += (Math.random() - 0.5) * 0.1
+      channels.value.ch2.frequency += (Math.random() - 0.5) * 0.1
+
+      // Update sample rate display
+      currentSampleRate.value = 250 + Math.floor(Math.random() * 50)
+
+      // Update cursor measurements
+      if (cursorsEnabled.value) {
+        timeDelta.value = 3.2 + Math.random() * 4
+        voltageDelta.value = 1.5 + Math.random() * 2
+      }
+    }
+  }, 100) // 10fps update rate
+}
 
 const primaryColors = [
   { name: 'primary-400', hex: '#60a5fa', token: '--color-primary-400', class: 'bg-blue-400' },

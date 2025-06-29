@@ -70,10 +70,20 @@ interface Props {
   xLabel: string
   yLabel: string
   title?: string
+  pointRadius?: number
+  pointHoverRadius?: number
+  pointBorderWidth?: number
+  pointBorderColor?: string
+  darkTheme?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: 'Analysis Results',
+  pointRadius: 4,
+  pointHoverRadius: 6,
+  pointBorderWidth: 2,
+  pointBorderColor: '#ffffff',
+  darkTheme: false,
 })
 
 const chartCanvas = ref<HTMLCanvasElement>()
@@ -105,11 +115,11 @@ function createChart() {
     borderColor: dataset.color || chartColors[index % chartColors.length],
     backgroundColor: (dataset.color || chartColors[index % chartColors.length]) + '20',
     borderWidth: 2,
-    pointRadius: 4,
-    pointHoverRadius: 6,
+    pointRadius: props.pointRadius,
+    pointHoverRadius: props.pointHoverRadius,
     pointBackgroundColor: dataset.color || chartColors[index % chartColors.length],
-    pointBorderColor: '#ffffff',
-    pointBorderWidth: 2,
+    pointBorderColor: props.pointBorderColor,
+    pointBorderWidth: props.pointBorderWidth,
     fill: false,
     tension: 0.1,
   }))
@@ -134,7 +144,7 @@ function createChart() {
             size: 16,
             weight: 'bold',
           },
-          color: '#374151',
+          color: props.darkTheme ? '#ffffff' : '#374151',
         },
         legend: {
           display: props.datasets.length > 1,
@@ -145,6 +155,7 @@ function createChart() {
             font: {
               size: 12,
             },
+            color: props.darkTheme ? '#ffffff' : '#374151',
           },
         },
         tooltip: {
@@ -182,14 +193,14 @@ function createChart() {
               size: 14,
               weight: 'bold',
             },
-            color: '#374151',
+            color: props.darkTheme ? '#ffffff' : '#374151',
           },
           grid: {
-            color: '#e5e7eb',
+            color: props.darkTheme ? 'rgba(148, 163, 184, 0.15)' : '#e5e7eb',
             lineWidth: 1,
           },
           ticks: {
-            color: '#6b7280',
+            color: props.darkTheme ? '#ffffff' : '#6b7280',
             font: {
               size: 11,
             },
@@ -208,14 +219,14 @@ function createChart() {
               size: 14,
               weight: 'bold',
             },
-            color: '#374151',
+            color: props.darkTheme ? '#ffffff' : '#374151',
           },
           grid: {
-            color: '#e5e7eb',
+            color: props.darkTheme ? 'rgba(148, 163, 184, 0.15)' : '#e5e7eb',
             lineWidth: 1,
           },
           ticks: {
-            color: '#6b7280',
+            color: props.darkTheme ? '#ffffff' : '#6b7280',
             font: {
               size: 11,
             },
@@ -263,11 +274,11 @@ function updateChart() {
     borderColor: dataset.color || chartColors[index % chartColors.length],
     backgroundColor: (dataset.color || chartColors[index % chartColors.length]) + '20',
     borderWidth: 2,
-    pointRadius: 4,
-    pointHoverRadius: 6,
+    pointRadius: props.pointRadius,
+    pointHoverRadius: props.pointHoverRadius,
     pointBackgroundColor: dataset.color || chartColors[index % chartColors.length],
-    pointBorderColor: '#ffffff',
-    pointBorderWidth: 2,
+    pointBorderColor: props.pointBorderColor,
+    pointBorderWidth: props.pointBorderWidth,
     fill: false,
     tension: 0.1,
   }))
@@ -332,7 +343,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   position: relative;
-  background: white;
+  background: v-bind('props.darkTheme ? "#000000" : "white"');
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
