@@ -111,13 +111,12 @@
                     'w-full text-left px-3 py-2 rounded-md transition-colors',
                     activeSection === 'guidelines'
                       ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-slate-400 cursor-not-allowed',
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                   ]"
-                  disabled
                 >
                   Design Guidelines
-                  <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded ml-2"
-                    >Future</span
+                  <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded ml-2"
+                    >Complete</span
                   >
                 </button>
               </li>
@@ -2107,6 +2106,182 @@
                     </div>
                   </div>
                 </section>
+              </div>
+            </section>
+          </div>
+
+          <!-- Design Guidelines Section -->
+          <div v-if="activeSection === 'guidelines'" class="space-y-8">
+            <div>
+              <h2 class="text-3xl font-bold text-slate-900 mb-2">Design Guidelines</h2>
+              <p class="text-lg text-slate-600">
+                Bulletproof rules for maintaining design system integrity and preventing breakage in
+                the Circuit Lab professional educational simulator.
+              </p>
+            </div>
+
+            <!-- The Golden Rules -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">
+                🚨 The Golden Rules (NEVER BREAK THESE)
+              </h3>
+              <p class="text-slate-600 mb-6">
+                Five fundamental rules that prevent system breakage and maintain professional
+                consistency.
+              </p>
+
+              <div class="space-y-6">
+                <div
+                  v-for="(rule, index) in goldenRules"
+                  :key="index"
+                  class="p-4 border rounded-lg"
+                  :class="rule.color"
+                >
+                  <div class="flex items-start gap-3">
+                    <div
+                      class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                      :class="rule.iconBg"
+                    >
+                      {{ index + 1 }}
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="font-semibold text-slate-900 mb-2">{{ rule.title }}</h4>
+                      <p class="text-slate-600 mb-3">{{ rule.description }}</p>
+                      <div v-if="rule.items" class="space-y-1">
+                        <div
+                          v-for="item in rule.items"
+                          :key="item"
+                          class="text-sm text-slate-700 flex items-center gap-2"
+                        >
+                          <div class="w-1.5 h-1.5 bg-slate-400 rounded-full"></div>
+                          <span v-html="item"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Emergency Stops -->
+            <section class="bg-red-50 border border-red-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold text-red-900 mb-4">🛑 Emergency Stops</h3>
+              <p class="text-red-700 mb-6">
+                STOP and ASK before doing these actions that could break existing professional
+                implementations.
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-medium text-red-900 mb-3">STOP if you're About To:</h4>
+                  <ul class="space-y-2">
+                    <li
+                      v-for="stop in emergencyStops"
+                      :key="stop"
+                      class="text-sm text-red-700 flex items-start gap-2"
+                    >
+                      <div class="w-4 h-4 text-red-500 mt-0.5">🚫</div>
+                      <span>{{ stop }}</span>
+                    </li>
+                  </ul>
+                </div>
+                <div class="bg-white rounded-lg p-4 border border-red-200">
+                  <h4 class="font-medium text-red-900 mb-3">ASK FIRST Template:</h4>
+                  <div class="bg-red-50 p-3 rounded text-sm font-mono text-red-800">
+                    "I need to [specific task].<br />
+                    I found [existing implementation].<br />
+                    Should I use/modify the existing one or create new?"
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Quality Gates -->
+            <section class="bg-white rounded-lg border border-slate-200 p-6">
+              <h3 class="text-xl font-semibold text-slate-900 mb-4">✅ Quality Gates</h3>
+              <p class="text-slate-600 mb-6">
+                Check these before submitting any UI work to ensure professional consistency.
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Visual Consistency</h4>
+                  <ul class="space-y-2">
+                    <li
+                      v-for="check in visualChecks"
+                      :key="check"
+                      class="text-sm text-slate-600 flex items-start gap-2"
+                    >
+                      <div class="w-4 h-4 text-emerald-500 mt-0.5">✓</div>
+                      <span>{{ check }}</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 class="font-medium text-slate-900 mb-3">Functionality Preservation</h4>
+                  <ul class="space-y-2">
+                    <li
+                      v-for="check in functionalChecks"
+                      :key="check"
+                      class="text-sm text-slate-600 flex items-start gap-2"
+                    >
+                      <div class="w-4 h-4 text-emerald-500 mt-0.5">✓</div>
+                      <span>{{ check }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <!-- Simple Success Formula -->
+            <section class="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold text-emerald-900 mb-4">🎯 Simple Success Formula</h3>
+              <p class="text-emerald-700 mb-6">
+                Follow this 5-step process for every UI task to ensure success.
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div v-for="(step, index) in successSteps" :key="index" class="text-center">
+                  <div
+                    class="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold mb-3 mx-auto"
+                  >
+                    {{ index + 1 }}
+                  </div>
+                  <h4 class="font-medium text-emerald-900 mb-2">{{ step.title }}</h4>
+                  <p class="text-sm text-emerald-700">{{ step.description }}</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Context Reminder -->
+            <section class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 class="text-xl font-semibold text-blue-900 mb-4">🎓 Context Reminder</h3>
+              <p class="text-blue-700 mb-6">
+                Never forget: This is a sophisticated professional educational circuit simulator.
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-medium text-blue-900 mb-3">What We Have:</h4>
+                  <ul class="space-y-2">
+                    <li
+                      v-for="feature in existingFeatures"
+                      :key="feature"
+                      class="text-sm text-blue-700 flex items-start gap-2"
+                    >
+                      <div class="w-4 h-4 text-blue-500 mt-0.5">🏆</div>
+                      <span>{{ feature }}</span>
+                    </li>
+                  </ul>
+                </div>
+                <div class="bg-white rounded-lg p-4 border border-blue-200">
+                  <h4 class="font-medium text-red-900 mb-3">What We're NOT:</h4>
+                  <div class="text-lg text-red-600 font-medium text-center py-4">
+                    Generic web app needing<br />
+                    basic components or<br />
+                    placeholder content
+                  </div>
+                </div>
               </div>
             </section>
           </div>
@@ -4331,5 +4506,123 @@ const circuitCursors = [
       },
     ],
   },
+]
+
+// Guidelines Section Data
+const goldenRules = [
+  {
+    title: 'ALWAYS READ FIRST',
+    description: 'Check essential documentation before starting any UI work.',
+    color: 'bg-blue-50 border-blue-200',
+    iconBg: 'bg-blue-500',
+    items: [
+      '<strong>PLAN.md</strong> - Understand this is a sophisticated circuit simulator',
+      '<strong>src/assets/main-new.css</strong> - All design tokens and component patterns',
+      "<strong>src/components/design-system/DesignSystemDemo.vue</strong> - See what's already built",
+    ],
+  },
+  {
+    title: 'SEARCH BEFORE CREATING',
+    description: 'Always check if professional implementations already exist.',
+    color: 'bg-amber-50 border-amber-200',
+    iconBg: 'bg-amber-500',
+    items: [
+      '<code>ls src/components/circuit/symbols/</code> - 12 professional circuit symbols exist',
+      '<code>ls src/components/circuit/analysis/</code> - Professional Chart.js implementation exists',
+      '<code>ls src/components/circuit/components/</code> - Professional component library exists',
+    ],
+  },
+  {
+    title: 'USE EXISTING PROFESSIONAL IMPLEMENTATIONS',
+    description: 'Leverage the sophisticated components already built.',
+    color: 'bg-emerald-50 border-emerald-200',
+    iconBg: 'bg-emerald-500',
+    items: [
+      '<strong>AnalysisChart.vue</strong> (346 lines) - Real Chart.js charts, not placeholders',
+      '<strong>ProbeComponent.vue</strong> (409 lines) - Professional measurement tools',
+      '<strong>12 IEEE-standard circuit symbols</strong> - Never replace with generic icons',
+      "<strong>MNA simulation engine</strong> (934 lines) - Don't break the physics",
+    ],
+  },
+  {
+    title: 'DESIGN SYSTEM COMPLIANCE',
+    description: 'Follow established patterns and tokens.',
+    color: 'bg-purple-50 border-purple-200',
+    iconBg: 'bg-purple-500',
+    items: [
+      '<strong>Colors:</strong> Only use <code>--color-primary-*</code>, <code>--color-circuit-*</code>, <code>--color-simulation-*</code>',
+      '<strong>Layout:</strong> Only use <code>.ide-layout</code>, <code>.component-palette</code>, <code>.properties-panel</code>, <code>.btn</code>',
+      '<strong>Icons:</strong> Lucide for UI, existing circuit symbols for components',
+      '<strong>Cursors:</strong> Use <code>.cursor-crosshair-hd</code>, <code>.cursor-grab-hd</code>, etc.',
+    ],
+  },
+  {
+    title: 'TECHNOLOGY STACK',
+    description: 'Use the established technology stack correctly.',
+    color: 'bg-slate-50 border-slate-200',
+    iconBg: 'bg-slate-500',
+    items: [
+      '<strong>Tailwind CSS only</strong> - No custom CSS unless absolutely necessary',
+      '<strong>Headless UI</strong> - For dropdowns, modals, toggles',
+      '<strong>Lucide Icons</strong> - For UI elements only',
+      '<strong>Vue 3 + TypeScript</strong> - Proper types, no <code>any</code>',
+    ],
+  },
+]
+
+const emergencyStops = [
+  'Create charts (professional Chart.js exists)',
+  'Create circuit symbols (12 professional symbols exist)',
+  'Create measurement tools (professional probes exist)',
+  'Change color values in main-new.css',
+  'Add custom CSS instead of Tailwind classes',
+  'Replace functional components with placeholders',
+  'Use generic icons for circuit components',
+]
+
+const visualChecks = [
+  'All form controls have matching heights using .property-input',
+  'All colors use design tokens from main-new.css',
+  'All spacing uses Tailwind classes (p-4, gap-3, space-y-2)',
+  'Professional IDE appearance maintained',
+]
+
+const functionalChecks = [
+  'All 170+ tests still pass',
+  'Circuit simulation works (MNA engine intact)',
+  'Real circuit data in charts (not placeholder content)',
+  'Existing professional features preserved',
+]
+
+const successSteps = [
+  {
+    title: 'Search',
+    description: 'Find existing implementation',
+  },
+  {
+    title: 'Read',
+    description: 'Understand design tokens and patterns',
+  },
+  {
+    title: 'Use',
+    description: 'Apply existing patterns and professional components',
+  },
+  {
+    title: 'Ask',
+    description: 'When uncertain about existing vs new',
+  },
+  {
+    title: 'Test',
+    description: 'Verify tests pass and no visual regressions',
+  },
+]
+
+const existingFeatures = [
+  '170+ comprehensive tests',
+  'Complete DC simulation engine with Modified Nodal Analysis',
+  'Professional IEEE-standard circuit symbols',
+  'Real-time parameter analysis with Chart.js',
+  'Advanced component library with realistic physics',
+  'Professional design system with custom cursors',
 ]
 </script>
