@@ -2,19 +2,27 @@
   <div class="properties-panel">
     <!-- Analysis Control Section -->
     <div class="property-section">
-      <div class="property-section-title">📊 Parameter Analysis</div>
+      <div class="property-section-title flex items-center gap-2">
+        <BarChart3 class="w-4 h-4" />
+        Parameter Analysis
+      </div>
       <button
         class="btn w-full"
         :class="isAnalysisActive ? 'btn-secondary' : 'btn-primary'"
         @click="toggleAnalysis"
       >
-        {{ isAnalysisActive ? '⏸️ Pause' : '▶️ Start' }} Analysis
+        <Pause v-if="isAnalysisActive" class="w-4 h-4 mr-2" />
+        <Play v-else class="w-4 h-4 mr-2" />
+        {{ isAnalysisActive ? 'Pause' : 'Start' }} Analysis
       </button>
     </div>
 
     <!-- Parameter Selection Section -->
     <div class="property-section">
-      <div class="property-section-title">🎛️ Sweep Parameters</div>
+      <div class="property-section-title flex items-center gap-2">
+        <Sliders class="w-4 h-4" />
+        Sweep Parameters
+      </div>
 
       <!-- Primary Parameter -->
       <div class="property-field">
@@ -73,7 +81,10 @@
 
     <!-- Output Selection Section -->
     <div class="property-section">
-      <div class="property-section-title">📈 Analysis Outputs</div>
+      <div class="property-section-title flex items-center gap-2">
+        <TrendingUp class="w-4 h-4" />
+        Analysis Outputs
+      </div>
       <div class="space-y-2">
         <label
           v-for="output in availableOutputs"
@@ -94,7 +105,10 @@
 
     <!-- Real-time Current Values Section -->
     <div v-if="isAnalysisActive" class="property-section">
-      <div class="property-section-title">🔍 Current Analysis Point</div>
+      <div class="property-section-title flex items-center gap-2">
+        <Search class="w-4 h-4" />
+        Current Analysis Point
+      </div>
       <div class="space-y-2">
         <div v-if="primaryParameter" class="property-field">
           <label class="property-label">{{ primaryParameterLabel }}</label>
@@ -151,7 +165,9 @@
           :title="`${primaryParameterLabel} vs Circuit Response`"
         />
         <div v-else class="info-panel">
-          <div class="info-icon">📊</div>
+          <div class="info-icon">
+            <BarChart3 class="w-8 h-8 text-slate-400" />
+          </div>
           <h4 class="text-lg font-semibold text-slate-900 mb-2">No Analysis Data</h4>
           <p class="text-slate-600">Configure parameters and run analysis to see results</p>
         </div>
@@ -160,10 +176,25 @@
 
     <!-- Export Controls Section -->
     <div v-if="analysisResults.length > 0" class="property-section">
-      <div class="property-section-title">💾 Export Results</div>
+      <div class="property-section-title flex items-center gap-2">
+        <Download class="w-4 h-4" />
+        Export Results
+      </div>
       <div class="flex gap-2">
-        <button @click="exportCSV" class="btn btn-secondary flex-1">📊 Export CSV</button>
-        <button @click="exportImage" class="btn btn-secondary flex-1">🖼️ Export Plot</button>
+        <button
+          @click="exportCSV"
+          class="btn btn-secondary flex-1 flex items-center justify-center gap-2"
+        >
+          <BarChart3 class="w-4 h-4" />
+          Export CSV
+        </button>
+        <button
+          @click="exportImage"
+          class="btn btn-secondary flex-1 flex items-center justify-center gap-2"
+        >
+          <Image class="w-4 h-4" />
+          Export Plot
+        </button>
       </div>
     </div>
   </div>
@@ -174,6 +205,16 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import AnalysisChart from './AnalysisChart.vue'
 import type { DC_Result } from '@/services/simulation'
+import {
+  BarChart3,
+  Play,
+  Pause,
+  Sliders,
+  TrendingUp,
+  Search,
+  Download,
+  Image,
+} from 'lucide-vue-next'
 
 // Component state
 const isAnalysisActive = ref(false)
@@ -324,13 +365,13 @@ async function startAnalysis() {
   analysisProgress.value = 0
   analysisResults.value = []
 
-  console.log('🚀 Starting parameter sweep analysis...')
+  console.log('Starting parameter sweep analysis...')
 
   try {
     await runParameterSweep()
-    console.log('✅ Parameter sweep completed')
+    console.log('Parameter sweep completed')
   } catch (error) {
-    console.error('❌ Parameter sweep failed:', error)
+    console.error('Parameter sweep failed:', error)
   } finally {
     isAnalysisRunning.value = false
   }
@@ -339,7 +380,7 @@ async function startAnalysis() {
 function stopAnalysis() {
   isAnalysisActive.value = false
   isAnalysisRunning.value = false
-  console.log('⏸️ Parameter analysis stopped')
+  console.log('Parameter analysis stopped')
 }
 
 async function runParameterSweep() {
