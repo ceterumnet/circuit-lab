@@ -263,7 +263,7 @@
   }
 
   .analysis-content {
-    @apply flex-1 p-4 overflow-auto;
+    @apply flex-1 p-0 overflow-auto;
   }
 
   /* Chart containers */

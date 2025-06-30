@@ -2,7 +2,7 @@
   <div class="properties-panel">
     <!-- Properties Panel Header -->
     <div class="ide-panel-header">
-      <h3 class="text-base font-medium text-gray-900">{{ workspaceTitle }}</h3>
+      <h3 class="text-base font-medium text-slate-900">{{ workspaceTitle }}</h3>
       <button
         v-if="hasCircuit && !selectedComponent && !selectedProbe"
         class="btn btn-icon btn-sm"
@@ -31,40 +31,71 @@
       <div v-else-if="multipleSelection" class="property-section">
         <div class="property-section-title">Multiple Selection</div>
         <div class="flex flex-col items-center justify-center text-center py-8">
-          <Settings class="w-8 h-8 text-gray-400 mb-3" />
-          <p class="text-sm text-gray-600">Editing multiple items at once is not yet supported.</p>
+          <Settings class="w-8 h-8 text-slate-400 mb-3" />
+          <p class="text-sm text-slate-600">Editing multiple items at once is not yet supported.</p>
         </div>
       </div>
 
       <!-- Analysis Panel (when circuit exists but no selection) -->
       <div v-else-if="hasCircuit" class="property-section">
         <div class="property-section-title">Circuit Analysis</div>
-        <parameter-analysis-panel />
+
+        <!-- Analysis Type Tabs -->
+        <div class="flex gap-1 mb-4 p-1 bg-slate-100 rounded-lg border border-slate-200">
+          <button
+            @click="analysisMode = 'dc'"
+            :class="[
+              'flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-150 flex items-center justify-center',
+              analysisMode === 'dc'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50',
+            ]"
+          >
+            <Zap class="w-4 h-4 mr-2" />
+            DC Analysis
+          </button>
+          <button
+            @click="analysisMode = 'ac'"
+            :class="[
+              'flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-150 flex items-center justify-center',
+              analysisMode === 'ac'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50',
+            ]"
+          >
+            <BarChart3 class="w-4 h-4 mr-2" />
+            AC Analysis
+          </button>
+        </div>
+
+        <!-- Analysis Panel Content -->
+        <div class="analysis-content">
+          <parameter-analysis-panel v-if="analysisMode === 'dc'" />
+          <a-c-analysis-panel v-else-if="analysisMode === 'ac'" />
+        </div>
       </div>
 
       <!-- Empty State -->
       <div v-else class="property-section">
         <div class="property-section-title">Circuit Builder</div>
         <div class="flex flex-col items-center justify-center text-center py-8">
-          <Wrench class="w-8 h-8 text-gray-400 mb-3" />
-          <p class="text-sm text-gray-600">Select a component to edit its properties</p>
+          <Wrench class="w-8 h-8 text-slate-400 mb-3" />
+          <p class="text-sm text-slate-600">Select a component to edit its properties</p>
         </div>
       </div>
     </div>
 
     <!-- Fullscreen Analysis Workspace Overlay -->
-    <div v-if="showFullscreenAnalysis" class="analysis-workspace">
-      <div class="analysis-controls">
-        <div class="flex items-center justify-between">
-          <h4 class="font-medium text-gray-900">Parameter Analysis</h4>
-          <button class="btn btn-secondary btn-sm" @click="showFullscreenAnalysis = false">
-            <X class="w-4 h-4 mr-2" />
-            Close
-          </button>
-        </div>
+    <div v-if="showFullscreenAnalysis" class="floating-panel fixed inset-0 z-50 bg-white">
+      <div class="ide-panel-header">
+        <h4 class="text-lg font-semibold text-slate-900">Parameter Analysis</h4>
+        <button class="btn btn-secondary btn-sm" @click="showFullscreenAnalysis = false">
+          <X class="w-4 h-4 mr-2" />
+          Close
+        </button>
       </div>
 
-      <div class="analysis-content">
+      <div class="ide-panel-content">
         <enhanced-parameter-analysis-panel />
       </div>
     </div>
@@ -73,10 +104,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Wrench, Settings, BarChart3, X } from 'lucide-vue-next'
+import { Wrench, Settings, BarChart3, X, Zap } from 'lucide-vue-next'
 import ComponentProperties from '@/components/circuit/ComponentProperties.vue'
 import ProbeProperties from '@/components/circuit/probes/ProbeProperties.vue'
 import ParameterAnalysisPanel from './ParameterAnalysisPanel.vue'
+import ACAnalysisPanel from './ACAnalysisPanel.vue'
 import EnhancedParameterAnalysisPanel from './EnhancedParameterAnalysisPanel.vue'
 import type { CircuitComponent, Probe } from '@/types/components'
 
@@ -90,6 +122,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const showFullscreenAnalysis = ref(false)
+const analysisMode = ref<'dc' | 'ac'>('dc')
 
 const workspaceTitle = computed(() => {
   if (props.selectedComponent) return 'Component Properties'
@@ -101,50 +134,5 @@ const workspaceTitle = computed(() => {
 </script>
 
 <style scoped>
-/* Custom styles for expanded/fullscreen modes using available design system */
-.properties-panel.expanded {
-  width: 600px;
-}
-
-.properties-panel.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1000;
-  border-left: none;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Responsive adjustments */
-@media (max-width: 1400px) {
-  .properties-panel.expanded {
-    width: 500px;
-  }
-}
-
-@media (max-width: 1200px) {
-  .properties-panel.expanded {
-    width: 400px;
-  }
-}
-
-@media (max-width: 800px) {
-  .properties-panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 100;
-    border-left: none;
-  }
-
-  .properties-panel.expanded {
-    width: 100vw;
-  }
-}
+/* Using design system classes only - no custom CSS */
 </style>

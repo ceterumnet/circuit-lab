@@ -1,257 +1,491 @@
 <template>
-  <div class="enhanced-parameter-analysis">
-    <!-- Analysis Configuration -->
-    <div class="config-section">
-      <div class="config-grid">
-        <!-- Parameter Selection -->
-        <div class="config-card">
-          <h4>🎛️ Sweep Parameter</h4>
-          <div class="parameter-control">
-            <select v-model="primaryParameter" @change="onParameterChange">
-              <option value="">Select component...</option>
-              <option v-for="param in availableParameters" :key="param.id" :value="param.id">
-                {{ param.label }}
-              </option>
-            </select>
-          </div>
+  <div class="properties-panel">
+    <!-- Enhanced Analysis Control Section -->
+    <div class="property-section">
+      <div class="property-section-title flex items-center gap-2">
+        <BarChart3 class="w-4 h-4" />
+        Enhanced Parameter Analysis
+      </div>
+      <button
+        class="btn w-full"
+        :class="isAnalysisActive ? 'btn-secondary' : 'btn-primary'"
+        @click="toggleAnalysis"
+        :disabled="!primaryParameter || selectedOutputs.length === 0"
+      >
+        <Pause v-if="isAnalysisActive" class="w-4 h-4 mr-2" />
+        <Play v-else class="w-4 h-4 mr-2" />
+        {{ isAnalysisActive ? 'Pause' : 'Start' }} Enhanced Analysis
+      </button>
+    </div>
 
-          <!-- Parameter Range -->
-          <div v-if="primaryParameter" class="range-controls">
-            <div class="range-row">
-              <label>Range:</label>
+    <!-- Parameter Selection Section -->
+    <div class="property-section">
+      <div class="property-section-title flex items-center gap-2">
+        <Sliders class="w-4 h-4" />
+        Sweep Parameters
+      </div>
+
+      <!-- Primary Parameter -->
+      <div class="property-field">
+        <label class="property-label">Primary Parameter</label>
+        <select v-model="primaryParameter" class="property-input" @change="onParameterChange">
+          <option value="">Select component...</option>
+          <option v-for="param in availableParameters" :key="param.id" :value="param.id">
+            {{ param.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Enhanced Parameter Range Controls -->
+      <div v-if="primaryParameter" class="space-y-3 mt-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="property-field">
+            <label class="property-label">Min Value</label>
+            <div class="flex items-center gap-2">
               <input
                 v-model.number="primaryRange.min"
                 type="number"
+                class="property-input"
                 :step="primaryRange.step"
-                placeholder="Min"
+                @input="onRangeChange"
               />
-              <span>to</span>
+              <span class="text-sm text-slate-500 font-medium">{{ primaryParameterUnit }}</span>
+            </div>
+          </div>
+          <div class="property-field">
+            <label class="property-label">Max Value</label>
+            <div class="flex items-center gap-2">
               <input
                 v-model.number="primaryRange.max"
                 type="number"
+                class="property-input"
                 :step="primaryRange.step"
-                placeholder="Max"
+                @input="onRangeChange"
               />
-              <span class="unit">{{ primaryParameterUnit }}</span>
-            </div>
-            <div class="range-row">
-              <label>Steps:</label>
-              <input
-                v-model.number="primaryRange.steps"
-                type="number"
-                min="5"
-                max="200"
-                placeholder="Steps"
-              />
-              <button class="quick-steps" @click="primaryRange.steps = 50">50</button>
-              <button class="quick-steps" @click="primaryRange.steps = 100">100</button>
+              <span class="text-sm text-slate-500 font-medium">{{ primaryParameterUnit }}</span>
             </div>
           </div>
         </div>
-
-        <!-- Output Selection -->
-        <div class="config-card">
-          <h4>📈 Analysis Outputs</h4>
-          <div class="output-grid">
-            <label v-for="output in availableOutputs" :key="output.id" class="output-checkbox">
-              <input
-                v-model="selectedOutputs"
-                :value="output.id"
-                type="checkbox"
-                @change="onOutputChange"
-              />
-              <span class="output-label">{{ output.label }}</span>
-              <span class="output-unit">({{ output.unit }})</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Analysis Control -->
-        <div class="config-card">
-          <h4>⚡ Analysis Control</h4>
-          <div class="control-buttons">
-            <button
-              class="analysis-btn primary"
-              :class="{ active: isAnalysisActive }"
-              @click="toggleAnalysis"
-              :disabled="!primaryParameter || selectedOutputs.length === 0"
-            >
-              {{ isAnalysisActive ? '⏸️ Pause' : '▶️ Start' }} Analysis
-            </button>
-            <button
-              class="analysis-btn secondary"
-              @click="clearResults"
-              :disabled="analysisResults.length === 0"
-            >
-              🗑️ Clear
-            </button>
-          </div>
-
-          <!-- Analysis Status -->
-          <div class="status-display">
-            <div v-if="isAnalysisRunning" class="status running">
-              <div class="spinner"></div>
-              <span>Running sweep... {{ analysisProgress }}%</span>
-              <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: `${analysisProgress}%` }"></div>
-              </div>
-            </div>
-            <div v-else-if="analysisResults.length > 0" class="status completed">
-              <span>✅ Complete ({{ analysisResults.length }} points)</span>
-            </div>
-            <div v-else class="status idle">
-              <span>Configure parameters and click Start</span>
-            </div>
+        <div class="property-field">
+          <label class="property-label">Analysis Steps</label>
+          <div class="flex items-center gap-2">
+            <input
+              v-model.number="primaryRange.steps"
+              type="number"
+              class="property-input flex-1"
+              min="5"
+              max="200"
+              @input="onRangeChange"
+            />
+            <button @click="primaryRange.steps = 50" class="btn btn-ghost btn-sm">50</button>
+            <button @click="primaryRange.steps = 100" class="btn btn-ghost btn-sm">100</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Results Visualization -->
-    <div class="results-section">
-      <!-- Current Values Display -->
-      <div v-if="isAnalysisActive" class="current-values-card">
-        <h4>🔍 Current Analysis Point</h4>
-        <div class="current-values-grid">
-          <div v-if="primaryParameter" class="current-value">
-            <span class="value-label">{{ primaryParameterLabel }}:</span>
-            <span class="value-data">{{
-              formatValue(currentPrimaryValue, primaryParameterUnit)
-            }}</span>
+    <!-- Output Selection Section -->
+    <div class="property-section">
+      <div class="property-section-title flex items-center gap-2">
+        <TrendingUp class="w-4 h-4" />
+        Analysis Outputs
+      </div>
+      <div class="space-y-2">
+        <label
+          v-for="output in availableOutputs"
+          :key="output.id"
+          class="flex items-center gap-3 cursor-pointer"
+        >
+          <input
+            v-model="selectedOutputs"
+            :value="output.id"
+            type="checkbox"
+            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            @change="onOutputChange"
+          />
+          <span class="text-sm text-slate-700">{{ output.label }} ({{ output.unit }})</span>
+        </label>
+      </div>
+
+      <!-- Plot Visibility Controls -->
+      <div v-if="selectedOutputs.length > 0" class="mt-4">
+        <label class="property-label">Visible Plots</label>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <button
+            v-for="output in selectedOutputs"
+            :key="output"
+            @click="togglePlotVisibility(output)"
+            :class="['btn btn-sm', visiblePlots.includes(output) ? 'btn-primary' : 'btn-ghost']"
+          >
+            {{ getOutputLabel(output) }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-time Current Values Section -->
+    <div v-if="isAnalysisActive" class="property-section">
+      <div class="property-section-title flex items-center gap-2">
+        <Search class="w-4 h-4" />
+        Current Analysis Point
+      </div>
+      <div class="space-y-2">
+        <div v-if="primaryParameter" class="property-field">
+          <label class="property-label">{{ primaryParameterLabel }}</label>
+          <div class="property-value">
+            {{ formatValue(currentPrimaryValue, primaryParameterUnit) }}
           </div>
-          <div v-for="output in selectedOutputs" :key="output" class="current-value">
-            <span class="value-label">{{ getOutputLabel(output) }}:</span>
-            <span class="value-data">{{
-              formatValue(currentOutputValues[output], getOutputUnit(output))
-            }}</span>
+        </div>
+        <div v-for="output in selectedOutputs" :key="output" class="property-field">
+          <label class="property-label">{{ getOutputLabel(output) }}</label>
+          <div
+            class="property-value"
+            :class="{
+              'voltage-display': output.includes('voltage'),
+              'current-display': output.includes('current'),
+              'power-display': output.includes('power'),
+              'resistance-display': output.includes('resistance'),
+            }"
+          >
+            {{ formatValue(currentOutputValues[output], getOutputUnit(output)) }}
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Plot Area -->
-      <div class="plot-section">
-        <div class="plot-header">
-          <h4>📊 Analysis Results</h4>
-          <div class="plot-controls">
-            <button
-              v-for="output in selectedOutputs"
-              :key="output"
-              class="plot-toggle"
-              :class="{ active: visiblePlots.includes(output) }"
-              @click="togglePlotVisibility(output)"
-            >
-              {{ getOutputLabel(output) }}
-            </button>
-          </div>
+    <!-- Enhanced Analysis Status Section -->
+    <div class="property-section">
+      <div class="property-section-title">Enhanced Analysis Status</div>
+      <div class="analysis-status-card">
+        <div v-if="isAnalysisRunning" class="simulation-status running">
+          <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+          Enhanced sweep... {{ analysisProgress }}%
+        </div>
+        <div v-else-if="analysisResults.length > 0" class="simulation-status success">
+          <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+          Enhanced analysis complete ({{ analysisResults.length }} points)
+        </div>
+        <div v-else class="simulation-status idle">
+          <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
+          Configure enhanced parameters and click Start Enhanced Analysis
         </div>
 
-        <div class="plot-container">
-          <canvas
-            ref="plotCanvas"
-            class="analysis-plot"
-            :width="plotWidth"
-            :height="plotHeight"
-            @mousemove="handlePlotMouseMove"
-            @mouseleave="clearPlotTooltip"
-          ></canvas>
-
-          <!-- Plot Tooltip -->
-          <div v-if="plotTooltip.visible" class="plot-tooltip" :style="plotTooltip.style">
-            <div class="tooltip-content">
-              <div class="tooltip-param">
-                {{ primaryParameterLabel }}: {{ formatValue(plotTooltip.x, primaryParameterUnit) }}
-              </div>
-              <div
-                v-for="(value, output) in plotTooltip.values"
-                :key="output"
-                class="tooltip-value"
-              >
-                {{ getOutputLabel(output) }}: {{ formatValue(value, getOutputUnit(output)) }}
-              </div>
-            </div>
+        <!-- Enhanced Progress Bar -->
+        <div v-if="isAnalysisRunning" class="mt-3">
+          <div class="w-full bg-slate-200 rounded-full h-2">
+            <div
+              class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              :style="{ width: `${analysisProgress}%` }"
+            ></div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Data Export -->
-      <div v-if="analysisResults.length > 0" class="export-section">
-        <h4>💾 Export Results</h4>
-        <div class="export-controls">
-          <button @click="exportCSV" class="export-btn">📊 Export CSV</button>
-          <button @click="exportImage" class="export-btn">🖼️ Export Plot</button>
-          <button @click="copyToClipboard" class="export-btn">📋 Copy Data</button>
+    <!-- Professional Analysis Chart Section -->
+    <div class="property-section">
+      <div class="property-section-title">Enhanced Analysis Results</div>
+      <div class="chart-container">
+        <analysis-chart
+          v-if="chartDatasets.length > 0"
+          ref="analysisChart"
+          :datasets="chartDatasets"
+          :x-label="primaryParameterLabel"
+          :y-label="'Multiple Outputs'"
+          :title="`Enhanced ${primaryParameterLabel} vs Circuit Response`"
+        />
+        <div v-else class="info-panel">
+          <div class="flex flex-col items-center justify-center text-center py-8">
+            <BarChart3 class="w-8 h-8 text-slate-400 mb-3" />
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">No Enhanced Analysis Data</h4>
+            <p class="text-slate-600">
+              Configure enhanced parameters and run analysis to see results
+            </p>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- Enhanced Export Controls Section -->
+    <div v-if="analysisResults.length > 0" class="property-section">
+      <div class="property-section-title flex items-center gap-2">
+        <Download class="w-4 h-4" />
+        Enhanced Export Results
+      </div>
+      <div class="space-y-2">
+        <div class="flex gap-2">
+          <button
+            @click="exportCSV"
+            class="btn btn-secondary flex-1 flex items-center justify-center gap-2"
+          >
+            <BarChart3 class="w-4 h-4" />
+            Export CSV
+          </button>
+          <button
+            @click="exportImage"
+            class="btn btn-secondary flex-1 flex items-center justify-center gap-2"
+          >
+            <Image class="w-4 h-4" />
+            Export Plot
+          </button>
+        </div>
+        <button
+          @click="copyToClipboard"
+          class="btn btn-ghost w-full flex items-center justify-center gap-2"
+        >
+          <Copy class="w-4 h-4" />
+          Copy Data to Clipboard
+        </button>
+      </div>
+    </div>
+
+    <!-- Clear Results -->
+    <div v-if="analysisResults.length > 0" class="property-section">
+      <button
+        @click="clearResults"
+        class="btn btn-secondary w-full flex items-center justify-center gap-2"
+      >
+        <RotateCcw class="w-4 h-4" />
+        Clear Enhanced Results
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
-
-// All the existing logic from ParameterAnalysisPanel but with enhanced UI structure
-const circuitStore = useCircuitStore()
+import AnalysisChart from './AnalysisChart.vue'
+import type { DC_Result } from '@/services/simulation'
+import {
+  BarChart3,
+  Play,
+  Pause,
+  Sliders,
+  TrendingUp,
+  Search,
+  Download,
+  Image,
+  Copy,
+  RotateCcw,
+} from 'lucide-vue-next'
 
 // Enhanced state management
 const isAnalysisActive = ref(false)
 const isAnalysisRunning = ref(false)
 const analysisProgress = ref(0)
+
+// Parameter selection
 const primaryParameter = ref('')
-const selectedOutputs = ref<string[]>(['voltage'])
-const visiblePlots = ref<string[]>(['voltage'])
+const selectedOutputs = ref<string[]>(['voltage', 'current'])
+const visiblePlots = ref<string[]>(['voltage', 'current'])
+
+// Enhanced parameter ranges with higher resolution
+const primaryRange = ref({
+  min: 100,
+  max: 10000,
+  steps: 100, // Default to higher resolution
+  step: 10, // Finer step control
+})
+
+// Analysis results
 const analysisResults = ref<
   Array<{
     primaryValue: number
     outputs: Record<string, number>
   }>
 >([])
+
+// Current analysis point
 const currentPrimaryValue = ref(0)
 const currentOutputValues = ref<Record<string, number>>({})
 
-// Enhanced plot configuration
-const plotCanvas = ref<HTMLCanvasElement>()
-const plotWidth = ref(800) // Larger plot size
-const plotHeight = ref(400)
+// Professional chart integration
+const analysisChart = ref()
 
-// Plot tooltip
-const plotTooltip = ref({
-  visible: false,
-  x: 0,
-  y: 0,
-  style: {},
-  values: {} as Record<string, number>,
+// Store access
+const circuitStore = useCircuitStore()
+
+// Available parameters (components that can be swept)
+const availableParameters = computed(() => {
+  const params: Array<{ id: string; label: string; unit: string; type: string }> = []
+
+  circuitStore.currentCircuit.components.forEach((component) => {
+    if (component.type === 'resistor') {
+      params.push({
+        id: `${component.id}:resistance`,
+        label: `${component.label || component.id} Resistance`,
+        unit: 'Ω',
+        type: 'resistance',
+      })
+    } else if (component.type === 'variable_resistor') {
+      params.push({
+        id: `${component.id}:resistance`,
+        label: `${component.label || component.id} Resistance`,
+        unit: 'Ω',
+        type: 'resistance',
+      })
+    } else if (component.type === 'potentiometer') {
+      params.push({
+        id: `${component.id}:wiperPosition`,
+        label: `${component.label || component.id} Wiper Position`,
+        unit: '%',
+        type: 'percentage',
+      })
+    } else if (component.type === 'voltage_source') {
+      params.push({
+        id: `${component.id}:voltage`,
+        label: `${component.label || component.id} Voltage`,
+        unit: 'V',
+        type: 'voltage',
+      })
+    }
+  })
+
+  return params
 })
 
-const primaryRange = ref({
-  min: 100,
-  max: 10000,
-  steps: 50,
-  step: 100,
+// Available outputs (measurements to plot)
+const availableOutputs = computed(() => {
+  const outputs = [
+    { id: 'voltage', label: 'Node Voltages', unit: 'V' },
+    { id: 'current', label: 'Component Currents', unit: 'A' },
+    { id: 'power', label: 'Component Power', unit: 'W' },
+    { id: 'resistance', label: 'Effective Resistance', unit: 'Ω' },
+  ]
+
+  // Add specific component measurements for enhanced analysis
+  circuitStore.currentCircuit.components.forEach((component) => {
+    if (component.type === 'diode' || component.type === 'led') {
+      outputs.push({
+        id: `${component.id}:current`,
+        label: `${component.label || component.id} Current`,
+        unit: 'A',
+      })
+      outputs.push({
+        id: `${component.id}:power`,
+        label: `${component.label || component.id} Power`,
+        unit: 'W',
+      })
+    }
+  })
+
+  return outputs
 })
 
-// Mock computed properties (implement based on existing logic)
-const availableParameters = computed(() => [
-  { id: 'R1:resistance', label: 'R1 Resistance', unit: 'Ω', type: 'resistance' },
-])
+// Computed parameter info
+const primaryParameterLabel = computed(() => {
+  const param = availableParameters.value.find((p) => p.id === primaryParameter.value)
+  return param?.label || ''
+})
 
-const availableOutputs = computed(() => [
-  { id: 'voltage', label: 'Node Voltage', unit: 'V' },
-  { id: 'current', label: 'Branch Current', unit: 'A' },
-  { id: 'power', label: 'Power', unit: 'W' },
-])
+const primaryParameterUnit = computed(() => {
+  const param = availableParameters.value.find((p) => p.id === primaryParameter.value)
+  return param?.unit || ''
+})
 
-const primaryParameterLabel = computed(() => 'Parameter')
-const primaryParameterUnit = computed(() => 'Ω')
+// Professional chart datasets following AnalysisChart.vue patterns
+const chartDatasets = computed(() => {
+  if (analysisResults.value.length === 0) return []
+
+  const datasets = []
+  const colors = ['#dc2626', '#059669', '#7c3aed', '#ea580c', '#06b6d4', '#ef4444'] // Design system colors
+
+  let colorIndex = 0
+  for (const output of visiblePlots.value) {
+    if (selectedOutputs.value.includes(output)) {
+      const data = analysisResults.value.map((result) => ({
+        x: result.primaryValue,
+        y: result.outputs[output] || 0,
+      }))
+
+      datasets.push({
+        label: getOutputLabel(output),
+        data,
+        color: colors[colorIndex % colors.length],
+        unit: getOutputUnit(output),
+      })
+
+      colorIndex++
+    }
+  }
+
+  return datasets
+})
 
 // Enhanced methods
 function toggleAnalysis() {
-  isAnalysisActive.value = !isAnalysisActive.value
+  if (isAnalysisActive.value) {
+    isAnalysisActive.value = false
+    isAnalysisRunning.value = false
+  } else {
+    if (!primaryParameter.value || selectedOutputs.value.length === 0) return
+    startEnhancedAnalysis()
+  }
+}
+
+async function startEnhancedAnalysis() {
+  isAnalysisActive.value = true
+  isAnalysisRunning.value = true
+  analysisProgress.value = 0
+  analysisResults.value = []
+
+  try {
+    const { min, max, steps } = primaryRange.value
+    const stepSize = (max - min) / (steps - 1)
+
+    for (let i = 0; i < steps; i++) {
+      if (!isAnalysisActive.value) break // Allow stopping
+
+      const paramValue = min + i * stepSize
+      currentPrimaryValue.value = paramValue
+
+      // Mock enhanced simulation - in real implementation, would call actual simulation
+      const outputs: Record<string, number> = {}
+
+      // Generate more sophisticated mock data for enhanced analysis
+      selectedOutputs.value.forEach((output) => {
+        let value = 0
+        if (output === 'voltage') {
+          value = 5 * Math.exp(-paramValue / 5000) + 0.1 * Math.sin(paramValue / 1000)
+        } else if (output === 'current') {
+          value = (0.005 * paramValue) / 1000 + 0.0001 * Math.cos(paramValue / 2000)
+        } else if (output === 'power') {
+          value = outputs.voltage * outputs.current || paramValue * 0.0001
+        } else if (output === 'resistance') {
+          value = paramValue
+        }
+        outputs[output] = value
+        currentOutputValues.value[output] = value
+      })
+
+      analysisResults.value.push({
+        primaryValue: paramValue,
+        outputs,
+      })
+
+      analysisProgress.value = Math.round((i / (steps - 1)) * 100)
+
+      // Enhanced processing delay with higher resolution
+      if (i % 5 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 30))
+      }
+    }
+
+    console.log('Enhanced analysis completed:', analysisResults.value.length, 'points')
+  } catch (error) {
+    console.error('Enhanced analysis failed:', error)
+  } finally {
+    isAnalysisRunning.value = false
+  }
 }
 
 function clearResults() {
   analysisResults.value = []
   isAnalysisActive.value = false
+  isAnalysisRunning.value = false
+  analysisProgress.value = 0
+  currentOutputValues.value = {}
 }
 
 function togglePlotVisibility(output: string) {
@@ -264,7 +498,18 @@ function togglePlotVisibility(output: string) {
 }
 
 function onParameterChange() {
-  // Implementation
+  // Reset analysis when parameter changes
+  clearResults()
+
+  // Set appropriate defaults based on parameter type
+  const param = availableParameters.value.find((p) => p.id === primaryParameter.value)
+  if (param?.type === 'resistance') {
+    primaryRange.value = { min: 100, max: 10000, steps: 100, step: 10 }
+  } else if (param?.type === 'voltage') {
+    primaryRange.value = { min: 1, max: 10, steps: 50, step: 0.1 }
+  } else if (param?.type === 'percentage') {
+    primaryRange.value = { min: 0, max: 100, steps: 100, step: 1 }
+  }
 }
 
 function onOutputChange() {
@@ -272,9 +517,30 @@ function onOutputChange() {
   visiblePlots.value = selectedOutputs.value.slice()
 }
 
+function onRangeChange() {
+  // Clear results when range changes
+  if (analysisResults.value.length > 0) {
+    clearResults()
+  }
+}
+
 function formatValue(value: number, unit: string): string {
   if (typeof value !== 'number' || isNaN(value)) return 'N/A'
-  return `${value.toFixed(3)} ${unit}`
+
+  // Enhanced formatting with engineering notation
+  if (Math.abs(value) >= 1e6) {
+    return `${(value / 1e6).toFixed(3)}M${unit}`
+  } else if (Math.abs(value) >= 1e3) {
+    return `${(value / 1e3).toFixed(3)}k${unit}`
+  } else if (Math.abs(value) >= 1) {
+    return `${value.toFixed(4)}${unit}`
+  } else if (Math.abs(value) >= 1e-3) {
+    return `${(value * 1e3).toFixed(3)}m${unit}`
+  } else if (Math.abs(value) >= 1e-6) {
+    return `${(value * 1e6).toFixed(3)}μ${unit}`
+  } else {
+    return `${value.toExponential(3)}${unit}`
+  }
 }
 
 function getOutputLabel(output: string): string {
@@ -287,455 +553,70 @@ function getOutputUnit(output: string): string {
   return outputDef?.unit || ''
 }
 
-function handlePlotMouseMove(event: MouseEvent) {
-  // Enhanced plot interaction
-  const rect = plotCanvas.value?.getBoundingClientRect()
-  if (!rect) return
-
-  const x = event.clientX - rect.left
-  const y = event.clientY - rect.top
-
-  // Show tooltip with data point information
-  plotTooltip.value = {
-    visible: true,
-    x: x,
-    y: y,
-    style: {
-      left: `${x + 10}px`,
-      top: `${y - 10}px`,
-    },
-    values: { voltage: 3.3, current: 0.001 }, // Mock data
-  }
-}
-
-function clearPlotTooltip() {
-  plotTooltip.value.visible = false
-}
-
+// Enhanced export functions
 function exportCSV() {
-  // CSV export implementation
+  if (analysisResults.value.length === 0) return
+
+  const headers = [
+    primaryParameterLabel.value,
+    ...selectedOutputs.value.map((o) => getOutputLabel(o)),
+  ]
+  const csvContent = [
+    headers.join(','),
+    ...analysisResults.value.map((result) =>
+      [
+        result.primaryValue,
+        ...selectedOutputs.value.map((output) => result.outputs[output] || 0),
+      ].join(','),
+    ),
+  ].join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `enhanced_analysis_${Date.now()}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 function exportImage() {
-  // Image export implementation
+  // Use AnalysisChart's export capability
+  if (analysisChart.value?.exportChart) {
+    const imageData = analysisChart.value.exportChart()
+    if (imageData) {
+      const link = document.createElement('a')
+      link.href = imageData
+      link.download = `enhanced_analysis_${Date.now()}.png`
+      link.click()
+    }
+  }
 }
 
 function copyToClipboard() {
-  // Clipboard copy implementation
+  if (analysisResults.value.length === 0) return
+
+  const text = analysisResults.value
+    .map((result) => `${result.primaryValue}: ${JSON.stringify(result.outputs)}`)
+    .join('\n')
+
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      console.log('Enhanced analysis data copied to clipboard')
+    })
+    .catch((err) => {
+      console.error('Failed to copy to clipboard:', err)
+    })
 }
+
+// Stop analysis when component unmounts
+onUnmounted(() => {
+  isAnalysisActive.value = false
+  isAnalysisRunning.value = false
+})
 </script>
 
 <style scoped>
-.enhanced-parameter-analysis {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 1rem;
-}
-
-.config-section {
-  flex-shrink: 0;
-}
-
-.config-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1rem;
-}
-
-.config-card {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.config-card h4 {
-  margin: 0 0 0.75rem 0;
-  color: #495057;
-  font-size: 0.95rem;
-}
-
-.parameter-control select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-
-.range-controls {
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.range-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.range-row label {
-  min-width: 4rem;
-  font-weight: 500;
-}
-
-.range-row input {
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-  padding: 0.25rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  box-sizing: border-box;
-}
-
-.range-row .unit {
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.quick-steps {
-  padding: 0.25rem 0.5rem;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.quick-steps:hover {
-  background: #f8f9fa;
-}
-
-.output-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.output-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.output-label {
-  font-weight: 500;
-}
-
-.output-unit {
-  color: #6c757d;
-  font-size: 0.8rem;
-}
-
-.control-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.analysis-btn {
-  flex: 1;
-  padding: 0.5rem 1rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.analysis-btn.primary {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.analysis-btn.primary:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.analysis-btn.secondary {
-  background: white;
-  color: #6c757d;
-}
-
-.analysis-btn.secondary:hover:not(:disabled) {
-  background: #f8f9fa;
-}
-
-.analysis-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.status-display {
-  font-size: 0.875rem;
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-radius: 4px;
-}
-
-.status.running {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.status.completed {
-  background: #d4edda;
-  color: #155724;
-}
-
-.status.idle {
-  background: #f8f9fa;
-  color: #6c757d;
-}
-
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background: #f8f9fa;
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 0.5rem;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #856404;
-  transition: width 0.3s ease;
-}
-
-.results-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  overflow: hidden;
-}
-
-.current-values-card {
-  background: #f8fff9;
-  border: 1px solid #d4edda;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.current-values-card h4 {
-  margin: 0 0 0.75rem 0;
-  color: #155724;
-}
-
-.current-values-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
-}
-
-.current-value {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
-  background: white;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-
-.value-label {
-  font-weight: 500;
-}
-
-.value-data {
-  font-family: monospace;
-  color: #495057;
-}
-
-.plot-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.plot-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.plot-header h4 {
-  margin: 0;
-  color: #495057;
-}
-
-.plot-controls {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.plot-toggle {
-  padding: 0.25rem 0.75rem;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.plot-toggle:hover {
-  background: #f8f9fa;
-}
-
-.plot-toggle.active {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.plot-container {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-}
-
-.analysis-plot {
-  border: none;
-  cursor: crosshair;
-}
-
-.plot-tooltip {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.tooltip-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.tooltip-param {
-  font-weight: 500;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  padding-bottom: 0.25rem;
-}
-
-.export-section {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.export-section h4 {
-  margin: 0 0 0.75rem 0;
-  color: #495057;
-}
-
-.export-controls {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.export-btn {
-  padding: 0.5rem 1rem;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.export-btn:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .config-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 800px) {
-  .config-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .current-values-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Narrow panel adjustments */
-@media (max-width: 500px) {
-  .range-row {
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-
-  .range-row label {
-    min-width: 3rem;
-    font-size: 0.75rem;
-  }
-
-  .range-row input {
-    padding: 0.2rem;
-    font-size: 0.75rem;
-    min-width: 60px;
-  }
-
-  .range-row .unit {
-    font-size: 0.7rem;
-  }
-}
+/* Using design system classes only - no custom CSS */
 </style>
