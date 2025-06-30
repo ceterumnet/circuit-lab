@@ -66,6 +66,8 @@ import NodeSymbol from './symbols/NodeSymbol.vue'
 import WireSymbol from './symbols/WireSymbol.vue'
 import CapacitorSymbol from './symbols/CapacitorSymbol.vue'
 import InductorSymbol from './symbols/InductorSymbol.vue'
+import ACVoltageSourceSymbol from './symbols/ACVoltageSourceSymbol.vue'
+import ACCurrentSourceSymbol from './symbols/ACCurrentSourceSymbol.vue'
 import ProbeSymbol from './symbols/ProbeSymbol.vue'
 
 const interactionStore = useInteractionStore()
@@ -106,6 +108,8 @@ function getIconComponent(iconName?: string) {
     ResistorSymbol: ResistorSymbol,
     VoltageSourceSymbol: VoltageSourceSymbol,
     CurrentSourceSymbol: CurrentSourceSymbol,
+    ACVoltageSourceSymbol: ACVoltageSourceSymbol,
+    ACCurrentSourceSymbol: ACCurrentSourceSymbol,
     SwitchSymbol: SwitchSymbol,
     VariableResistorSymbol: VariableResistorSymbol,
     PotentiometerSymbol: PotentiometerSymbol,
@@ -131,6 +135,8 @@ function getComponentIconColor(componentType: string) {
     inductor: 'text-purple-600',
     'voltage-source': 'text-red-600',
     'current-source': 'text-blue-600',
+    ac_voltage_source: 'text-red-500',
+    ac_current_source: 'text-blue-500',
     diode: 'text-orange-600',
     led: 'text-orange-600',
     switch: 'text-slate-600',

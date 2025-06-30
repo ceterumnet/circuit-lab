@@ -65,6 +65,32 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- AC Voltage source component -->
+    <a-c-voltage-source-component
+      v-else-if="component.type === 'ac_voltage_source'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
+    <!-- AC Current source component -->
+    <a-c-current-source-component
+      v-else-if="component.type === 'ac_current_source'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Switch component -->
     <switch-component
       v-else-if="component.type === 'switch'"
@@ -179,6 +205,8 @@ import CapacitorComponent from '@/components/circuit/components/CapacitorCompone
 import InductorComponent from '@/components/circuit/components/InductorComponent.vue'
 import VoltageSourceComponent from '@/components/circuit/components/VoltageSourceComponent.vue'
 import CurrentSourceComponent from '@/components/circuit/components/CurrentSourceComponent.vue'
+import ACVoltageSourceComponent from '@/components/circuit/components/ACVoltageSourceComponent.vue'
+import ACCurrentSourceComponent from '@/components/circuit/components/ACCurrentSourceComponent.vue'
 import SwitchComponent from '@/components/circuit/components/SwitchComponent.vue'
 import VariableResistorComponent from '@/components/circuit/components/VariableResistorComponent.vue'
 import PotentiometerComponent from '@/components/circuit/components/PotentiometerComponent.vue'

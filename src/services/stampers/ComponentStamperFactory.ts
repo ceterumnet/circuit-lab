@@ -5,6 +5,8 @@ import type { ComponentStamper } from './shared'
 import { ResistorStamper } from './linear/ResistorStamper'
 import { VoltageSourceStamper } from './linear/VoltageSourceStamper'
 import { CurrentSourceStamper } from './linear/CurrentSourceStamper'
+import { ACVoltageSourceStamper } from './linear/ACVoltageSourceStamper'
+import { ACCurrentSourceStamper } from './linear/ACCurrentSourceStamper'
 import { WireStamper } from './linear/WireStamper'
 import { GroundStamper } from './linear/GroundStamper'
 import { NodeStamper } from './linear/NodeStamper'
@@ -27,6 +29,8 @@ export class ComponentStamperFactory {
     ['wire', WireStamper],
     ['voltage_source', VoltageSourceStamper],
     ['current_source', CurrentSourceStamper],
+    ['ac_voltage_source', ACVoltageSourceStamper],
+    ['ac_current_source', ACCurrentSourceStamper],
     ['switch', SwitchStamper],
     ['variable_resistor', VariableResistorStamper],
     ['potentiometer', PotentiometerStamper],

@@ -203,6 +203,40 @@ const inductorDefinition: ComponentDefinition = {
   icon: 'InductorSymbol', // Professional coil inductor symbol
 }
 
+const acVoltageSourceDefinition: ComponentDefinition = {
+  type: 'ac_voltage_source',
+  name: 'AC Voltage Source',
+  category: 'power',
+  complexity: 'moderate',
+  terminals: [
+    { id: 'positive', position: { x: 0, y: -30 }, type: 'power', label: '+' },
+    { id: 'negative', position: { x: 0, y: 30 }, type: 'power', label: '-' },
+  ],
+  properties: [
+    { key: 'amplitude', type: 'number', label: 'Amplitude', unit: 'V', default: 5 },
+    { key: 'frequency', type: 'number', label: 'Frequency', unit: 'Hz', default: 1000 },
+    { key: 'phase', type: 'number', label: 'Phase', unit: '°', default: 0 },
+  ],
+  icon: 'ACVoltageSourceSymbol', // AC voltage source with sine wave
+}
+
+const acCurrentSourceDefinition: ComponentDefinition = {
+  type: 'ac_current_source',
+  name: 'AC Current Source',
+  category: 'power',
+  complexity: 'moderate',
+  terminals: [
+    { id: 'positive', position: { x: 0, y: -30 }, type: 'power', label: '+' },
+    { id: 'negative', position: { x: 0, y: 30 }, type: 'power', label: '-' },
+  ],
+  properties: [
+    { key: 'amplitude', type: 'number', label: 'Amplitude', unit: 'A', default: 0.001 },
+    { key: 'frequency', type: 'number', label: 'Frequency', unit: 'Hz', default: 1000 },
+    { key: 'phase', type: 'number', label: 'Phase', unit: '°', default: 0 },
+  ],
+  icon: 'ACCurrentSourceSymbol', // AC current source with sine wave
+}
+
 // Register all components
 ComponentRegistry.set('resistor', resistorDefinition)
 ComponentRegistry.set('voltage_source', voltageSourceDefinition)
@@ -217,6 +251,8 @@ ComponentRegistry.set('led', ledDefinition)
 ComponentRegistry.set('wire', wireDefinition)
 ComponentRegistry.set('capacitor', capacitorDefinition)
 ComponentRegistry.set('inductor', inductorDefinition)
+ComponentRegistry.set('ac_voltage_source', acVoltageSourceDefinition)
+ComponentRegistry.set('ac_current_source', acCurrentSourceDefinition)
 
 // Export definitions for backwards compatibility
 export {
@@ -233,6 +269,8 @@ export {
   ledDefinition,
   capacitorDefinition,
   inductorDefinition,
+  acVoltageSourceDefinition,
+  acCurrentSourceDefinition,
 }
 
 // Utility functions
@@ -248,4 +286,22 @@ export function getComponentsByCategory(category: string): ComponentDefinition[]
   return Array.from(ComponentRegistry.values()).filter(
     (component) => component.category === category,
   )
+}
+
+export const registry: Record<string, ComponentDefinition> = {
+  resistor: resistorDefinition,
+  voltage_source: voltageSourceDefinition,
+  current_source: currentSourceDefinition,
+  ac_voltage_source: acVoltageSourceDefinition,
+  ac_current_source: acCurrentSourceDefinition,
+  ground: groundDefinition,
+  node: nodeDefinition,
+  switch: switchDefinition,
+  wire: wireDefinition,
+  variable_resistor: variableResistorDefinition,
+  potentiometer: potentiometerDefinition,
+  diode: diodeDefinition,
+  led: ledDefinition,
+  capacitor: capacitorDefinition,
+  inductor: inductorDefinition,
 }

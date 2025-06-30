@@ -46,6 +46,8 @@ import type { ComponentDefinition } from '@/types/components'
 // Import component symbols
 import ResistorSymbol from './symbols/ResistorSymbol.vue'
 import VoltageSourceSymbol from './symbols/VoltageSourceSymbol.vue'
+import ACVoltageSourceSymbol from './symbols/ACVoltageSourceSymbol.vue'
+import ACCurrentSourceSymbol from './symbols/ACCurrentSourceSymbol.vue'
 import GroundSymbol from './symbols/GroundSymbol.vue'
 import NodeSymbol from './symbols/NodeSymbol.vue'
 import WireSymbol from './symbols/WireSymbol.vue'
@@ -124,6 +126,8 @@ function getIconComponent(iconName?: string) {
   const iconMap = {
     ResistorSymbol: ResistorSymbol,
     VoltageSourceSymbol: VoltageSourceSymbol,
+    ACVoltageSourceSymbol: ACVoltageSourceSymbol,
+    ACCurrentSourceSymbol: ACCurrentSourceSymbol,
     GroundSymbol: GroundSymbol,
     NodeSymbol: NodeSymbol,
     WireSymbol: WireSymbol,
