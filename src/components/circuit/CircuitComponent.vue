@@ -156,6 +156,19 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- BJT component -->
+    <BJTComponent
+      v-else-if="component.type === 'bjt_npn'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Ground component -->
     <ground-component
       v-else-if="component.type === 'ground'"
@@ -212,6 +225,7 @@ import VariableResistorComponent from '@/components/circuit/components/VariableR
 import PotentiometerComponent from '@/components/circuit/components/PotentiometerComponent.vue'
 import DiodeComponent from '@/components/circuit/components/DiodeComponent.vue'
 import LEDComponent from '@/components/circuit/components/LEDComponent.vue'
+import BJTComponent from '@/components/circuit/components/BJTComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
 import NodeComponent from '@/components/circuit/components/NodeComponent.vue'

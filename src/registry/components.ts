@@ -173,6 +173,35 @@ const ledDefinition: ComponentDefinition = {
   icon: 'LEDSymbol', // Professional LED symbol with light rays
 }
 
+const bjtNPNDefinition: ComponentDefinition = {
+  type: 'bjt_npn',
+  name: 'NPN BJT',
+  category: 'active',
+  complexity: 'complex',
+  terminals: [
+    { id: 'collector', position: { x: 0, y: -30 }, type: 'io', label: 'C' },
+    { id: 'base', position: { x: -30, y: 0 }, type: 'io', label: 'B' },
+    { id: 'emitter', position: { x: 0, y: 30 }, type: 'io', label: 'E' },
+  ],
+  properties: [
+    {
+      key: 'saturationCurrent',
+      type: 'number',
+      label: 'Saturation Current',
+      unit: 'A',
+      default: 1e-14,
+    },
+    {
+      key: 'currentGain',
+      type: 'number',
+      label: 'Current Gain (β)',
+      unit: '',
+      default: 100,
+    },
+  ],
+  icon: 'BJTSymbol', // Professional BJT symbol with terminals
+}
+
 const capacitorDefinition: ComponentDefinition = {
   type: 'capacitor',
   name: 'Capacitor',
@@ -248,6 +277,7 @@ ComponentRegistry.set('variable_resistor', variableResistorDefinition)
 ComponentRegistry.set('potentiometer', potentiometerDefinition)
 ComponentRegistry.set('diode', diodeDefinition)
 ComponentRegistry.set('led', ledDefinition)
+ComponentRegistry.set('bjt_npn', bjtNPNDefinition)
 ComponentRegistry.set('wire', wireDefinition)
 ComponentRegistry.set('capacitor', capacitorDefinition)
 ComponentRegistry.set('inductor', inductorDefinition)
@@ -267,6 +297,7 @@ export {
   potentiometerDefinition,
   diodeDefinition,
   ledDefinition,
+  bjtNPNDefinition,
   capacitorDefinition,
   inductorDefinition,
   acVoltageSourceDefinition,
@@ -302,6 +333,7 @@ export const registry: Record<string, ComponentDefinition> = {
   potentiometer: potentiometerDefinition,
   diode: diodeDefinition,
   led: ledDefinition,
+  bjt_npn: bjtNPNDefinition,
   capacitor: capacitorDefinition,
   inductor: inductorDefinition,
 }

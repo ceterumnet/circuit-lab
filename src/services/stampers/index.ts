@@ -17,11 +17,13 @@ export { InductorStamper } from './linear/InductorStamper'
 
 // Non-linear stampers and utilities
 export { DiodeCharacteristic } from './nonlinear/DiodeCharacteristic'
+export { BJTCharacteristic } from './nonlinear/BJTCharacteristic'
 export { LoadLineIntersection } from './nonlinear/LoadLineIntersection'
 export { DiodeParameterLibrary } from './nonlinear/DiodeParameterLibrary'
 export { CircuitAnalyzer } from './nonlinear/CircuitAnalyzer'
 export { DiodeStamper } from './nonlinear/DiodeStamper'
 export { LEDStamper } from './nonlinear/LEDStamper'
+export { BJTStamper } from './nonlinear/BJTStamper'
 
 // Utility classes
 export { ComponentStamperFactory } from './ComponentStamperFactory'

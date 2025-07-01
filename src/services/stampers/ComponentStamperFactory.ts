@@ -19,6 +19,7 @@ import { InductorStamper } from './linear/InductorStamper'
 // Non-linear stampers
 import { DiodeStamper } from './nonlinear/DiodeStamper'
 import { LEDStamper } from './nonlinear/LEDStamper'
+import { BJTStamper } from './nonlinear/BJTStamper'
 
 /**
  * Component stamper factory
@@ -38,6 +39,7 @@ export class ComponentStamperFactory {
     ['inductor', InductorStamper],
     ['diode', DiodeStamper],
     ['led', LEDStamper],
+    ['bjt_npn', BJTStamper],
     ['ground', GroundStamper],
     ['node', NodeStamper],
   ])
