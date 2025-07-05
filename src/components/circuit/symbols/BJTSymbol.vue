@@ -25,12 +25,7 @@
     <line x1="18" y1="38" x2="30" y2="40" stroke="currentColor" stroke-width="1.5" />
 
     <!-- NPN Arrow on emitter (pointing outward - conventional current flow) -->
-    <polygon
-      points="28,38 32,36 32,40"
-      fill="currentColor"
-      stroke="currentColor"
-      stroke-width="1"
-    />
+    <polygon points="32,39 28,40 28,36" fill="currentColor" stroke="currentColor" />
 
     <!-- Terminal labels for educational clarity -->
     <text

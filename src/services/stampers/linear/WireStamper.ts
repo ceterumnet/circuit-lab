@@ -9,6 +9,9 @@ import { PotentiometerStamper } from '@/services/stampers'
  * This ensures consistent Ohm's law calculations and eliminates KCL violations
  */
 export class WireStamper extends ResistiveStamper {
+  // Static set to track wires currently calculating current (prevents infinite recursion)
+  private static calculatingWires = new Set<string>()
+
   constructor(component: CircuitComponent) {
     // Use wire's configured resistance, default to 1mΩ for numerical stability
     // 1mΩ is small enough to be negligible in most circuits but avoids conditioning issues
@@ -58,13 +61,23 @@ export class WireStamper extends ResistiveStamper {
     branchCurrents: number[],
     allStampers?: ComponentStamper[],
   ): number {
-    const [n1, n2] = this.getNodeIndices(nodeMap)
-
-    // PURE MNA: Same-node connections carry zero current by definition
-    if (n1 === n2) {
-      console.log(`${this.type} ${this.id}: Same-node connection, current = 0A`)
-      return 0
+    // RECURSION DETECTION: Prevent infinite loops in circular wire dependencies
+    if (WireStamper.calculatingWires.has(this.id)) {
+      console.warn(`⚠️ Wire ${this.id}: Circular dependency detected, falling back to Ohm's law`)
+      return super.calculateCurrent(solution, nodeMap, branchCurrents, allStampers)
     }
+
+    // Mark this wire as currently calculating
+    WireStamper.calculatingWires.add(this.id)
+
+    try {
+      const [n1, n2] = this.getNodeIndices(nodeMap)
+
+      // PURE MNA: Same-node connections carry zero current by definition
+      if (n1 === n2) {
+        console.log(`${this.type} ${this.id}: Same-node connection, current = 0A`)
+        return 0
+      }
 
     // KCL-Based Calculation: Find all components connected to this wire's nodes
     if (!allStampers) {

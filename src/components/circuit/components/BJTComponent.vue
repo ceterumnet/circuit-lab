@@ -82,7 +82,8 @@
       <!-- NPN Arrow on emitter (pointing outward) -->
       <v-line
         :config="{
-          points: [28, 38, 32, 36, 32, 40, 28, 38],
+          // points: [32, 41, 28, 42, 29, 38, 32, 41],
+          points: [32, 40.5, 28.5, 42, 29, 38, 32, 40.5],
           stroke: isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
           strokeWidth: 1,
           fill: isActive ? '#22c55e' : isSelected ? '#ff4d4d' : isHighlighted ? '#ffc107' : '#333',
