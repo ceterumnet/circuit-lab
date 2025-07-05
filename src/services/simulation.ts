@@ -144,6 +144,39 @@ function detectFloatingNodes(
       node1 = termToNodeIndex.get(term1Id)
       node2 = termToNodeIndex.get(term2Id)
       console.log(`🔍 ${component.type} ${component.id}: nodes ${node1} ↔ ${node2}`)
+    } else if (component.type === 'bjt_npn' || component.type === 'bjt_pnp') {
+      // BJTs provide DC connectivity between all three terminals
+      // For floating node detection, treat them as providing electrical continuity
+      const definition = getComponentDefinition(component.type)!
+      const baseTermId = `${component.id}:${definition.terminals[0].id}` // base
+      const collectorTermId = `${component.id}:${definition.terminals[1].id}` // collector
+      const emitterTermId = `${component.id}:${definition.terminals[2].id}` // emitter
+
+      const baseNode = termToNodeIndex.get(baseTermId)
+      const collectorNode = termToNodeIndex.get(collectorTermId)
+      const emitterNode = termToNodeIndex.get(emitterTermId)
+
+      console.log(
+        `🔍 ${component.type} ${component.id}: nodes base=${baseNode}, collector=${collectorNode}, emitter=${emitterNode}`,
+      )
+
+      // Add connectivity: base ↔ collector ↔ emitter (three-terminal device)
+      // For floating node detection, treat as providing paths between all terminals
+      if (baseNode !== undefined && collectorNode !== undefined) {
+        connectivity.get(baseNode)!.add(collectorNode)
+        connectivity.get(collectorNode)!.add(baseNode)
+      }
+      if (collectorNode !== undefined && emitterNode !== undefined) {
+        connectivity.get(collectorNode)!.add(emitterNode)
+        connectivity.get(emitterNode)!.add(collectorNode)
+      }
+      if (baseNode !== undefined && emitterNode !== undefined) {
+        connectivity.get(baseNode)!.add(emitterNode)
+        connectivity.get(emitterNode)!.add(baseNode)
+      }
+
+      // Skip the standard two-terminal connectivity logic below
+      continue
     }
 
     // Add bidirectional connectivity
