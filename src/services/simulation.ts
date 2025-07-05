@@ -3,6 +3,7 @@ import { zeros, lusolve, matrix, Matrix } from 'mathjs'
 import { getComponentDefinition } from '@/registry/components'
 import { EnhancedMNASolver, NewtonRaphsonSolver, type NonLinearStamper } from './numerical-solver'
 import { DiodeStamper, ComponentStamperFactory, type ComponentStamper } from '@/services/stampers'
+import { WireStamper } from '@/services/stampers/linear/WireStamper'
 
 /**
  * Represents the result of a DC simulation.
@@ -405,6 +406,9 @@ export async function solveDC(
   console.log('Starting Unified DC Analysis for circuit:', circuit.id)
 
   try {
+    // Clear wire recursion state before each simulation
+    WireStamper.clearRecursionState()
+
     const components = circuit.components
 
     // Step 1: Build electrical nodes using the same logic as before

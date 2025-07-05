@@ -19,6 +19,13 @@ export class WireStamper extends ResistiveStamper {
     super(component.id, component.type, component, resistance)
   }
 
+  /**
+   * Clear the recursion detection state (call before each simulation)
+   */
+  public static clearRecursionState(): void {
+    WireStamper.calculatingWires.clear()
+  }
+
   public getNodeIndices(nodeMap: Map<string, number>): [number, number] {
     // Wires store connection info differently than standard components
     const props = this.component.properties!
@@ -79,115 +86,120 @@ export class WireStamper extends ResistiveStamper {
         return 0
       }
 
-    // KCL-Based Calculation: Find all components connected to this wire's nodes
-    if (!allStampers) {
-      // Fallback to Ohm's law if allStampers not provided (should not happen in normal operation)
-      console.warn(`⚠️ Wire ${this.id}: allStampers not provided, falling back to Ohm's law`)
-      return super.calculateCurrent(solution, nodeMap, branchCurrents, allStampers)
-    }
-
-    // Find all components connected to each wire node (excluding this wire itself)
-    const n1Components: ComponentStamper[] = []
-    const n2Components: ComponentStamper[] = []
-
-    for (const stamper of allStampers) {
-      if (stamper.id === this.id) continue // Skip self
-
-      try {
-        // Get the nodes this component connects to
-        let componentNodes: number[] = []
-
-        if (stamper.type === 'wire') {
-          const wireStamper = stamper as WireStamper
-          const [wireN1, wireN2] = wireStamper.getNodeIndices(nodeMap)
-          componentNodes = [wireN1, wireN2]
-        } else if (stamper.type === 'potentiometer') {
-          // Potentiometers have 3 nodes
-          const potStamper = stamper as PotentiometerStamper
-          const nodeIndices = (
-            potStamper as unknown as {
-              getNodeIndices: (nodeMap: Map<string, number>) => [number, number, number]
-            }
-          ).getNodeIndices(nodeMap)
-          componentNodes = [nodeIndices[0], nodeIndices[1], nodeIndices[2]]
-        } else if (
-          'getNodeIndices' in stamper &&
-          typeof (stamper as unknown as { getNodeIndices: unknown }).getNodeIndices === 'function'
-        ) {
-          // Standard 2-terminal components
-          const nodeIndices = (
-            stamper as unknown as {
-              getNodeIndices: (nodeMap: Map<string, number>) => [number, number]
-            }
-          ).getNodeIndices(nodeMap)
-          componentNodes = [nodeIndices[0], nodeIndices[1]]
-        }
-
-        // Check if this component connects to our wire's nodes
-        if (componentNodes.includes(n1)) {
-          n1Components.push(stamper)
-        }
-        if (componentNodes.includes(n2)) {
-          n2Components.push(stamper)
-        }
-      } catch (error) {
-        // Skip components that don't have standard node access
-        continue
+      // KCL-Based Calculation: Find all components connected to this wire's nodes
+      if (!allStampers) {
+        // Fallback to Ohm's law if allStampers not provided (should not happen in normal operation)
+        console.warn(`⚠️ Wire ${this.id}: allStampers not provided, falling back to Ohm's law`)
+        WireStamper.calculatingWires.delete(this.id) // Clean up before early return
+        return super.calculateCurrent(solution, nodeMap, branchCurrents, allStampers)
       }
-    }
 
-    // Calculate KCL current: sum of currents flowing into n1 node should equal current flowing into n2 node
-    // In a series circuit, the wire current should equal the current of connected series components
+      // Find all components connected to each wire node (excluding this wire itself)
+      const n1Components: ComponentStamper[] = []
+      const n2Components: ComponentStamper[] = []
 
-    // Find a reliable current reference from connected components
-    let referenceComponent: ComponentStamper | null = null
-    let referenceCurrent = 0
+      for (const stamper of allStampers) {
+        if (stamper.id === this.id) continue // Skip self
 
-    // Prefer non-wire components as current reference (more stable)
-    for (const component of [...n1Components, ...n2Components]) {
-      if (component.type !== 'wire' && component.type !== 'ground' && component.type !== 'node') {
-        referenceComponent = component
-        referenceCurrent = Math.abs(
-          component.calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
-        )
-        break
+        try {
+          // Get the nodes this component connects to
+          let componentNodes: number[] = []
+
+          if (stamper.type === 'wire') {
+            const wireStamper = stamper as WireStamper
+            const [wireN1, wireN2] = wireStamper.getNodeIndices(nodeMap)
+            componentNodes = [wireN1, wireN2]
+          } else if (stamper.type === 'potentiometer') {
+            // Potentiometers have 3 nodes
+            const potStamper = stamper as PotentiometerStamper
+            const nodeIndices = (
+              potStamper as unknown as {
+                getNodeIndices: (nodeMap: Map<string, number>) => [number, number, number]
+              }
+            ).getNodeIndices(nodeMap)
+            componentNodes = [nodeIndices[0], nodeIndices[1], nodeIndices[2]]
+          } else if (
+            'getNodeIndices' in stamper &&
+            typeof (stamper as unknown as { getNodeIndices: unknown }).getNodeIndices === 'function'
+          ) {
+            // Standard 2-terminal components
+            const nodeIndices = (
+              stamper as unknown as {
+                getNodeIndices: (nodeMap: Map<string, number>) => [number, number]
+              }
+            ).getNodeIndices(nodeMap)
+            componentNodes = [nodeIndices[0], nodeIndices[1]]
+          }
+
+          // Check if this component connects to our wire's nodes
+          if (componentNodes.includes(n1)) {
+            n1Components.push(stamper)
+          }
+          if (componentNodes.includes(n2)) {
+            n2Components.push(stamper)
+          }
+        } catch (error) {
+          // Skip components that don't have standard node access
+          continue
+        }
       }
-    }
 
-    // If no non-wire reference found, try to use the wire's Ohm's law calculation but with better stability
-    if (!referenceComponent) {
+      // Calculate KCL current: sum of currents flowing into n1 node should equal current flowing into n2 node
+      // In a series circuit, the wire current should equal the current of connected series components
+
+      // Find a reliable current reference from connected components
+      let referenceComponent: ComponentStamper | null = null
+      let referenceCurrent = 0
+
+      // Prefer non-wire components as current reference (more stable)
+      for (const component of [...n1Components, ...n2Components]) {
+        if (component.type !== 'wire' && component.type !== 'ground' && component.type !== 'node') {
+          referenceComponent = component
+          referenceCurrent = Math.abs(
+            component.calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
+          )
+          break
+        }
+      }
+
+      // If no non-wire reference found, try to use the wire's Ohm's law calculation but with better stability
+      if (!referenceComponent) {
+        const v1 = solution.get([n1, 0]) as number
+        const v2 = solution.get([n2, 0]) as number
+        const voltageDiff = Math.abs(v1 - v2)
+
+        // Use KCL logic: if voltage difference is very small, use reference from connected components
+        if (voltageDiff < 1e-6) {
+          // Very small voltage difference - use first connected component's current
+          if (n1Components.length > 0) {
+            referenceCurrent = Math.abs(
+              n1Components[0].calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
+            )
+          } else if (n2Components.length > 0) {
+            referenceCurrent = Math.abs(
+              n2Components[0].calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
+            )
+          } else {
+            referenceCurrent = 0
+          }
+        } else {
+          // Voltage difference significant enough for Ohm's law
+          referenceCurrent = voltageDiff / this.resistance
+        }
+      }
+
+      // Determine current direction based on node voltage difference
       const v1 = solution.get([n1, 0]) as number
       const v2 = solution.get([n2, 0]) as number
-      const voltageDiff = Math.abs(v1 - v2)
+      const current = v1 > v2 ? referenceCurrent : -referenceCurrent
 
-      // Use KCL logic: if voltage difference is very small, use reference from connected components
-      if (voltageDiff < 1e-6) {
-        // Very small voltage difference - use first connected component's current
-        if (n1Components.length > 0) {
-          referenceCurrent = Math.abs(
-            n1Components[0].calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
-          )
-        } else if (n2Components.length > 0) {
-          referenceCurrent = Math.abs(
-            n2Components[0].calculateCurrent(solution, nodeMap, branchCurrents, allStampers),
-          )
-        } else {
-          referenceCurrent = 0
-        }
-      } else {
-        // Voltage difference significant enough for Ohm's law
-        referenceCurrent = voltageDiff / this.resistance
-      }
+      console.log(
+        `${this.type} ${this.id}: KCL-based current = ${current.toExponential(3)}A (ref: ${referenceComponent?.type || 'voltage-based'} ${referenceComponent?.id || ''})`,
+      )
+      return current
+    } finally {
+      // Clean up: remove this wire from calculating set
+      WireStamper.calculatingWires.delete(this.id)
     }
-
-    // Determine current direction based on node voltage difference
-    const v1 = solution.get([n1, 0]) as number
-    const v2 = solution.get([n2, 0]) as number
-    const current = v1 > v2 ? referenceCurrent : -referenceCurrent
-
-    console.log(
-      `${this.type} ${this.id}: KCL-based current = ${current.toExponential(3)}A (ref: ${referenceComponent?.type || 'voltage-based'} ${referenceComponent?.id || ''})`,
-    )
-    return current
   }
 }
