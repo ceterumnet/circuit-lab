@@ -259,37 +259,104 @@ const currentColor = computed(() => {
 const arrowLinePoints = computed(() => {
   if (props.probe.type !== 'current') return []
 
-  // Use physical current direction instead of user-defined direction
-  const flowsStartToEnd = physicalCurrentInfo.value.flowsStartToEnd
-  const lineLength = 12
-  const yPos = -18 // Position above the readout box
+  // Calculate the actual wire direction vector
+  const wire = circuitStore.currentCircuit.components.find((c) => c.id === props.probe.targetId)
+  if (wire?.type !== 'wire' || !wire.properties) return []
 
-  if (flowsStartToEnd) {
-    // Right-pointing arrow line (current flows start → end)
-    return [8, yPos, 8 + lineLength, yPos]
-  } else {
-    // Left-pointing arrow line (current flows end → start)
-    return [-8, yPos, -8 - lineLength, yPos]
+  const wireProps = wire.properties
+  const components = circuitStore.currentCircuit.components
+  const startComp = components.find((c) => c.id === wireProps.startComponentId)
+  const endComp = components.find((c) => c.id === wireProps.endComponentId)
+
+  if (!startComp || !endComp) return []
+
+  // Get actual wire endpoints
+  const startPos = getTerminalWorldPosition(startComp, wireProps.startTerminal as string)
+  const endPos = getTerminalWorldPosition(endComp, wireProps.endTerminal as string)
+
+  // Calculate wire direction vector
+  const wireVector = { x: endPos.x - startPos.x, y: endPos.y - startPos.y }
+  const wireLength = Math.sqrt(wireVector.x * wireVector.x + wireVector.y * wireVector.y)
+
+  if (wireLength === 0) return []
+
+  // Normalize the wire vector
+  const normalizedWire = { x: wireVector.x / wireLength, y: wireVector.y / wireLength }
+
+  // Use physical current direction
+  const flowsStartToEnd = physicalCurrentInfo.value.flowsStartToEnd
+  const arrowLength = 12
+  const yOffset = -18 // Position above the readout box
+
+  // Calculate arrow direction based on actual wire direction and current flow
+  const arrowDirection = flowsStartToEnd ? 1 : -1
+  const arrowVector = {
+    x: normalizedWire.x * arrowDirection,
+    y: normalizedWire.y * arrowDirection,
   }
+
+  // Position arrow line along the wire direction
+  const startX = 8 - (arrowLength / 2) * arrowVector.x
+  const startY = yOffset - (arrowLength / 2) * arrowVector.y
+  const endX = 8 + (arrowLength / 2) * arrowVector.x
+  const endY = yOffset + (arrowLength / 2) * arrowVector.y
+
+  return [startX, startY, endX, endY]
 })
 
 const arrowHeadPath = computed(() => {
   if (props.probe.type !== 'current') return ''
 
-  // Use physical current direction instead of user-defined direction
+  // Calculate the actual wire direction vector
+  const wire = circuitStore.currentCircuit.components.find((c) => c.id === props.probe.targetId)
+  if (wire?.type !== 'wire' || !wire.properties) return ''
+
+  const wireProps = wire.properties
+  const components = circuitStore.currentCircuit.components
+  const startComp = components.find((c) => c.id === wireProps.startComponentId)
+  const endComp = components.find((c) => c.id === wireProps.endComponentId)
+
+  if (!startComp || !endComp) return ''
+
+  // Get actual wire endpoints
+  const startPos = getTerminalWorldPosition(startComp, wireProps.startTerminal as string)
+  const endPos = getTerminalWorldPosition(endComp, wireProps.endTerminal as string)
+
+  // Calculate wire direction vector
+  const wireVector = { x: endPos.x - startPos.x, y: endPos.y - startPos.y }
+  const wireLength = Math.sqrt(wireVector.x * wireVector.x + wireVector.y * wireVector.y)
+
+  if (wireLength === 0) return ''
+
+  // Normalize the wire vector
+  const normalizedWire = { x: wireVector.x / wireLength, y: wireVector.y / wireLength }
+
+  // Use physical current direction
   const flowsStartToEnd = physicalCurrentInfo.value.flowsStartToEnd
   const arrowSize = 4
-  const yPos = -18 // Position above the readout box
+  const yOffset = -18 // Position above the readout box
 
-  if (flowsStartToEnd) {
-    // Right-pointing arrow head (current flows start → end)
-    const tipX = 8 + 12
-    return `M${tipX},${yPos} L${tipX - arrowSize},${yPos - arrowSize / 2} L${tipX - arrowSize},${yPos + arrowSize / 2} Z`
-  } else {
-    // Left-pointing arrow head (current flows end → start)
-    const tipX = -8 - 12
-    return `M${tipX},${yPos} L${tipX + arrowSize},${yPos - arrowSize / 2} L${tipX + arrowSize},${yPos + arrowSize / 2} Z`
+  // Calculate arrow direction based on actual wire direction and current flow
+  const arrowDirection = flowsStartToEnd ? 1 : -1
+  const arrowVector = {
+    x: normalizedWire.x * arrowDirection,
+    y: normalizedWire.y * arrowDirection,
   }
+
+  // Position arrow head at the tip of the arrow line
+  const tipX = 8 + 6 * arrowVector.x
+  const tipY = yOffset + 6 * arrowVector.y
+
+  // Calculate perpendicular vector for arrow head wings
+  const perpVector = { x: -arrowVector.y, y: arrowVector.x }
+
+  // Arrow head points
+  const wing1X = tipX - arrowSize * arrowVector.x + (arrowSize / 2) * perpVector.x
+  const wing1Y = tipY - arrowSize * arrowVector.y + (arrowSize / 2) * perpVector.y
+  const wing2X = tipX - arrowSize * arrowVector.x - (arrowSize / 2) * perpVector.x
+  const wing2Y = tipY - arrowSize * arrowVector.y - (arrowSize / 2) * perpVector.y
+
+  return `M${tipX},${tipY} L${wing1X},${wing1Y} L${wing2X},${wing2Y} Z`
 })
 
 const probeValue = computed(() => {

@@ -16,6 +16,29 @@ All Circuit Lab components now follow professional design system guidelines:
 
 ---
 
+## ✅ RECENTLY RESOLVED - Current Session
+
+### **Fixed: Current Probe Arrow Visualization**
+
+**✅ RESOLVED**: Current probe arrows now correctly display direction based on actual wire geometry and physical current flow.
+
+**Solution Implemented**:
+
+- **Wire-aligned arrows**: Arrows now follow the actual wire direction vector instead of fixed left/right orientation
+- **Physical accuracy**: Arrow direction matches `physicalCurrentInfo.flowsStartToEnd` calculation
+- **Orientation independence**: Works correctly regardless of circuit layout or wire positioning
+- **Maintained physics**: Simulation calculations remain accurate and unchanged
+
+**Technical Implementation**:
+
+- Updated `arrowLinePoints` and `arrowHeadPath` computed properties in `ProbeComponent.vue`
+- Added wire direction vector calculation using `getTerminalWorldPosition`
+- Arrow positioning now based on normalized wire direction and current flow physics
+
+**Testing**: All 339 tests pass, no regressions introduced.
+
+---
+
 ## Overview
 
 Building a web-based circuit simulation application focused on educational purposes and learning circuit design. The goal is to provide an interactive platform for understanding operational theory, analysis, and simulation of electronic circuits.
@@ -91,6 +114,34 @@ Building a web-based circuit simulation application focused on educational purpo
 - Multi-parameter sweeps (currently single parameter)
 - Additional analysis types (temperature effects, statistical analysis)
 - Advanced visualization options (3D plots, contour maps)
+
+**Enhanced Current Flow Visualization (Future)**
+
+Advanced visualization enhancements for orientation-independent current flow understanding:
+
+- **Animated Flow Indicators**: Moving dots/pulses along wires showing current direction and magnitude
+  - Speed proportional to current magnitude using logarithmic scaling
+  - Color-coded for different current ranges (low/medium/high)
+  - Toggleable for focused learning vs. clean interface
+- **Color-Coded Flow Gradients**: Gradient coloring along wires from start to end
+  - Start/end colors indicate current direction (red→blue for positive flow)
+  - Intensity proportional to current magnitude
+  - Subtle educational indicator without visual clutter
+- **Contextual Component Indicators**: Current flow visualization relative to component function
+  - Voltage sources: "sourcing" vs "sinking" current with appropriate visual cues
+  - Resistors: "consuming" power with heat-map style visualization
+  - Diodes: "conducting" vs "blocking" with forward/reverse indicators
+  - Educational context helps students understand current's role in circuit function
+- **Smart Teaching Mode**: Hybrid approach combining multiple visualization techniques
+  - Wire-aligned arrows (current implementation) for physical accuracy
+  - Contextual coloring based on current magnitude and electrical role
+  - Optional animated flow for educational demonstrations
+  - User-selectable visualization intensity (minimal, standard, teaching)
+- **Multi-Modal Current Display**: Different visualization modes for different learning objectives
+  - **Physical Mode**: Wire-aligned arrows showing actual current paths
+  - **Functional Mode**: Component-centric display showing electrical roles
+  - **Educational Mode**: Enhanced animations and contextual information
+  - **Minimal Mode**: Clean interface with subtle current indicators
 
 ## Development Roadmap
 
