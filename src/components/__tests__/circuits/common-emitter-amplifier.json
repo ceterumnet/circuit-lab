@@ -1,0 +1,216 @@
+{
+  "id": "common-emitter-amplifier",
+  "name": "Common Emitter Amplifier - BJT Demo",
+  "components": [
+    {
+      "id": "VCC",
+      "type": "voltage_source",
+      "position": { "x": 100, "y": 100 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "voltage": 12.0,
+        "label": "VCC"
+      }
+    },
+    {
+      "id": "VIN",
+      "type": "voltage_source",
+      "position": { "x": 100, "y": 300 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "voltage": 0.7,
+        "label": "Vin"
+      }
+    },
+    {
+      "id": "Q1",
+      "type": "bjt_npn",
+      "position": { "x": 300, "y": 200 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "saturationCurrent": 1e-14,
+        "currentGain": 100,
+        "label": "Q1"
+      }
+    },
+    {
+      "id": "RC",
+      "type": "resistor",
+      "position": { "x": 300, "y": 100 },
+      "rotation": 90,
+      "selected": false,
+      "properties": {
+        "resistance": 2200,
+        "label": "RC"
+      }
+    },
+    {
+      "id": "RB",
+      "type": "resistor",
+      "position": { "x": 200, "y": 200 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "resistance": 470000,
+        "label": "RB"
+      }
+    },
+    {
+      "id": "RE",
+      "type": "resistor",
+      "position": { "x": 300, "y": 300 },
+      "rotation": 90,
+      "selected": false,
+      "properties": {
+        "resistance": 1000,
+        "label": "RE"
+      }
+    },
+    {
+      "id": "GND1",
+      "type": "ground",
+      "position": { "x": 100, "y": 400 },
+      "rotation": 0,
+      "selected": false
+    },
+    {
+      "id": "GND2",
+      "type": "ground",
+      "position": { "x": 300, "y": 400 },
+      "rotation": 0,
+      "selected": false
+    },
+    {
+      "id": "W1",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "VCC",
+        "startTerminal": "positive",
+        "endComponentId": "RC",
+        "endTerminal": "terminal1"
+      }
+    },
+    {
+      "id": "W2",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "RC",
+        "startTerminal": "terminal2",
+        "endComponentId": "Q1",
+        "endTerminal": "collector"
+      }
+    },
+    {
+      "id": "W3",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "VIN",
+        "startTerminal": "positive",
+        "endComponentId": "RB",
+        "endTerminal": "terminal1"
+      }
+    },
+    {
+      "id": "W4",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "RB",
+        "startTerminal": "terminal2",
+        "endComponentId": "Q1",
+        "endTerminal": "base"
+      }
+    },
+    {
+      "id": "W5",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "Q1",
+        "startTerminal": "emitter",
+        "endComponentId": "RE",
+        "endTerminal": "terminal1"
+      }
+    },
+    {
+      "id": "W6",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "RE",
+        "startTerminal": "terminal2",
+        "endComponentId": "GND2",
+        "endTerminal": "terminal"
+      }
+    },
+    {
+      "id": "W7",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "VCC",
+        "startTerminal": "negative",
+        "endComponentId": "GND1",
+        "endTerminal": "terminal"
+      }
+    },
+    {
+      "id": "W8",
+      "type": "wire",
+      "position": { "x": 0, "y": 0 },
+      "rotation": 0,
+      "selected": false,
+      "properties": {
+        "startComponentId": "VIN",
+        "startTerminal": "negative",
+        "endComponentId": "GND1",
+        "endTerminal": "terminal"
+      }
+    }
+  ],
+  "wires": [],
+  "probes": [
+    {
+      "id": "IB_probe",
+      "type": "current",
+      "position": { "x": 250, "y": 180 },
+      "targetId": "W4",
+      "direction": true
+    },
+    {
+      "id": "IC_probe",
+      "type": "current",
+      "position": { "x": 320, "y": 150 },
+      "targetId": "W2",
+      "direction": true
+    },
+    {
+      "id": "VOUT_probe",
+      "type": "voltage",
+      "position": { "x": 380, "y": 150 },
+      "targetId": "W2",
+      "direction": true
+    }
+  ],
+  "nodes": {}
+}

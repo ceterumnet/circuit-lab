@@ -2,7 +2,12 @@ import type { Circuit, CircuitComponent, Wire } from '@/types/components'
 import { zeros, lusolve, matrix, Matrix } from 'mathjs'
 import { getComponentDefinition } from '@/registry/components'
 import { EnhancedMNASolver, NewtonRaphsonSolver, type NonLinearStamper } from './numerical-solver'
-import { DiodeStamper, ComponentStamperFactory, type ComponentStamper } from '@/services/stampers'
+import {
+  DiodeStamper,
+  ComponentStamperFactory,
+  type ComponentStamper,
+  BJTStamper,
+} from '@/services/stampers'
 import { WireStamper } from '@/services/stampers/linear/WireStamper'
 
 /**
@@ -478,7 +483,11 @@ export async function solveDC(
         stampers.push(stamper)
 
         // Check if this is also a non-linear component
-        if (component.type === 'diode' || component.type === 'led') {
+        if (
+          component.type === 'diode' ||
+          component.type === 'led' ||
+          component.type === 'bjt_npn'
+        ) {
           nonLinearStampers.push(stamper as ComponentStamper & NonLinearStamper)
         }
       } catch (error) {
@@ -585,11 +594,14 @@ export async function solveDC(
       // ARCHITECTURE COMPLIANCE: Try direct Load Line solution first (SPICE-like)
       // For simple circuits, this should eliminate the need for Newton-Raphson
 
-      // CRITICAL FIX: Provide all stampers to diode stampers for proper circuit analysis
+      // CRITICAL FIX: Provide all stampers to non-linear stampers for proper circuit analysis
       for (const stamper of nonLinearStampers) {
         if (stamper.type === 'diode' || stamper.type === 'led') {
           const diodeStamper = stamper as DiodeStamper
           diodeStamper.setAllStampers(stampers)
+        } else if (stamper.type === 'bjt_npn') {
+          const bjtStamper = stamper as BJTStamper
+          bjtStamper.setAllStampers(stampers)
         }
       }
 
@@ -614,6 +626,12 @@ export async function solveDC(
             dummySolution,
             stampers,
           )
+        } else if (stamper.type === 'bjt_npn') {
+          // For BJTs, use Load Line pre-calculation in stampLinearized
+          // This requires a dummy solution vector for the analysis
+          const dummySolution = matrix(zeros(matrixSize, 1))
+          const bjtStamper = stamper as BJTStamper
+          bjtStamper.stampLinearized(fullMatrix, fullRhs, termToNodeIndex, dummySolution, stampers)
         } else {
           // Standard linear component stamping
           const result = stamper.stampDC(fullMatrix, fullRhs, termToNodeIndex, nextFullBranchIndex)
@@ -820,6 +838,65 @@ export async function solveDC(
         stampers,
       )
       currentResults[stamper.id] = current
+
+      // Update BJT component properties with operating region information
+      if (stamper.type === 'bjt_npn' && stamper instanceof BJTStamper) {
+        const operatingRegion = stamper.getOperatingRegion()
+        const baseCurrent = stamper.getBaseCurrent()
+        const collectorCurrent = current // This is the collector current from calculateCurrent
+        const emitterCurrent = stamper.getEmitterCurrent()
+
+        // Get terminal voltages for VBE and VCE calculation
+        const baseNodeIndex = termToNodeIndex.get(`${stamper.id}:base`)
+        const collectorNodeIndex = termToNodeIndex.get(`${stamper.id}:collector`)
+        const emitterNodeIndex = termToNodeIndex.get(`${stamper.id}:emitter`)
+
+        let vBE: number | undefined
+        let vCE: number | undefined
+        let currentGain: number | undefined
+
+        if (baseNodeIndex !== undefined && emitterNodeIndex !== undefined) {
+          const vB = solution.get([baseNodeIndex, 0]) as number
+          const vE = solution.get([emitterNodeIndex, 0]) as number
+          vBE = vB - vE
+        }
+
+        if (collectorNodeIndex !== undefined && emitterNodeIndex !== undefined) {
+          const vC = solution.get([collectorNodeIndex, 0]) as number
+          const vE = solution.get([emitterNodeIndex, 0]) as number
+          vCE = vC - vE
+        }
+
+        // Calculate current gain if both currents are meaningful
+        if (baseCurrent > 1e-12 && collectorCurrent > 1e-12) {
+          currentGain = collectorCurrent / baseCurrent
+        }
+
+        // Find the component and update its properties
+        const component = circuit.components.find((c) => c.id === stamper.id)
+        if (component) {
+          const updatedProperties: Record<
+            string,
+            string | number | boolean | { x: number; y: number }
+          > = {
+            ...component.properties,
+            operatingRegion: operatingRegion,
+            isActive: operatingRegion === 'Active',
+            baseCurrent: baseCurrent,
+            collectorCurrent: collectorCurrent,
+            emitterCurrent: emitterCurrent,
+          }
+
+          if (vBE !== undefined) updatedProperties.vBE = vBE
+          if (vCE !== undefined) updatedProperties.vCE = vCE
+          if (currentGain !== undefined) updatedProperties.currentGain = currentGain
+
+          component.properties = updatedProperties
+          console.log(
+            `🎯 Updating BJT ${stamper.id} properties: operatingRegion = "${operatingRegion}", IB = ${baseCurrent?.toExponential(2)}A, IC = ${collectorCurrent?.toExponential(2)}A, VBE = ${vBE?.toFixed(3)}V`,
+          )
+        }
+      }
     }
 
     console.log('Unified DC Analysis completed successfully')

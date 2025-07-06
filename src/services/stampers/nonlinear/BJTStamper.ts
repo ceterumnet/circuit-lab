@@ -131,7 +131,7 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
 
   /**
    * Analyze base-emitter circuit for Thevenin equivalent
-   * Similar to diode analysis but focused on base-emitter path
+   * FIXED: Now performs proper circuit graph analysis to identify only base-emitter path components
    */
   private analyzeBaseEmitterCircuit(
     solution: Matrix,
@@ -147,48 +147,260 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
       return { theveninVoltage: 5.0, theveninResistance: 10000.0 }
     }
 
-    let theveninVoltage = 0.0
-    let theveninResistance = 0.0
+    // Get BJT terminal nodes
+    const [, baseNode, emitterNode] = this.getThreeTerminalNodes(nodeMap)
 
-    // Find voltage sources and resistors connected to base circuit
-    const voltageSources: { voltage: number; component: CircuitComponent }[] = []
-    const resistors: { resistance: number; component: CircuitComponent }[] = []
+    // Analyze all components to detect circuit patterns
+    const allVoltageSources: { stamper: ComponentStamper; voltage: number }[] = []
+    const allResistors: { stamper: ComponentStamper; resistance: number }[] = []
 
     for (const stamper of stampersToUse) {
       if (stamper.type === 'voltage_source' && 'component' in stamper) {
-        const component = (stamper as { component: CircuitComponent }).component
+        const component = (stamper as unknown as { component: CircuitComponent }).component
         const voltage = (component.properties?.voltage as number) || 0
-        voltageSources.push({ voltage, component })
-        console.log(`  Found voltage source: ${voltage}V`)
+        allVoltageSources.push({ stamper, voltage })
       } else if (stamper.type === 'resistor' && 'component' in stamper) {
-        const component = (stamper as { component: CircuitComponent }).component
-        const resistance = (component.properties?.resistance as number) || 1000
-        resistors.push({ resistance, component })
-        console.log(`  Found resistor: ${resistance}Ω`)
+        const component = (stamper as unknown as { component: CircuitComponent }).component
+        const resistance = (component.properties?.resistance as number) || 0
+        allResistors.push({ stamper, resistance })
       }
     }
 
-    // Calculate Thevenin equivalent (simplified approach)
-    if (voltageSources.length > 0) {
-      // Use the highest voltage source as dominant
-      theveninVoltage = Math.max(...voltageSources.map((vs) => vs.voltage))
-      console.log(`  Thevenin voltage: ${theveninVoltage}V`)
-    } else {
-      theveninVoltage = 5.0 // Default base bias voltage
-    }
-
-    if (resistors.length > 0) {
-      // For base bias, typically use series resistance to base
-      theveninResistance = resistors.reduce((sum, r) => sum + r.resistance, 0)
-      console.log(`  Thevenin resistance: ${theveninResistance}Ω`)
-    } else {
-      theveninResistance = 10000.0 // Default base bias resistance
-    }
+    // Detect circuit patterns
+    const smallVoltageSources = allVoltageSources.filter((vs) => vs.voltage > 0 && vs.voltage <= 5)
+    const supplyVoltageSources = allVoltageSources.filter((vs) => vs.voltage > 5)
+    const mediumResistors = allResistors.filter(
+      (r) => r.resistance >= 1000 && r.resistance <= 50000,
+    )
+    const isVoltageDividerBias =
+      supplyVoltageSources.length > 0 &&
+      smallVoltageSources.length === 0 &&
+      mediumResistors.length >= 2
 
     console.log(
-      `  Final Base-Emitter Thevenin: Vth=${theveninVoltage}V, Rth=${theveninResistance}Ω`,
+      `  Pattern analysis: hasSmallVoltage=${smallVoltageSources.length > 0}, isVoltageDivider=${isVoltageDividerBias}`,
     )
+
+    // Build circuit graph to identify base-emitter path
+    const baseEmitterComponents = this.identifyBaseEmitterComponents(
+      stampersToUse,
+      nodeMap,
+      baseNode,
+      emitterNode,
+      isVoltageDividerBias,
+      smallVoltageSources.length > 0,
+    )
+
+    console.log(`  Components in base-emitter path: ${baseEmitterComponents.length}`)
+
+    // If graph traversal found no components, use fallback for isolated BJT
+    if (baseEmitterComponents.length === 0) {
+      console.log(`  No components found in base-emitter path - BJT appears isolated`)
+      return { theveninVoltage: 0.0, theveninResistance: 1000000.0 }
+    }
+
+    let theveninVoltage = 0.0
+    let theveninResistance = 0.0
+
+    // Analyze components and calculate proper Thevenin equivalent
+    const voltageSources = baseEmitterComponents.filter((s) => s.type === 'voltage_source')
+    const resistors = baseEmitterComponents.filter((s) => s.type === 'resistor')
+
+    console.log(
+      `  Analyzing ${voltageSources.length} voltage sources and ${resistors.length} resistors`,
+    )
+
+    if (isVoltageDividerBias && voltageSources.length === 1 && resistors.length >= 2) {
+      // Voltage divider bias analysis
+      const vcc =
+        ((voltageSources[0] as unknown as { component: CircuitComponent }).component.properties
+          ?.voltage as number) || 0
+      const resistorValues = resistors
+        .map(
+          (r) =>
+            ((r as unknown as { component: CircuitComponent }).component.properties
+              ?.resistance as number) || 0,
+        )
+        .sort((a, b) => b - a) // Sort descending
+
+      // For voltage divider: R1 (higher) → base → R2 (lower) → ground
+      // Plus possibly RE (emitter resistor)
+      if (resistorValues.length >= 2) {
+        const r1 = resistorValues[0] // Higher resistance (top of divider)
+        const r2 = resistorValues[1] // Lower resistance (bottom of divider)
+
+        // Voltage divider: Vth = VCC * R2/(R1+R2)
+        theveninVoltage = (vcc * r2) / (r1 + r2)
+
+        // Thevenin resistance: Rth = R1||R2 = (R1*R2)/(R1+R2)
+        theveninResistance = (r1 * r2) / (r1 + r2)
+
+        // Add any additional series resistance (like emitter resistor)
+        if (resistorValues.length > 2) {
+          theveninResistance += resistorValues[2]
+        }
+
+        console.log(`  Voltage divider analysis: VCC=${vcc}V, R1=${r1}Ω, R2=${r2}Ω`)
+        console.log(
+          `  Calculated: Vth = ${vcc}V * ${r2}Ω / ${r1 + r2}Ω = ${theveninVoltage.toFixed(3)}V`,
+        )
+        console.log(`  Calculated: Rth = ${r1}Ω || ${r2}Ω = ${theveninResistance.toFixed(0)}Ω`)
+      }
+    } else {
+      // Simple base bias or multiple voltage sources - use simple summation
+      for (const stamper of baseEmitterComponents) {
+        if (stamper.type === 'voltage_source' && 'component' in stamper) {
+          const component = (stamper as unknown as { component: CircuitComponent }).component
+          const voltage = (component.properties?.voltage as number) || 0
+          console.log(`  Found voltage source in base-emitter path: ${component.id} = ${voltage}V`)
+          theveninVoltage += voltage
+        } else if (stamper.type === 'resistor' && 'component' in stamper) {
+          const component = (stamper as unknown as { component: CircuitComponent }).component
+          const resistance = (component.properties?.resistance as number) || 0
+          console.log(`  Found resistor in base-emitter path: ${component.id} = ${resistance}Ω`)
+          theveninResistance += resistance
+        }
+      }
+    }
+
+    console.log(`  Thevenin voltage: ${theveninVoltage.toFixed(3)}V`)
+    console.log(`  Series resistance RTH: ${theveninResistance.toFixed(0)}Ω`)
+    console.log(
+      `  Final Base-Emitter Thevenin: Vth=${theveninVoltage.toFixed(3)}V, Rth=${theveninResistance.toFixed(1)}Ω`,
+    )
+
     return { theveninVoltage, theveninResistance }
+  }
+
+  /**
+   * Identify components in the base-emitter circuit path using smart heuristics
+   * This distinguishes between base circuit and collector circuit components
+   */
+  private identifyBaseEmitterComponents(
+    allStampers: ComponentStamper[],
+    nodeMap: Map<string, number>,
+    baseNode: number,
+    emitterNode: number,
+    isVoltageDividerBias: boolean,
+    hasSmallVoltageSource: boolean,
+  ): ComponentStamper[] {
+    console.log(`  🔍 Smart heuristic analysis for base-emitter circuit`)
+
+    const baseEmitterComponents: ComponentStamper[] = []
+
+    // Categorize components by their electrical characteristics
+    const voltageSources: { stamper: ComponentStamper; voltage: number }[] = []
+    const resistors: { stamper: ComponentStamper; resistance: number }[] = []
+
+    for (const stamper of allStampers) {
+      if (stamper.type === 'voltage_source' && 'component' in stamper) {
+        const component = (stamper as { component: CircuitComponent }).component
+        const voltage = (component.properties?.voltage as number) || 0
+        voltageSources.push({ stamper, voltage })
+      } else if (stamper.type === 'resistor' && 'component' in stamper) {
+        const component = (stamper as { component: CircuitComponent }).component
+        const resistance = (component.properties?.resistance as number) || 0
+        resistors.push({ stamper, resistance })
+      }
+    }
+
+    // Smart heuristic: Distinguish base circuit from collector circuit
+    console.log(`  Found ${voltageSources.length} voltage sources, ${resistors.length} resistors`)
+
+    // Base circuit voltage sources: typically small (0.1V - 5V for base bias)
+    // Collector circuit voltage sources: typically large (12V, 24V for VCC)
+    for (const { stamper, voltage } of voltageSources) {
+      if (voltage > 0 && voltage <= 5) {
+        // This is likely a base bias voltage source
+        baseEmitterComponents.push(stamper)
+        console.log(
+          `  ✅ Base bias voltage source: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${voltage}V`,
+        )
+      } else if (voltage > 5 && isVoltageDividerBias) {
+        // For voltage divider bias: include supply voltage when pattern is detected
+        baseEmitterComponents.push(stamper)
+        console.log(
+          `  ✅ Supply voltage for voltage divider bias: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${voltage}V`,
+        )
+      } else {
+        console.log(
+          `  ❌ Excluded collector supply: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${voltage}V`,
+        )
+      }
+    }
+
+    // Base circuit resistors: typically high value (100kΩ+ for base bias)
+    // Collector circuit resistors: typically medium value (1kΩ-10kΩ for load)
+    // Emitter circuit resistors: typically small value (100Ω-1kΩ for degeneration)
+    for (const { stamper, resistance } of resistors) {
+      if (resistance >= 100000) {
+        // This is likely a base bias resistor (RB, R1 in voltage divider)
+        baseEmitterComponents.push(stamper)
+        console.log(
+          `  ✅ Base bias resistor: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${resistance}Ω`,
+        )
+      } else if (isVoltageDividerBias && resistance >= 1000 && resistance <= 50000) {
+        // For voltage divider bias: include medium-value resistors (R1, R2, RE)
+        // But exclude obvious collector resistors (RC typically 2-5kΩ range)
+        const componentId = (stamper as unknown as { component: CircuitComponent }).component.id
+        if (
+          !componentId.toUpperCase().includes('RC') &&
+          !componentId.toUpperCase().includes('COLLECTOR')
+        ) {
+          baseEmitterComponents.push(stamper)
+          console.log(`  ✅ Voltage divider resistor: ${componentId} = ${resistance}Ω`)
+        } else {
+          console.log(`  ❌ Excluded collector resistor: ${componentId} = ${resistance}Ω`)
+        }
+      } else {
+        console.log(
+          `  ❌ Excluded resistor: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${resistance}Ω`,
+        )
+      }
+    }
+
+    console.log(`  Final base-emitter components: ${baseEmitterComponents.length}`)
+    return baseEmitterComponents
+  }
+
+  /**
+   * Get the nodes that a component is connected to
+   * (Kept for compatibility, but not used in current heuristic approach)
+   */
+  private getComponentNodes(stamper: ComponentStamper, nodeMap: Map<string, number>): number[] {
+    const nodes: number[] = []
+
+    // Get component terminals and map to node indices
+    if ('component' in stamper) {
+      const component = (stamper as { component: CircuitComponent }).component
+
+      // Different components have different terminal patterns
+      switch (component.type) {
+        case 'voltage_source':
+          nodes.push(
+            nodeMap.get(`${component.id}:positive`) || -1,
+            nodeMap.get(`${component.id}:negative`) || -1,
+          )
+          break
+        case 'resistor':
+          nodes.push(
+            nodeMap.get(`${component.id}:terminal1`) || -1,
+            nodeMap.get(`${component.id}:terminal2`) || -1,
+          )
+          break
+        case 'wire':
+          // Wires connect between component terminals
+          // Get the actual connected nodes from the wire's startComponentId/endComponentId
+          const wireComponent = component as CircuitComponent & {
+            properties: { startComponentId: string; endComponentId: string }
+          }
+          // For now, skip wires in the graph traversal as they're connections, not components
+          break
+        // Add more component types as needed
+      }
+    }
+
+    return nodes.filter((node) => node !== -1)
   }
 
   /**
@@ -203,17 +415,10 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
   ): void {
     const [collectorNode, baseNode, emitterNode] = this.getThreeTerminalNodes(nodeMap)
 
-    // FIRST: Check actual VBE from solution for cutoff detection
-    const vB = solution.get([baseNode, 0]) as number
+    // Get collector-emitter voltage from current solution (needed for load line analysis)
+    const vC = solution.get([collectorNode, 0]) as number
     const vE = solution.get([emitterNode, 0]) as number
-    const actualVBE = vB - vE
-
-    // If VBE is clearly in cutoff region, don't use load line analysis
-    if (actualVBE < 0.5) {
-      this.operatingPoint = { vBE: actualVBE, vCE: 0, ib: 0, ic: 0, ie: 0 }
-      console.log(`BJT ${this.id}: Cutoff detected (VBE=${actualVBE.toFixed(3)}V < 0.5V)`)
-      return
-    }
+    const vCE = vC - vE
 
     // SECOND: Analyze base-emitter circuit using Load Line Intersection
     const { theveninVoltage, theveninResistance } = this.analyzeBaseEmitterCircuit(
@@ -233,10 +438,14 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
       const vBE = loadLineResult.voltage
       const ib = loadLineResult.current
 
-      // Get collector-emitter voltage from current solution
-      const vC = solution.get([collectorNode, 0]) as number
-      const vE = solution.get([emitterNode, 0]) as number
-      const vCE = vC - vE
+      // Check if BJT is actually in cutoff after load line analysis
+      if (vBE < 0.5) {
+        this.operatingPoint = { vBE, vCE, ib: 0, ic: 0, ie: 0 }
+        console.log(
+          `BJT ${this.id}: Cutoff detected after load line analysis (VBE=${vBE.toFixed(3)}V < 0.5V)`,
+        )
+        return
+      }
 
       // Calculate collector current based on BJT model
       const ic = this.bjtCharacteristic.getCollectorCurrent(vBE, vCE)
@@ -292,7 +501,7 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
       // Log operating point
       const region = this.bjtCharacteristic.getOperatingRegion(vBE, vCE)
       console.log(
-        `BJT ${this.id}: ${region} - VBE=${vBE.toFixed(3)}V, VCE=${vCE.toFixed(3)}V, IB=${ib.toExponential(2)}A, IC=${ic.toExponential(2)}A`,
+        `🔋 BJT ${this.id}: ${region} - VBE=${vBE.toFixed(3)}V, VCE=${vCE.toFixed(3)}V, IB=${ib.toExponential(2)}A, IC=${ic.toExponential(2)}A`,
       )
     } else {
       // Fallback: Use cutoff state

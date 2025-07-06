@@ -26,7 +26,7 @@
 
       <!-- Component Properties Section -->
       <div class="property-section">
-        <div class="property-section-title">Properties</div>
+        <div class="property-section-title">Properties! {{ component.type }}</div>
 
         <!-- Dynamically generated properties -->
         <div
@@ -139,6 +139,53 @@
           <label class="property-label">Power Dissipation</label>
           <div class="property-value power-display">
             {{ (simulationDebugInfo.powerDissipation * 1000).toFixed(3) }}mW
+          </div>
+        </div>
+
+        <!-- BJT-specific analysis information -->
+        <div v-if="simulationDebugInfo.operatingRegion !== undefined" class="property-field">
+          <label class="property-label">Operating Region</label>
+          <div
+            class="property-value"
+            :class="getOperatingRegionClass(simulationDebugInfo.operatingRegion)"
+          >
+            {{ simulationDebugInfo.operatingRegion }}
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.baseCurrent !== undefined" class="property-field">
+          <label class="property-label">Base Current (IB)</label>
+          <div class="property-value current-display">
+            {{ formatCurrent(simulationDebugInfo.baseCurrent) }}
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.collectorCurrent !== undefined" class="property-field">
+          <label class="property-label">Collector Current (IC)</label>
+          <div class="property-value current-display">
+            {{ formatCurrent(simulationDebugInfo.collectorCurrent) }}
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.emitterCurrent !== undefined" class="property-field">
+          <label class="property-label">Emitter Current (IE)</label>
+          <div class="property-value current-display">
+            {{ formatCurrent(simulationDebugInfo.emitterCurrent) }}
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.vBE !== undefined" class="property-field">
+          <label class="property-label">VBE Voltage</label>
+          <div class="property-value voltage-display">
+            {{ simulationDebugInfo.vBE.toFixed(3) }}V
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.vCE !== undefined" class="property-field">
+          <label class="property-label">VCE Voltage</label>
+          <div class="property-value voltage-display">
+            {{ simulationDebugInfo.vCE.toFixed(3) }}V
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.currentGain !== undefined" class="property-field">
+          <label class="property-label">Current Gain (β)</label>
+          <div class="property-value">
+            {{ simulationDebugInfo.currentGain.toFixed(1) }}
           </div>
         </div>
       </div>
@@ -431,10 +478,11 @@ const wireDebugInfo = computed(() => {
 })
 
 const simulationDebugInfo = computed(() => {
-  const dcSolution = circuitStore.dcSolution
-  if (!dcSolution) return null
-
-  const { voltages, currents, termToNodeIndex } = dcSolution
+  console.log('🔍 Simulation Debug Info:', {
+    componentType: props.component.type,
+    componentId: props.component.id,
+    allProperties: props.component.properties,
+  })
 
   // Get node information for the component
   let nodeIndex: number | undefined
@@ -442,37 +490,108 @@ const simulationDebugInfo = computed(() => {
   let current: number | undefined
   let powerDissipation: number | undefined
 
-  // For wire components, get the current directly
-  if (props.component.type === 'wire') {
-    current = currents[props.component.id]
+  try {
+    const dcSolution = circuitStore.dcSolution
+    console.log('🔍 Circuit Store State:', {
+      dcSolution: dcSolution,
+      isRealTimeSimulation: circuitStore.isRealTimeSimulation,
+      isSimulating: circuitStore.isSimulating,
+      hasValidSimulation: circuitStore.hasValidSimulation,
+      simulationErrors: circuitStore.simulationErrors,
+    })
 
-    // Try to get voltage from start terminal
-    if (props.component.properties) {
-      const startTerminalId = `${props.component.properties.startComponentId}:${props.component.properties.startTerminal}`
-      nodeIndex = termToNodeIndex.get(startTerminalId)
-      if (nodeIndex !== undefined) {
-        voltage = voltages[nodeIndex]
+    if (!dcSolution) {
+      console.log('🔍 No DC solution available - triggering manual simulation...')
+      // Try to trigger a manual simulation
+      circuitStore.startSimulation()
+      return null
+    }
+
+    console.log('🔍 DC Solution available, extracting data...')
+    const { voltages, currents, termToNodeIndex } = dcSolution
+
+    console.log('🔍 Processing component type:', props.component.type)
+
+    // For wire components, get the current directly
+    if (props.component.type === 'wire') {
+      console.log('🔍 Processing wire component...')
+      current = currents[props.component.id]
+
+      // Try to get voltage from start terminal
+      if (props.component.properties) {
+        const startTerminalId = `${props.component.properties.startComponentId}:${props.component.properties.startTerminal}`
+        nodeIndex = termToNodeIndex.get(startTerminalId)
+        if (nodeIndex !== undefined) {
+          voltage = voltages[nodeIndex]
+        }
+      }
+    } else {
+      console.log('🔍 Processing non-wire component...')
+      // For other components, get current and try to find voltage
+      current = currents[props.component.id]
+      console.log('🔍 Component current:', current)
+
+      // Try to get voltage from first terminal
+      const componentDef = getComponentDefinition(props.component.type)
+      console.log('🔍 Component definition:', componentDef)
+
+      if (componentDef?.terminals?.[0]) {
+        const terminalId = `${props.component.id}:${componentDef.terminals[0].id}`
+        console.log('🔍 Looking for terminal:', terminalId)
+        nodeIndex = termToNodeIndex.get(terminalId)
+        if (nodeIndex !== undefined) {
+          voltage = voltages[nodeIndex]
+          console.log('🔍 Found voltage:', voltage)
+        }
       }
     }
-  } else {
-    // For other components, get current and try to find voltage
-    current = currents[props.component.id]
 
-    // Try to get voltage from first terminal
-    const componentDef = getComponentDefinition(props.component.type)
-    if (componentDef?.terminals?.[0]) {
-      const terminalId = `${props.component.id}:${componentDef.terminals[0].id}`
-      nodeIndex = termToNodeIndex.get(terminalId)
-      if (nodeIndex !== undefined) {
-        voltage = voltages[nodeIndex]
-      }
+    // Calculate power dissipation for resistive components
+    if (current !== undefined && voltage !== undefined && props.component.properties?.resistance) {
+      const resistance = props.component.properties.resistance as number
+      powerDissipation = current * current * resistance
     }
+
+    console.log('🔍 Basic values extracted:', { nodeIndex, voltage, current, powerDissipation })
+  } catch (error) {
+    console.error('🔍 Exception in simulationDebugInfo basic processing:', error)
+    return null
   }
 
-  // Calculate power dissipation for resistive components
-  if (current !== undefined && voltage !== undefined && props.component.properties?.resistance) {
-    const resistance = props.component.properties.resistance as number
-    powerDissipation = current * current * resistance
+  // BJT-specific analysis information
+  let operatingRegion: string | undefined
+  let baseCurrent: number | undefined
+  let collectorCurrent: number | undefined
+  let emitterCurrent: number | undefined
+  let vBE: number | undefined
+  let vCE: number | undefined
+  let currentGain: number | undefined
+
+  try {
+    console.log('🔍 Starting BJT processing...')
+    if (props.component.type === 'bjt_npn') {
+      console.log('✅ BJT detected, extracting properties:', props.component.properties)
+      operatingRegion = props.component.properties?.operatingRegion as string
+      baseCurrent = props.component.properties?.baseCurrent as number
+      collectorCurrent = props.component.properties?.collectorCurrent as number
+      emitterCurrent = props.component.properties?.emitterCurrent as number
+      vBE = props.component.properties?.vBE as number
+      vCE = props.component.properties?.vCE as number
+      currentGain = props.component.properties?.currentGain as number
+      console.log('🎯 BJT Properties extracted:', {
+        operatingRegion,
+        baseCurrent,
+        collectorCurrent,
+        emitterCurrent,
+        vBE,
+        vCE,
+        currentGain,
+      })
+    } else {
+      console.log('🔍 No BJT detected, properties:', props.component.properties)
+    }
+  } catch (error) {
+    console.error('🔍 Exception in BJT processing:', error)
   }
 
   return {
@@ -480,6 +599,13 @@ const simulationDebugInfo = computed(() => {
     voltage,
     current,
     powerDissipation,
+    operatingRegion,
+    baseCurrent,
+    collectorCurrent,
+    emitterCurrent,
+    vBE,
+    vCE,
+    currentGain,
   }
 })
 
@@ -521,6 +647,32 @@ const connectedComponents = computed(() => {
 
   return connections
 })
+
+// Helper methods for formatting and styling
+const formatCurrent = (current: number): string => {
+  if (Math.abs(current) >= 1e-3) {
+    return `${(current * 1000).toFixed(3)}mA`
+  } else if (Math.abs(current) >= 1e-6) {
+    return `${(current * 1e6).toFixed(3)}μA`
+  } else if (Math.abs(current) >= 1e-9) {
+    return `${(current * 1e9).toFixed(3)}nA`
+  } else {
+    return `${current.toExponential(2)}A`
+  }
+}
+
+const getOperatingRegionClass = (region: string): string => {
+  switch (region) {
+    case 'Active':
+      return 'text-green-600 font-semibold'
+    case 'Saturation':
+      return 'text-orange-600 font-semibold'
+    case 'Cutoff':
+      return 'text-slate-500 font-semibold'
+    default:
+      return 'text-slate-600'
+  }
+}
 </script>
 
 <style scoped>

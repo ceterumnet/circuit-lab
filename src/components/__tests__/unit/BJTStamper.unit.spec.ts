@@ -204,3 +204,278 @@ describe('BJTStamper Unit Tests', () => {
     })
   })
 })
+
+describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
+  describe('analyzeBaseEmitterCircuit', () => {
+    it('should correctly analyze simple base bias circuit', () => {
+      // Test circuit: VIN (2V) → RB (470kΩ) → Q1 base → Q1 emitter → ground
+      const mockComponent: CircuitComponent = {
+        id: 'Q1',
+        type: 'bjt_npn',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTStamper(mockComponent)
+
+      // Create mock stampers for base-emitter circuit
+      const mockStampers = [
+        // VIN - voltage source in base circuit
+        {
+          type: 'voltage_source',
+          component: {
+            id: 'VIN',
+            type: 'voltage_source',
+            properties: { voltage: 2.0 },
+          },
+        },
+        // RB - base resistor in base circuit
+        {
+          type: 'resistor',
+          component: {
+            id: 'RB',
+            type: 'resistor',
+            properties: { resistance: 470000 },
+          },
+        },
+        // VCC - voltage source NOT in base circuit (should be ignored)
+        {
+          type: 'voltage_source',
+          component: {
+            id: 'VCC',
+            type: 'voltage_source',
+            properties: { voltage: 12.0 },
+          },
+        },
+        // RC - collector resistor NOT in base circuit (should be ignored)
+        {
+          type: 'resistor',
+          component: {
+            id: 'RC',
+            type: 'resistor',
+            properties: { resistance: 2200 },
+          },
+        },
+      ]
+
+      // Mock the method to make it accessible for testing
+      const analyzeMethod = (
+        bjtStamper as {
+          analyzeBaseEmitterCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeBaseEmitterCircuit.bind(bjtStamper)
+
+      // Create dummy solution and nodeMap
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+        ['Q1:collector', 3],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      // Expected: Only VIN and RB should be considered for base-emitter circuit
+      expect(result.theveninVoltage).toBe(2.0) // VIN only, not VCC
+      expect(result.theveninResistance).toBe(470000) // RB only, not RC
+    })
+
+    it('should correctly analyze voltage divider bias circuit', () => {
+      // Test circuit: VCC → R1 → base → R2 → ground, emitter → RE → ground
+      const mockComponent = {
+        id: 'Q1',
+        type: 'bjt_npn',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTStamper(mockComponent)
+
+      // Create mock stampers for voltage divider bias circuit
+      const mockStampers = [
+        // VCC - in base circuit through voltage divider
+        {
+          type: 'voltage_source',
+          component: {
+            id: 'VCC',
+            type: 'voltage_source',
+            properties: { voltage: 12.0 },
+          },
+        },
+        // R1 - upper voltage divider resistor
+        {
+          type: 'resistor',
+          component: {
+            id: 'R1',
+            type: 'resistor',
+            properties: { resistance: 10000 },
+          },
+        },
+        // R2 - lower voltage divider resistor
+        {
+          type: 'resistor',
+          component: {
+            id: 'R2',
+            type: 'resistor',
+            properties: { resistance: 2200 },
+          },
+        },
+        // RE - emitter resistor
+        {
+          type: 'resistor',
+          component: {
+            id: 'RE',
+            type: 'resistor',
+            properties: { resistance: 1000 },
+          },
+        },
+        // RC - collector resistor NOT in base circuit (should be ignored)
+        {
+          type: 'resistor',
+          component: {
+            id: 'RC',
+            type: 'resistor',
+            properties: { resistance: 4700 },
+          },
+        },
+      ]
+
+      const analyzeMethod = (bjtStamper as any).analyzeBaseEmitterCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+        ['Q1:collector', 3],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      // Expected: Voltage divider gives ~2.15V, equivalent resistance includes R1||R2 + RE
+      const expectedVth = (12.0 * 2200) / (10000 + 2200) // ~2.15V
+      const expectedRth = (10000 * 2200) / (10000 + 2200) + 1000 // ~2.8kΩ
+
+      expect(result.theveninVoltage).toBeCloseTo(expectedVth, 2)
+      expect(result.theveninResistance).toBeCloseTo(expectedRth, 0)
+    })
+
+    it('should handle multiple voltage sources correctly', () => {
+      // Test circuit with multiple voltage sources in base circuit
+      const mockComponent = {
+        id: 'Q1',
+        type: 'bjt_npn',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTStamper(mockComponent)
+
+      const mockStampers = [
+        // VIN - signal voltage source
+        {
+          type: 'voltage_source',
+          component: {
+            id: 'VIN',
+            type: 'voltage_source',
+            properties: { voltage: 0.5 },
+          },
+        },
+        // VBIAS - DC bias voltage source
+        {
+          type: 'voltage_source',
+          component: {
+            id: 'VBIAS',
+            type: 'voltage_source',
+            properties: { voltage: 2.0 },
+          },
+        },
+        // RB - base resistor
+        {
+          type: 'resistor',
+          component: {
+            id: 'RB',
+            type: 'resistor',
+            properties: { resistance: 100000 },
+          },
+        },
+      ]
+
+      const analyzeMethod = (bjtStamper as any).analyzeBaseEmitterCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+        ['Q1:collector', 3],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      // Expected: Should handle superposition or use dominant voltage source
+      expect(result.theveninVoltage).toBeGreaterThan(0)
+      expect(result.theveninResistance).toBeGreaterThan(0)
+    })
+
+    it('should provide defaults when no components found', () => {
+      const mockComponent: CircuitComponent = {
+        id: 'Q1',
+        type: 'bjt_npn',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTStamper(mockComponent)
+
+      const mockStampers: ComponentStamper[] = [] // Empty stampers array
+
+      const analyzeMethod = (
+        bjtStamper as {
+          analyzeBaseEmitterCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeBaseEmitterCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+        ['Q1:collector', 3],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      // Expected: No components found should result in cutoff conditions
+      expect(result.theveninVoltage).toBe(0.0) // Cutoff voltage
+      expect(result.theveninResistance).toBe(1000000.0) // High resistance for cutoff
+    })
+  })
+})
