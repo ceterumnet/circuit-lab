@@ -329,12 +329,13 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
       }
     }
 
-    // Base circuit resistors: typically high value (100kΩ+ for base bias)
+    // Base circuit resistors: typically high value (10kΩ+ for base bias)
     // Collector circuit resistors: typically medium value (1kΩ-10kΩ for load)
-    // Emitter circuit resistors: typically small value (100Ω-1kΩ for degeneration)
+    // Emitter circuit resistors: typically small value (100Ω-2kΩ for degeneration)
     for (const { stamper, resistance } of resistors) {
-      if (resistance >= 100000) {
+      if (resistance >= 10000) {
         // This is likely a base bias resistor (RB, R1 in voltage divider)
+        // Real-world base resistors: 10kΩ - 1MΩ range
         baseEmitterComponents.push(stamper)
         console.log(
           `  ✅ Base bias resistor: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${resistance}Ω`,

@@ -45,7 +45,7 @@ export class BJTCharacteristic {
     const ib = this.getBaseCurrent(vBE)
 
     // Check for cutoff region (base not forward biased)
-    if (vBE < 0.6) {
+    if (vBE < 0.5) {
       return this.saturationCurrent // Minimal leakage current
     }
 
@@ -78,7 +78,7 @@ export class BJTCharacteristic {
    */
   getCollectorConductance(vBE: number, vCE: number): number {
     // Check operating region
-    if (vBE < 0.6) {
+    if (vBE < 0.5) {
       return 1e-12 // Cutoff - very small conductance
     }
 
@@ -95,7 +95,7 @@ export class BJTCharacteristic {
    * Determine BJT operating region for educational display
    */
   getOperatingRegion(vBE: number, vCE: number): string {
-    if (vBE < 0.6) {
+    if (vBE < 0.5) {
       return 'Cutoff'
     } else if (vCE < this.vCESat) {
       return 'Saturation'

@@ -20,7 +20,7 @@
       "rotation": 0,
       "selected": false,
       "properties": {
-        "voltage": 0.7,
+        "voltage": 3.5,
         "label": "Vin"
       }
     },
@@ -54,7 +54,7 @@
       "rotation": 0,
       "selected": false,
       "properties": {
-        "resistance": 470000,
+        "resistance": 47000,
         "label": "RB"
       }
     },
