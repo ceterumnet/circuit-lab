@@ -36,6 +36,23 @@ function createTestBJT(
   }
 }
 
+/**
+ * Create mock stamper for testing
+ */
+function createMockStamper(
+  id: string,
+  type: string,
+  component: CircuitComponent,
+): ComponentStamper {
+  return {
+    id,
+    type,
+    component,
+    stampDC: () => ({ branchCurrents: [] }),
+    calculateCurrent: () => 0,
+  } as ComponentStamper & { component: CircuitComponent }
+}
+
 describe('BJTStamper Unit Tests', () => {
   let bjtStamper: BJTStamper
   let testComponent: CircuitComponent
@@ -227,46 +244,46 @@ describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
       // Create mock stampers for base-emitter circuit
       const mockStampers = [
         // VIN - voltage source in base circuit
-        {
+        createMockStamper('VIN', 'voltage_source', {
+          id: 'VIN',
           type: 'voltage_source',
-          component: {
-            id: 'VIN',
-            type: 'voltage_source',
-            properties: { voltage: 2.0 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 2.0 },
+        }),
         // RB - base resistor in base circuit
-        {
+        createMockStamper('RB', 'resistor', {
+          id: 'RB',
           type: 'resistor',
-          component: {
-            id: 'RB',
-            type: 'resistor',
-            properties: { resistance: 470000 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 470000 },
+        }),
         // VCC - voltage source NOT in base circuit (should be ignored)
-        {
+        createMockStamper('VCC', 'voltage_source', {
+          id: 'VCC',
           type: 'voltage_source',
-          component: {
-            id: 'VCC',
-            type: 'voltage_source',
-            properties: { voltage: 12.0 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 12.0 },
+        }),
         // RC - collector resistor NOT in base circuit (should be ignored)
-        {
+        createMockStamper('RC', 'resistor', {
+          id: 'RC',
           type: 'resistor',
-          component: {
-            id: 'RC',
-            type: 'resistor',
-            properties: { resistance: 2200 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 2200 },
+        }),
       ]
 
       // Mock the method to make it accessible for testing
       const analyzeMethod = (
-        bjtStamper as {
+        bjtStamper as unknown as {
           analyzeBaseEmitterCircuit: (
             solution: Matrix,
             nodeMap: Map<string, number>,
@@ -292,11 +309,12 @@ describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
 
     it('should correctly analyze voltage divider bias circuit', () => {
       // Test circuit: VCC → R1 → base → R2 → ground, emitter → RE → ground
-      const mockComponent = {
+      const mockComponent: CircuitComponent = {
         id: 'Q1',
         type: 'bjt_npn',
         position: { x: 300, y: 200 },
         rotation: 0,
+        selected: false,
         properties: {
           saturationCurrent: 1e-14,
           currentGain: 100,
@@ -309,53 +327,61 @@ describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
       // Create mock stampers for voltage divider bias circuit
       const mockStampers = [
         // VCC - in base circuit through voltage divider
-        {
+        createMockStamper('VCC', 'voltage_source', {
+          id: 'VCC',
           type: 'voltage_source',
-          component: {
-            id: 'VCC',
-            type: 'voltage_source',
-            properties: { voltage: 12.0 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 12.0 },
+        }),
         // R1 - upper voltage divider resistor
-        {
+        createMockStamper('R1', 'resistor', {
+          id: 'R1',
           type: 'resistor',
-          component: {
-            id: 'R1',
-            type: 'resistor',
-            properties: { resistance: 10000 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 10000 },
+        }),
         // R2 - lower voltage divider resistor
-        {
+        createMockStamper('R2', 'resistor', {
+          id: 'R2',
           type: 'resistor',
-          component: {
-            id: 'R2',
-            type: 'resistor',
-            properties: { resistance: 2200 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 2200 },
+        }),
         // RE - emitter resistor
-        {
+        createMockStamper('RE', 'resistor', {
+          id: 'RE',
           type: 'resistor',
-          component: {
-            id: 'RE',
-            type: 'resistor',
-            properties: { resistance: 1000 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 1000 },
+        }),
         // RC - collector resistor NOT in base circuit (should be ignored)
-        {
+        createMockStamper('RC', 'resistor', {
+          id: 'RC',
           type: 'resistor',
-          component: {
-            id: 'RC',
-            type: 'resistor',
-            properties: { resistance: 4700 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 4700 },
+        }),
       ]
 
-      const analyzeMethod = (bjtStamper as any).analyzeBaseEmitterCircuit.bind(bjtStamper)
+      const analyzeMethod = (
+        bjtStamper as unknown as {
+          analyzeBaseEmitterCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeBaseEmitterCircuit.bind(bjtStamper)
 
       const solution = matrix([[0], [0], [0]])
       const nodeMap = new Map([
@@ -376,11 +402,12 @@ describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
 
     it('should handle multiple voltage sources correctly', () => {
       // Test circuit with multiple voltage sources in base circuit
-      const mockComponent = {
+      const mockComponent: CircuitComponent = {
         id: 'Q1',
         type: 'bjt_npn',
         position: { x: 300, y: 200 },
         rotation: 0,
+        selected: false,
         properties: {
           saturationCurrent: 1e-14,
           currentGain: 100,
@@ -392,35 +419,43 @@ describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
 
       const mockStampers = [
         // VIN - signal voltage source
-        {
+        createMockStamper('VIN', 'voltage_source', {
+          id: 'VIN',
           type: 'voltage_source',
-          component: {
-            id: 'VIN',
-            type: 'voltage_source',
-            properties: { voltage: 0.5 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 0.5 },
+        }),
         // VBIAS - DC bias voltage source
-        {
+        createMockStamper('VBIAS', 'voltage_source', {
+          id: 'VBIAS',
           type: 'voltage_source',
-          component: {
-            id: 'VBIAS',
-            type: 'voltage_source',
-            properties: { voltage: 2.0 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 2.0 },
+        }),
         // RB - base resistor
-        {
+        createMockStamper('RB', 'resistor', {
+          id: 'RB',
           type: 'resistor',
-          component: {
-            id: 'RB',
-            type: 'resistor',
-            properties: { resistance: 100000 },
-          },
-        },
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 100000 },
+        }),
       ]
 
-      const analyzeMethod = (bjtStamper as any).analyzeBaseEmitterCircuit.bind(bjtStamper)
+      const analyzeMethod = (
+        bjtStamper as unknown as {
+          analyzeBaseEmitterCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeBaseEmitterCircuit.bind(bjtStamper)
 
       const solution = matrix([[0], [0], [0]])
       const nodeMap = new Map([
@@ -455,7 +490,7 @@ describe('BJTStamper - Base-Emitter Circuit Analysis', () => {
       const mockStampers: ComponentStamper[] = [] // Empty stampers array
 
       const analyzeMethod = (
-        bjtStamper as {
+        bjtStamper as unknown as {
           analyzeBaseEmitterCircuit: (
             solution: Matrix,
             nodeMap: Map<string, number>,
