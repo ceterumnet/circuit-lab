@@ -24,6 +24,7 @@ export { CircuitAnalyzer } from './nonlinear/CircuitAnalyzer'
 export { DiodeStamper } from './nonlinear/DiodeStamper'
 export { LEDStamper } from './nonlinear/LEDStamper'
 export { BJTStamper } from './nonlinear/BJTStamper'
+export { BJTPNPStamper } from './nonlinear/BJTPNPStamper'
 
 // Utility classes
 export { ComponentStamperFactory } from './ComponentStamperFactory'

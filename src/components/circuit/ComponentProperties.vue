@@ -569,7 +569,7 @@ const simulationDebugInfo = computed(() => {
 
   try {
     console.log('🔍 Starting BJT processing...')
-    if (props.component.type === 'bjt_npn') {
+    if (props.component.type === 'bjt_npn' || props.component.type === 'bjt_pnp') {
       console.log('✅ BJT detected, extracting properties:', props.component.properties)
       operatingRegion = props.component.properties?.operatingRegion as string
       baseCurrent = props.component.properties?.baseCurrent as number

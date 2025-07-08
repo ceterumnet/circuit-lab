@@ -7,6 +7,7 @@ import {
   ComponentStamperFactory,
   type ComponentStamper,
   BJTStamper,
+  BJTPNPStamper,
 } from '@/services/stampers'
 import { WireStamper } from '@/services/stampers/linear/WireStamper'
 
@@ -602,6 +603,9 @@ export async function solveDC(
         } else if (stamper.type === 'bjt_npn') {
           const bjtStamper = stamper as BJTStamper
           bjtStamper.setAllStampers(stampers)
+        } else if (stamper.type === 'bjt_pnp') {
+          const bjtStamper = stamper as BJTPNPStamper
+          bjtStamper.setAllStampers(stampers)
         }
       }
 
@@ -631,6 +635,12 @@ export async function solveDC(
           // This requires a dummy solution vector for the analysis
           const dummySolution = matrix(zeros(matrixSize, 1))
           const bjtStamper = stamper as BJTStamper
+          bjtStamper.stampLinearized(fullMatrix, fullRhs, termToNodeIndex, dummySolution, stampers)
+        } else if (stamper.type === 'bjt_pnp') {
+          // For PNP BJTs, use Load Line pre-calculation in stampLinearized
+          // This requires a dummy solution vector for the analysis
+          const dummySolution = matrix(zeros(matrixSize, 1))
+          const bjtStamper = stamper as BJTPNPStamper
           bjtStamper.stampLinearized(fullMatrix, fullRhs, termToNodeIndex, dummySolution, stampers)
         } else {
           // Standard linear component stamping
@@ -712,7 +722,12 @@ export async function solveDC(
 
         for (const stamper of stampers) {
           // Skip non-linear components for linear stamping
-          if (stamper.type !== 'diode' && stamper.type !== 'led') {
+          if (
+            stamper.type !== 'diode' &&
+            stamper.type !== 'led' &&
+            stamper.type !== 'bjt_npn' &&
+            stamper.type !== 'bjt_pnp'
+          ) {
             const result = stamper.stampDC(
               linearMatrix,
               linearRhs,
@@ -840,7 +855,10 @@ export async function solveDC(
       currentResults[stamper.id] = current
 
       // Update BJT component properties with operating region information
-      if (stamper.type === 'bjt_npn' && stamper instanceof BJTStamper) {
+      if (
+        (stamper.type === 'bjt_npn' || stamper.type === 'bjt_pnp') &&
+        (stamper instanceof BJTStamper || stamper instanceof BJTPNPStamper)
+      ) {
         const operatingRegion = stamper.getOperatingRegion()
         const baseCurrent = stamper.getBaseCurrent()
         const collectorCurrent = current // This is the collector current from calculateCurrent
