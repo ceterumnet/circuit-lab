@@ -7,6 +7,7 @@
 ## PLANNING MODE
 
 - Always ask clarifying questions
+- Implement one thing at a time
 - Never assume design, tech stack or features
 - Use deep-dive sub-agents to assist with research
 - Use deep-dive sub-agents to review the different aspects of your plan before presenting to the user
