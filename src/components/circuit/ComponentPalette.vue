@@ -69,6 +69,8 @@ import InductorSymbol from './symbols/InductorSymbol.vue'
 import ACVoltageSourceSymbol from './symbols/ACVoltageSourceSymbol.vue'
 import ACCurrentSourceSymbol from './symbols/ACCurrentSourceSymbol.vue'
 import BJTSymbol from './symbols/BJTSymbol.vue'
+import NMOSSymbol from './symbols/NMOSSymbol.vue'
+import PMOSSymbol from './symbols/PMOSSymbol.vue'
 import ProbeSymbol from './symbols/ProbeSymbol.vue'
 
 const interactionStore = useInteractionStore()
@@ -117,6 +119,8 @@ function getIconComponent(iconName?: string) {
     DiodeSymbol: DiodeSymbol,
     LEDSymbol: LEDSymbol,
     BJTSymbol: BJTSymbol,
+    NMOSSymbol: NMOSSymbol,
+    PMOSSymbol: PMOSSymbol,
     GroundSymbol: GroundSymbol,
     NodeSymbol: NodeSymbol,
     WireSymbol: WireSymbol,
@@ -142,6 +146,8 @@ function getComponentIconColor(componentType: string) {
     diode: 'text-orange-600',
     led: 'text-orange-600',
     bjt_npn: 'text-indigo-600',
+    mosfet_n: 'text-indigo-600',
+    mosfet_p: 'text-indigo-600',
     switch: 'text-slate-600',
     ground: 'text-green-600',
     node: 'text-slate-600',

@@ -169,6 +169,32 @@
       @terminal-mouseup="handleTerminalMouseUp"
     />
 
+    <!-- NMOS component -->
+    <NMOSComponent
+      v-else-if="component.type === 'mosfet_n'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
+    <!-- PMOS component -->
+    <PMOSComponent
+      v-else-if="component.type === 'mosfet_p'"
+      :component="component"
+      @select="handleSelect"
+      @dragstart="handleDragStart"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEnd"
+      @terminal-click="handleTerminalClick"
+      @terminal-mousedown="handleTerminalMouseDown"
+      @terminal-mouseup="handleTerminalMouseUp"
+    />
+
     <!-- Ground component -->
     <ground-component
       v-else-if="component.type === 'ground'"
@@ -226,6 +252,8 @@ import PotentiometerComponent from '@/components/circuit/components/Potentiomete
 import DiodeComponent from '@/components/circuit/components/DiodeComponent.vue'
 import LEDComponent from '@/components/circuit/components/LEDComponent.vue'
 import BJTComponent from '@/components/circuit/components/BJTComponent.vue'
+import NMOSComponent from '@/components/circuit/components/NMOSComponent.vue'
+import PMOSComponent from '@/components/circuit/components/PMOSComponent.vue'
 import GroundComponent from '@/components/circuit/components/GroundComponent.vue'
 import WireComponent from '@/components/circuit/components/WireComponent.vue'
 import NodeComponent from '@/components/circuit/components/NodeComponent.vue'

@@ -25,6 +25,9 @@ export { DiodeStamper } from './nonlinear/DiodeStamper'
 export { LEDStamper } from './nonlinear/LEDStamper'
 export { BJTStamper } from './nonlinear/BJTStamper'
 export { BJTPNPStamper } from './nonlinear/BJTPNPStamper'
+export { MOSFETCharacteristic } from './nonlinear/MOSFETCharacteristic'
+export { NMOSStamper } from './nonlinear/NMOSStamper'
+export { PMOSStamper } from './nonlinear/PMOSStamper'
 
 // Utility classes
 export { ComponentStamperFactory } from './ComponentStamperFactory'

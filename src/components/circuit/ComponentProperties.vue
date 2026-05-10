@@ -188,6 +188,31 @@
             {{ simulationDebugInfo.currentGain.toFixed(1) }}
           </div>
         </div>
+
+        <div v-if="simulationDebugInfo.drainCurrent !== undefined" class="property-field">
+          <label class="property-label">Drain Current (Id)</label>
+          <div class="property-value current-display">
+            {{ formatCurrent(simulationDebugInfo.drainCurrent) }}
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.vGS !== undefined" class="property-field">
+          <label class="property-label">Gate-Source Voltage (VGS/VSG)</label>
+          <div class="property-value voltage-display">
+            {{ simulationDebugInfo.vGS.toFixed(3) }}V
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.vDS !== undefined" class="property-field">
+          <label class="property-label">Drain-Source Voltage (VDS/VSD)</label>
+          <div class="property-value voltage-display">
+            {{ simulationDebugInfo.vDS.toFixed(3) }}V
+          </div>
+        </div>
+        <div v-if="simulationDebugInfo.transconductance !== undefined" class="property-field">
+          <label class="property-label">Transconductance (gm)</label>
+          <div class="property-value">
+            {{ (simulationDebugInfo.transconductance * 1000).toFixed(3) }}mS
+          </div>
+        </div>
       </div>
 
       <!-- Debug Information Section -->
@@ -594,6 +619,23 @@ const simulationDebugInfo = computed(() => {
     console.error('🔍 Exception in BJT processing:', error)
   }
 
+  // MOSFET-specific analysis information
+  let drainCurrent: number | undefined
+  let vGS: number | undefined
+  let vDS: number | undefined
+  let transconductance: number | undefined
+
+  try {
+    if (props.component.type === 'mosfet_n' || props.component.type === 'mosfet_p') {
+      drainCurrent = props.component.properties?.drainCurrent as number
+      vGS = props.component.properties?.vGS as number
+      vDS = props.component.properties?.vDS as number
+      transconductance = props.component.properties?.transconductance as number
+    }
+  } catch (error) {
+    console.error('🔍 Exception in MOSFET processing:', error)
+  }
+
   return {
     nodeIndex,
     voltage,
@@ -606,6 +648,10 @@ const simulationDebugInfo = computed(() => {
     vBE,
     vCE,
     currentGain,
+    drainCurrent,
+    vGS,
+    vDS,
+    transconductance,
   }
 })
 
@@ -669,6 +715,8 @@ const getOperatingRegionClass = (region: string): string => {
       return 'text-orange-600 font-semibold'
     case 'Cutoff':
       return 'text-slate-500 font-semibold'
+    case 'Triode':
+      return 'text-blue-600 font-semibold'
     default:
       return 'text-slate-600'
   }

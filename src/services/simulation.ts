@@ -8,6 +8,8 @@ import {
   type ComponentStamper,
   BJTStamper,
   BJTPNPStamper,
+  NMOSStamper,
+  PMOSStamper,
 } from '@/services/stampers'
 import { WireStamper } from '@/services/stampers/linear/WireStamper'
 
@@ -179,6 +181,39 @@ function detectFloatingNodes(
       if (baseNode !== undefined && emitterNode !== undefined) {
         connectivity.get(baseNode)!.add(emitterNode)
         connectivity.get(emitterNode)!.add(baseNode)
+      }
+
+       // Skip the standard two-terminal connectivity logic below
+       continue
+    } else if (component.type === 'mosfet_n' || component.type === 'mosfet_p') {
+      // MOSFETs provide DC connectivity between drain and source (gate is high impedance)
+      // For floating node detection, treat drain-source as providing electrical continuity
+      const definition = getComponentDefinition(component.type)!
+      const drainTermId = `${component.id}:${definition.terminals[0].id}` // drain
+      const gateTermId = `${component.id}:${definition.terminals[1].id}` // gate
+      const sourceTermId = `${component.id}:${definition.terminals[2].id}` // source
+
+      const drainNode = termToNodeIndex.get(drainTermId)
+      const gateNode = termToNodeIndex.get(gateTermId)
+      const sourceNode = termToNodeIndex.get(sourceTermId)
+
+      console.log(
+        `🔍 ${component.type} ${component.id}: nodes drain=${drainNode}, gate=${gateNode}, source=${sourceNode}`,
+      )
+
+      // Add connectivity: drain ↔ source (channel path)
+      // Gate is high impedance, but add weak connectivity for floating node detection
+      if (drainNode !== undefined && sourceNode !== undefined) {
+        connectivity.get(drainNode)!.add(sourceNode)
+        connectivity.get(sourceNode)!.add(drainNode)
+      }
+      if (drainNode !== undefined && gateNode !== undefined) {
+        connectivity.get(drainNode)!.add(gateNode)
+        connectivity.get(gateNode)!.add(drainNode)
+      }
+      if (gateNode !== undefined && sourceNode !== undefined) {
+        connectivity.get(gateNode)!.add(sourceNode)
+        connectivity.get(sourceNode)!.add(gateNode)
       }
 
       // Skip the standard two-terminal connectivity logic below
@@ -487,7 +522,10 @@ export async function solveDC(
         if (
           component.type === 'diode' ||
           component.type === 'led' ||
-          component.type === 'bjt_npn'
+          component.type === 'bjt_npn' ||
+          component.type === 'bjt_pnp' ||
+          component.type === 'mosfet_n' ||
+          component.type === 'mosfet_p'
         ) {
           nonLinearStampers.push(stamper as ComponentStamper & NonLinearStamper)
         }
@@ -606,6 +644,12 @@ export async function solveDC(
         } else if (stamper.type === 'bjt_pnp') {
           const bjtStamper = stamper as BJTPNPStamper
           bjtStamper.setAllStampers(stampers)
+        } else if (stamper.type === 'mosfet_n') {
+          const nmosStamper = stamper as NMOSStamper
+          nmosStamper.setAllStampers(stampers)
+        } else if (stamper.type === 'mosfet_p') {
+          const pmosStamper = stamper as PMOSStamper
+          pmosStamper.setAllStampers(stampers)
         }
       }
 
@@ -642,6 +686,16 @@ export async function solveDC(
           const dummySolution = matrix(zeros(matrixSize, 1))
           const bjtStamper = stamper as BJTPNPStamper
           bjtStamper.stampLinearized(fullMatrix, fullRhs, termToNodeIndex, dummySolution, stampers)
+        } else if (stamper.type === 'mosfet_n') {
+          // For NMOS, use linearized stamping
+          const dummySolution = matrix(zeros(matrixSize, 1))
+          const nmosStamper = stamper as NMOSStamper
+          nmosStamper.stampLinearized(fullMatrix, fullRhs, termToNodeIndex, dummySolution, stampers)
+        } else if (stamper.type === 'mosfet_p') {
+          // For PMOS, use linearized stamping
+          const dummySolution = matrix(zeros(matrixSize, 1))
+          const pmosStamper = stamper as PMOSStamper
+          pmosStamper.stampLinearized(fullMatrix, fullRhs, termToNodeIndex, dummySolution, stampers)
         } else {
           // Standard linear component stamping
           const result = stamper.stampDC(fullMatrix, fullRhs, termToNodeIndex, nextFullBranchIndex)
@@ -726,7 +780,9 @@ export async function solveDC(
             stamper.type !== 'diode' &&
             stamper.type !== 'led' &&
             stamper.type !== 'bjt_npn' &&
-            stamper.type !== 'bjt_pnp'
+            stamper.type !== 'bjt_pnp' &&
+            stamper.type !== 'mosfet_n' &&
+            stamper.type !== 'mosfet_p'
           ) {
             const result = stamper.stampDC(
               linearMatrix,
@@ -912,6 +968,71 @@ export async function solveDC(
           component.properties = updatedProperties
           console.log(
             `🎯 Updating BJT ${stamper.id} properties: operatingRegion = "${operatingRegion}", IB = ${baseCurrent?.toExponential(2)}A, IC = ${collectorCurrent?.toExponential(2)}A, VBE = ${vBE?.toFixed(3)}V`,
+          )
+        }
+      }
+
+      // Update MOSFET component properties with operating region information
+      if (
+        (stamper.type === 'mosfet_n' || stamper.type === 'mosfet_p') &&
+        (stamper instanceof NMOSStamper || stamper instanceof PMOSStamper)
+      ) {
+        const operatingRegion = stamper.getOperatingRegion()
+        const drainCurrent = stamper.getDrainCurrent()
+        const transconductance = stamper.getTransconductance()
+
+        // Get terminal voltages
+        const drainNodeIndex = termToNodeIndex.get(`${stamper.id}:drain`)
+        const gateNodeIndex = termToNodeIndex.get(`${stamper.id}:gate`)
+        const sourceNodeIndex = termToNodeIndex.get(`${stamper.id}:source`)
+
+        let vGS: number | undefined
+        let vDS: number | undefined
+
+        if (stamper.type === 'mosfet_n') {
+          if (gateNodeIndex !== undefined && sourceNodeIndex !== undefined) {
+            const vG = solution.get([gateNodeIndex, 0]) as number
+            const vS = solution.get([sourceNodeIndex, 0]) as number
+            vGS = vG - vS
+          }
+          if (drainNodeIndex !== undefined && sourceNodeIndex !== undefined) {
+            const vD = solution.get([drainNodeIndex, 0]) as number
+            const vS = solution.get([sourceNodeIndex, 0]) as number
+            vDS = vD - vS
+          }
+        } else {
+          // PMOS: Vsg and Vsd
+          if (gateNodeIndex !== undefined && sourceNodeIndex !== undefined) {
+            const vG = solution.get([gateNodeIndex, 0]) as number
+            const vS = solution.get([sourceNodeIndex, 0]) as number
+            vGS = vS - vG
+          }
+          if (drainNodeIndex !== undefined && sourceNodeIndex !== undefined) {
+            const vD = solution.get([drainNodeIndex, 0]) as number
+            const vS = solution.get([sourceNodeIndex, 0]) as number
+            vDS = vS - vD
+          }
+        }
+
+        const component = circuit.components.find((c) => c.id === stamper.id)
+        if (component) {
+          const updatedProperties: Record<
+            string,
+            string | number | boolean | { x: number; y: number }
+          > = {
+            ...component.properties,
+            operatingRegion: operatingRegion,
+            isActive: operatingRegion !== 'Cutoff',
+            drainCurrent: drainCurrent,
+            transconductance: transconductance,
+          }
+
+          if (vGS !== undefined) updatedProperties.vGS = vGS
+          if (vDS !== undefined) updatedProperties.vDS = vDS
+
+          component.properties = updatedProperties
+          console.log(
+            `🎯 Updating MOSFET ${stamper.id} properties: operatingRegion = "${operatingRegion}", Id = ${drainCurrent?.toExponential(2)}A, Gm = ${transconductance?.toExponential(3)}S`,
           )
         }
       }

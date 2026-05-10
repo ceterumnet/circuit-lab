@@ -21,6 +21,8 @@ import { DiodeStamper } from './nonlinear/DiodeStamper'
 import { LEDStamper } from './nonlinear/LEDStamper'
 import { BJTStamper } from './nonlinear/BJTStamper'
 import { BJTPNPStamper } from './nonlinear/BJTPNPStamper'
+import { NMOSStamper } from './nonlinear/NMOSStamper'
+import { PMOSStamper } from './nonlinear/PMOSStamper'
 
 /**
  * Component stamper factory
@@ -42,6 +44,8 @@ export class ComponentStamperFactory {
     ['led', LEDStamper],
     ['bjt_npn', BJTStamper],
     ['bjt_pnp', BJTPNPStamper],
+    ['mosfet_n', NMOSStamper],
+    ['mosfet_p', PMOSStamper],
     ['ground', GroundStamper],
     ['node', NodeStamper],
   ])

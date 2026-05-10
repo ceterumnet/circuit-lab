@@ -231,6 +231,42 @@ const bjtPNPDefinition: ComponentDefinition = {
   icon: 'BJTPNPSymbol', // Professional PNP BJT symbol with inward-pointing arrow
 }
 
+const mosfetNDefinition: ComponentDefinition = {
+  type: 'mosfet_n',
+  name: 'NMOS',
+  category: 'active',
+  complexity: 'complex',
+  terminals: [
+    { id: 'drain', position: { x: 0, y: -30 }, type: 'io', label: 'D' },
+    { id: 'gate', position: { x: -30, y: 0 }, type: 'io', label: 'G' },
+    { id: 'source', position: { x: 0, y: 30 }, type: 'io', label: 'S' },
+  ],
+  properties: [
+    { key: 'vThreshold', type: 'number', label: 'Threshold Voltage', unit: 'V', default: 1.0 },
+    { key: 'kP', type: 'number', label: 'Transconductance (Kp)', unit: 'A/V²', default: 200e-6 },
+    { key: 'lambda', type: 'number', label: 'Channel Length Modulation', unit: 'V⁻¹', default: 0.01 },
+  ],
+  icon: 'NMOSSymbol',
+}
+
+const mosfetPDefinition: ComponentDefinition = {
+  type: 'mosfet_p',
+  name: 'PMOS',
+  category: 'active',
+  complexity: 'complex',
+  terminals: [
+    { id: 'drain', position: { x: 0, y: -30 }, type: 'io', label: 'D' },
+    { id: 'gate', position: { x: -30, y: 0 }, type: 'io', label: 'G' },
+    { id: 'source', position: { x: 0, y: 30 }, type: 'io', label: 'S' },
+  ],
+  properties: [
+    { key: 'vThreshold', type: 'number', label: 'Threshold Voltage', unit: 'V', default: -1.0 },
+    { key: 'kP', type: 'number', label: 'Transconductance (Kp)', unit: 'A/V²', default: 200e-6 },
+    { key: 'lambda', type: 'number', label: 'Channel Length Modulation', unit: 'V⁻¹', default: 0.01 },
+  ],
+  icon: 'PMOSSymbol',
+}
+
 const capacitorDefinition: ComponentDefinition = {
   type: 'capacitor',
   name: 'Capacitor',
@@ -308,6 +344,8 @@ ComponentRegistry.set('diode', diodeDefinition)
 ComponentRegistry.set('led', ledDefinition)
 ComponentRegistry.set('bjt_npn', bjtNPNDefinition)
 ComponentRegistry.set('bjt_pnp', bjtPNPDefinition)
+ComponentRegistry.set('mosfet_n', mosfetNDefinition)
+ComponentRegistry.set('mosfet_p', mosfetPDefinition)
 ComponentRegistry.set('wire', wireDefinition)
 ComponentRegistry.set('capacitor', capacitorDefinition)
 ComponentRegistry.set('inductor', inductorDefinition)
@@ -329,6 +367,8 @@ export {
   ledDefinition,
   bjtNPNDefinition,
   bjtPNPDefinition,
+  mosfetNDefinition,
+  mosfetPDefinition,
   capacitorDefinition,
   inductorDefinition,
   acVoltageSourceDefinition,
@@ -366,6 +406,8 @@ export const registry: Record<string, ComponentDefinition> = {
   led: ledDefinition,
   bjt_npn: bjtNPNDefinition,
   bjt_pnp: bjtPNPDefinition,
+  mosfet_n: mosfetNDefinition,
+  mosfet_p: mosfetPDefinition,
   capacitor: capacitorDefinition,
   inductor: inductorDefinition,
 }
