@@ -264,7 +264,7 @@ function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
   // NEW: Handle wire drag completion on empty space
   if (interactionStore.wireCreationState.isDragging) {
     const worldPos = screenToWorld(stage.getPointerPosition()!)
-    const snappedPos = {
+    const _snappedPos = {
       x: Math.round(worldPos.x / gridSize) * gridSize,
       y: Math.round(worldPos.y / gridSize) * gridSize,
     }

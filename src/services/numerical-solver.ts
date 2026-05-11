@@ -1,5 +1,5 @@
 import { zeros, lusolve, matrix, Matrix, multiply, subtract, add, index, range } from 'mathjs'
-import type { ComponentStamper } from './simulation'
+import type { ComponentStamper } from './stampers/shared'
 
 /**
  * Enhanced numerical solver with improved precision and stability

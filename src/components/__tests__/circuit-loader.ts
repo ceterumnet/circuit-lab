@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import type { TestCircuitSpec, ExpectedResults, ToleranceSpec } from './test-types'
-import type { Circuit, CircuitComponent, Wire } from '../../types/components'
+import type { Circuit, CircuitComponent, Position, Wire } from '../../types/components'
 
 /**
  * Circuit loading utilities for file-based test circuit definitions
@@ -124,7 +124,7 @@ function parseComponents(rawComponents: unknown): CircuitComponent[] {
       position: parsePosition(comp.position),
       rotation: comp.rotation as number,
       selected: comp.selected as boolean,
-      properties: (comp.properties as Record<string, unknown>) || {},
+      properties: (comp.properties as unknown as { [key: string]: string | number | boolean | Position }) || {},
     }
   })
 }
@@ -152,7 +152,7 @@ function parseWires(rawWires: unknown): Wire[] {
       position: parsePosition(wire.position),
       rotation: wire.rotation as number,
       selected: wire.selected as boolean,
-      properties: (wire.properties as Record<string, unknown>) || {},
+      properties: (wire.properties as unknown as { [key: string]: string | number | boolean | Position }) || {},
     }
   })
 }
