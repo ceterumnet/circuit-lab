@@ -255,6 +255,8 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import AnalysisChart from './AnalysisChart.vue'
 import {
   BarChart3,
   Play,

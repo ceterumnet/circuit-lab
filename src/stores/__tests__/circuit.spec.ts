@@ -1,5 +1,6 @@
 // Set up localStorage BEFORE any imports (vue-devtools-kit checks at module load time)
 // biome-ignore lint: this needs to be the first line
+// biome-ignore lint: storageObj is used in the getters/setters below
 const storageObj: Record<string, string> = {}
 Object.defineProperty(globalThis, 'localStorage', {
   value: {
@@ -883,6 +884,105 @@ describe('Clipboard', () => {
     store.copySelectedComponents()
 
     expect(store.hasClipboardContent()).toBe(true)
+  })
+
+  it('pasteComponents pastes from clipboard with offset', () => {
+    const store = useCircuitStore()
+    store.addComponent(makeComponent('R1', 'resistor', { resistance: 100 }))
+    mockInteractionStore.selectedComponentIds = ['R1']
+    store.copySelectedComponents()
+
+    vi.mocked(generateComponentId).mockReturnValue('PCOMP')
+    const initialLen = store.currentCircuit.components.length
+    const result = store.pasteComponents()
+
+    expect(result).toBe(true)
+    expect(store.currentCircuit.components.length).toBeGreaterThan(initialLen)
+  })
+
+  it('getClipboardComponents returns clipboard components after copy', () => {
+    const store = useCircuitStore()
+    store.addComponent(makeComponent('R1', 'resistor', { resistance: 100 }))
+    mockInteractionStore.selectedComponentIds = ['R1']
+    store.copySelectedComponents()
+
+    const clips = store.getClipboardComponents()
+
+    expect(clips).toHaveLength(1)
+    expect(clips[0].id).toBe('R1')
+  })
+
+  it('pasteComponents returns false when clipboard is empty', () => {
+    const store = useCircuitStore()
+
+    const result = store.pasteComponents()
+
+    expect(result).toBe(false)
+  })
+})
+
+// =====================================================================
+describe('pasteComponentsAtPosition probe logic', () => {
+  it('pastes probes with updated target references when component is copied and pasted', () => {
+    const store = useCircuitStore()
+    store.addComponent(makeComponent('R1', 'resistor', { resistance: 100 }))
+
+    vi.mocked(generateComponentId).mockImplementation(() => 'P1')
+    store.addProbe('R1', { x: 100, y: 100 }, 'voltage')
+
+    // Select both the component and the probe, then copy
+    mockInteractionStore.selectedComponentIds = ['R1', 'P1']
+    store.copySelectedComponents()
+
+    expect(store.getClipboardData().components).toHaveLength(1)
+    expect(store.getClipboardData().probes).toHaveLength(1)
+
+    // Set up generateComponentId to return distinct IDs for each call
+    let callCount = 0
+    vi.mocked(generateComponentId).mockImplementation(() => {
+      callCount++
+      if (callCount === 1) return 'R2'
+      return 'P2'
+    })
+
+    const initialProbeLen = store.currentCircuit.probes.length
+    const result = store.pasteComponentsAtPosition({ x: 200, y: 200 })
+
+    expect(result).toBe(true)
+    expect(store.currentCircuit.probes.length).toBeGreaterThan(initialProbeLen)
+
+    const newProbe = store.currentCircuit.probes.find((p) => p.id === 'P2')
+    expect(newProbe).toBeDefined()
+    expect(newProbe!.targetId).toBe('R2')
+  })
+
+  it('skips probe and logs warning when target reference is missing', () => {
+    const store = useCircuitStore()
+    store.addComponent(makeComponent('R1', 'resistor', { resistance: 100 }))
+
+    vi.mocked(generateComponentId).mockReturnValue('P1')
+    store.addProbe('R1', { x: 100, y: 100 }, 'voltage')
+
+    // Select both component and probe, then copy
+    mockInteractionStore.selectedComponentIds = ['R1', 'P1']
+    store.copySelectedComponents()
+
+    // Remove the component from clipboard so the probe's target has no mapping
+    const clipboard = store.getClipboardData()
+    clipboard.components = []
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // Still need generateComponentId to return something for the probe
+    vi.mocked(generateComponentId).mockReturnValue('P_bad_new')
+
+    const initialProbeCount = store.currentCircuit.probes.length
+    const result = store.pasteComponentsAtPosition({ x: 0, y: 0 })
+
+    expect(result).toBe(true)
+    expect(store.currentCircuit.probes).toHaveLength(initialProbeCount)
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Cannot paste probe P1: missing target reference',
+    )
   })
 })
 
