@@ -16,20 +16,20 @@ export class GroundStamper implements ComponentStamper {
   }
 
   stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _mnaMatrix: Matrix,
+    _rhsVector: Matrix,
+    _nodeMap: Map<string, number>,
+    _nextBranchIndex: number,
   ): StampResult {
     // Ground doesn't stamp anything - it's handled by setting ground node voltage to 0
     return { branchCurrents: [] }
   }
 
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     return 0 // Ground doesn't have current
   }

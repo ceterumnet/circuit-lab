@@ -48,7 +48,7 @@ export class PotentiometerStamper implements ComponentStamper {
     mnaMatrix: Matrix,
     rhsVector: Matrix,
     nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _nextBranchIndex: number,
   ): StampResult {
     const [n1, n2, nWiper] = this.getNodeIndices(nodeMap)
 
@@ -77,11 +77,11 @@ export class PotentiometerStamper implements ComponentStamper {
   calculateCurrent(
     solution: Matrix,
     nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // Return current through R1 (terminal1 to wiper) as the main current
-    const [n1, n2, nWiper] = this.getNodeIndices(nodeMap)
+    const [n1, _n2, nWiper] = this.getNodeIndices(nodeMap)
     const v1 = solution.get([n1, 0]) as number
     const vWiper = solution.get([nWiper, 0]) as number
     return (v1 - vWiper) / this.r1

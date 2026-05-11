@@ -341,7 +341,7 @@ function handleClick(e: KonvaEventObject<MouseEvent>) {
   emit('select', props.component.id, e)
 }
 
-function handleSelect(event: KonvaEventObject<MouseEvent>) {
+function handleSelect(_event: KonvaEventObject<MouseEvent>) {
   // This is now handled by the main handleClick to avoid conflicts.
   // emit('select', props.component.id, event)
 }

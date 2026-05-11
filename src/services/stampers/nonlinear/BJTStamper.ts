@@ -282,7 +282,7 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
     baseNode: number,
     emitterNode: number,
     isVoltageDividerBias: boolean,
-    hasSmallVoltageSource: boolean,
+    _hasSmallVoltageSource: boolean,
   ): ComponentStamper[] {
     console.log(`  🔍 Smart heuristic analysis for base-emitter circuit`)
 
@@ -392,7 +392,7 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
         case 'wire':
           // Wires connect between component terminals
           // Get the actual connected nodes from the wire's startComponentId/endComponentId
-          const wireComponent = component as CircuitComponent & {
+          const _wireComponent = component as CircuitComponent & {
             properties: { startComponentId: string; endComponentId: string }
           }
           // For now, skip wires in the graph traversal as they're connections, not components
@@ -515,10 +515,10 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
    * Linear DC stamping (unused for non-linear components)
    */
   stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _mnaMatrix: Matrix,
+    _rhsVector: Matrix,
+    _nodeMap: Map<string, number>,
+    _nextBranchIndex: number,
   ): StampResult {
     return { branchCurrents: [] }
   }
@@ -528,10 +528,10 @@ export class BJTStamper implements ComponentStamper, NonLinearStamper {
    * For BJT, we return collector current as the main current
    */
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // Return collector current as primary current measurement
     if (this.operatingPoint) {

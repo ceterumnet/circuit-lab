@@ -206,7 +206,7 @@ describe('PMOSStamper Unit Tests', () => {
       const solution = matrix([[1.0], [3.0], [5.0]]) // Vsg=2V, Vsd=4V → saturation
       pmosStamper.stampLinearized(mnaMatrix, rhsVector, nodeMap, solution)
 
-      const id = pmosStamper.getDrainCurrent()
+      const _id = pmosStamper.getDrainCurrent()
       const rhsArr = rhsVector.toArray() as number[][]
 
       expect(rhsArr[2][0]).toBeLessThan(0) // source: current injected (negative)

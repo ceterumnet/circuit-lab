@@ -60,17 +60,17 @@ function createTestResistor(id: string, resistance: number): CircuitComponent {
  * Create REAL stampers using direct instantiation (like VoltageSourceStamper tests)
  * This tests the actual integration!
  */
-function createRealDiodeStamper(id: string, saturationCurrent?: number): ComponentStamper {
+function _createRealDiodeStamper(id: string, saturationCurrent?: number): ComponentStamper {
   const component = createTestDiode(id, saturationCurrent)
   return new DiodeStamper(component)
 }
 
-function createRealVoltageSourceStamper(id: string, voltage: number): ComponentStamper {
+function _createRealVoltageSourceStamper(id: string, voltage: number): ComponentStamper {
   const component = createTestVoltageSource(id, voltage)
   return new VoltageSourceStamper(component)
 }
 
-function createRealResistorStamper(id: string, resistance: number): ComponentStamper {
+function _createRealResistorStamper(id: string, resistance: number): ComponentStamper {
   const component = createTestResistor(id, resistance)
   return new ResistorStamper(component)
 }
@@ -78,7 +78,7 @@ function createRealResistorStamper(id: string, resistance: number): ComponentSta
 /**
  * Create basic MNA system for testing
  */
-function createTestNodeMap(diodeId: string): Map<string, number> {
+function _createTestNodeMap(diodeId: string): Map<string, number> {
   const nodeMap = new Map<string, number>()
   nodeMap.set(`${diodeId}:anode`, 0)
   nodeMap.set(`${diodeId}:cathode`, 1)
@@ -288,7 +288,7 @@ describe('DiodeStamper Unit Tests', () => {
 
     it('should add small conductance for matrix conditioning', () => {
       const solution = matrix([[0.7], [0.0], [0.0]])
-      const originalMatrix = matrix(mnaMatrix.toArray()) // Copy original
+      const _originalMatrix = matrix(mnaMatrix.toArray()) // Copy original
 
       diodeStamper.stampLinearized(mnaMatrix, rhsVector, nodeMap, solution)
 

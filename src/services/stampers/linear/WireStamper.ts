@@ -138,7 +138,7 @@ export class WireStamper extends ResistiveStamper {
           if (componentNodes.includes(n2)) {
             n2Components.push(stamper)
           }
-        } catch (error) {
+        } catch (_error) {
           // Skip components that don't have standard node access
           continue
         }

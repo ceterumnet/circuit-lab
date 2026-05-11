@@ -37,14 +37,14 @@ export class CurrentSourceStamper implements ComponentStamper {
     mnaMatrix: Matrix,
     rhsVector: Matrix,
     nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _nextBranchIndex: number,
   ): StampResult {
     const [n1, n2] = this.getNodeIndices(nodeMap)
 
     // Current source MNA stamp - inject current into RHS vector
     // Current flows from n1 to n2 (out of positive terminal, into negative terminal)
     // KCL: I_out = -I_in, so we add current to positive node and subtract from negative node
-    const currentRhs = rhsVector.size()[0] as number
+    const _currentRhs = rhsVector.size()[0] as number
 
     // Add current injection to positive terminal (current flows out)
     rhsVector.set([n1, 0], (rhsVector.get([n1, 0]) as number) + this.current)
@@ -57,10 +57,10 @@ export class CurrentSourceStamper implements ComponentStamper {
   }
 
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // Current source current is fixed by definition
     return this.current

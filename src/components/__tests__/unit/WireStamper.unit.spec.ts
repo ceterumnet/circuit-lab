@@ -51,12 +51,12 @@ function createTestResistor(id: string, resistance: number): ComponentStamper {
   } as ComponentStamper
 }
 
-function createTestVoltageSource(id: string, voltage: number): ComponentStamper {
+function createTestVoltageSource(id: string, _voltage: number): ComponentStamper {
   return {
     id,
     type: 'voltage_source',
     stampDC: () => ({ branchCurrents: [] }),
-    calculateCurrent: (solution: Matrix, nodeMap: Map<string, number>) => {
+    calculateCurrent: (_solution: Matrix, _nodeMap: Map<string, number>) => {
       // For testing purposes, return a known current value
       return 0.001 // 1mA
     },

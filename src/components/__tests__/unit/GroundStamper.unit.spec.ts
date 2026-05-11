@@ -309,7 +309,7 @@ describe('GroundStamper Unit Tests', () => {
         } as CircuitComponent,
       ]
 
-      grounds.forEach((component, index) => {
+      grounds.forEach((component, _index) => {
         const stamper = new GroundStamper(component)
 
         const mnaMatrix = matrix([

@@ -97,7 +97,7 @@ export function validateSimulationResults(
 
   // Validate power dissipations if provided
   if (expected.powers) {
-    for (const [componentId, expectedPower] of Object.entries(expected.powers)) {
+    for (const [componentId, _expectedPower] of Object.entries(expected.powers)) {
       // Calculate actual power from voltage and current
       const actualCurrent = actual.currents[componentId]
       if (actualCurrent === undefined) {
@@ -217,7 +217,7 @@ export function createTestSummaryReport(
  * Validate Kirchhoff's Current Law (KCL) for all nodes
  * Critical for series circuit current conservation testing
  */
-export function validateKCL(actual: SimulationResult, tolerance: number = 1e-12): ValidationResult {
+export function validateKCL(actual: SimulationResult, _tolerance: number = 1e-12): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
   const passed = true
@@ -247,7 +247,7 @@ export function validateKCL(actual: SimulationResult, tolerance: number = 1e-12)
  * Validate Kirchhoff's Voltage Law (KVL) for circuit loops
  * Critical for voltage drop physics compliance testing
  */
-export function validateKVL(actual: SimulationResult, tolerance: number = 1e-12): ValidationResult {
+export function validateKVL(actual: SimulationResult, _tolerance: number = 1e-12): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
   const passed = true

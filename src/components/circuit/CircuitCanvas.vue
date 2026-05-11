@@ -758,7 +758,7 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 }
 
-function handleStageDragMove(e: KonvaEventObject<DragEvent>) {
+function _handleStageDragMove(_e: KonvaEventObject<DragEvent>) {
   // This function is no longer needed since both middle mouse and spacebar panning
   // now use the global mouse handlers for consistent behavior
 }
@@ -782,11 +782,11 @@ function handleWireMouseUp(wireId: string, e: KonvaEventObject<MouseEvent>) {
   const startTerminal = interactionStore.wireCreationState.startTerminal
   if (!startTerminal) return
 
-  const worldPos = screenToWorld(stage.getPointerPosition()!)
-  const snappedPos = {
-    x: Math.round(worldPos.x / gridSize) * gridSize,
-    y: Math.round(worldPos.y / gridSize) * gridSize,
-  }
+    const worldPos = screenToWorld(stage.getPointerPosition()!)
+    const snappedPos = {
+      x: Math.round(worldPos.x / gridSize) * gridSize,
+      y: Math.round(worldPos.y / gridSize) * gridSize,
+    }
 
   historyActions.splitWireAndConnectWithHistory(wireId, snappedPos, startTerminal)
   interactionStore.cancelWireCreation()
@@ -1193,7 +1193,7 @@ const pastePreviewData = computed(() => {
 })
 
 // Backward compatibility
-const pastePreviewComponents = computed(() => pastePreviewData.value.components)
+const _pastePreviewComponents = computed(() => pastePreviewData.value.components)
 
 const wireIntersectionIndicators = computed(() => {
   return interactionStore.componentPlacementPreview.intersections

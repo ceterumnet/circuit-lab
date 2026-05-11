@@ -15,20 +15,20 @@ export class NodeStamper implements ComponentStamper {
   }
 
   stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _mnaMatrix: Matrix,
+    _rhsVector: Matrix,
+    _nodeMap: Map<string, number>,
+    _nextBranchIndex: number,
   ): StampResult {
     // Nodes are purely for connectivity - no stamping needed
     return { branchCurrents: [] }
   }
 
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     return 0 // Nodes don't have current
   }

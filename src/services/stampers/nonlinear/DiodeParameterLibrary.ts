@@ -175,7 +175,7 @@ export class DiodeParameterLibrary {
     temperature: number,
   ): DiodeParameterProfile {
     // Temperature coefficient: Is doubles every ~10K, Vf decreases ~2mV/K
-    const tempRatio = temperature / 300 // Room temperature reference
+    const _tempRatio = temperature / 300 // Room temperature reference
     const adjustedIs = profile.saturationCurrent * Math.pow(2, (temperature - 300) / 10)
 
     return {

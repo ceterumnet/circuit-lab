@@ -79,7 +79,7 @@ export class ACCurrentSourceStamper implements ComponentStamper {
     mnaMatrix: Matrix,
     rhsVector: Matrix,
     nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _nextBranchIndex: number,
   ): StampResult {
     const [n1, n2] = this.getNodeIndices(nodeMap)
     const dcCurrent = this.getDCCurrent()
@@ -101,10 +101,10 @@ export class ACCurrentSourceStamper implements ComponentStamper {
   }
 
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // For DC analysis, return the DC current (0 for AC sources)
     // For AC analysis, this would return the phasor magnitude

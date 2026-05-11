@@ -57,7 +57,7 @@ export function useCircuitHistory() {
   }
 
   function createWireToPositionWithHistory(position: Position, description?: string) {
-    const interactionStore = useInteractionStore()
+  const _interactionStore = useInteractionStore()
 
     if (
       !interactionStore.wireCreationState.isActive ||

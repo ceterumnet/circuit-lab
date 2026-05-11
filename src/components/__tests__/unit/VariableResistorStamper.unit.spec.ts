@@ -316,7 +316,7 @@ describe('VariableResistorStamper Unit Tests', () => {
         { resistance: -100, min: 100, max: 1000, expected: 100 }, // Negative clamped to min
       ]
 
-      testCases.forEach(({ resistance, min, max, expected }) => {
+      testCases.forEach(({ resistance, min, max }) => {
         const component = createTestVariableResistor('VR1', resistance, min, max)
         const stamper = new VariableResistorStamper(component)
 

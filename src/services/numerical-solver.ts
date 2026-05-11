@@ -230,7 +230,7 @@ export class EnhancedMNASolver {
         if (correctionNorm < this.options.tolerance * solutionNorm) {
           break
         }
-      } catch (error) {
+      } catch (_error) {
         // If refinement fails, return current solution
         console.warn('⚠️ Iterative refinement failed at iteration', iter + 1)
         break

@@ -27,8 +27,8 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import {
   Chart,
   type ChartConfiguration,
-  type ChartData,
-  type ChartOptions,
+  type ChartData as _ChartData,
+  type ChartOptions as _ChartOptions,
   CategoryScale,
   LinearScale,
   PointElement,

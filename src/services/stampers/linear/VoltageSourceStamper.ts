@@ -65,7 +65,7 @@ export class VoltageSourceStamper implements ComponentStamper {
     solution: Matrix,
     nodeMap: Map<string, number>,
     branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // For voltage sources, current comes from the branch current variable
     // Use the branchCurrents parameter if available, otherwise fall back to branchIndex

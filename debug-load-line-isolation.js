@@ -225,7 +225,7 @@ console.log('Starting Load Line Intersection Isolation Test...\n')
 
 try {
   testDiodeCharacteristic()
-  const results = testLoadLineIntersection()
+  const _results = testLoadLineIntersection()
 
   console.log(`\n${'='.repeat(80)}`)
   console.log('TEST COMPLETE')

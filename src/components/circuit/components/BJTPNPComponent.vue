@@ -224,7 +224,7 @@ const componentDefinition = computed(() => getComponentDefinition(props.componen
 // Component properties with defaults
 const currentGain = computed(() => (props.component.properties?.currentGain as number) || 100)
 
-const saturationCurrent = computed(
+const _saturationCurrent = computed(
   () => (props.component.properties?.saturationCurrent as number) || 1e-14,
 )
 

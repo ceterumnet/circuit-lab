@@ -207,7 +207,7 @@ const physicalCurrentInfo = computed(() => {
 })
 
 // Legacy currentInfo for backward compatibility (now uses physicalCurrentInfo)
-const currentInfo = computed(() => {
+const _currentInfo = computed(() => {
   const physical = physicalCurrentInfo.value
   return {
     value: physical.magnitude, // Always positive now

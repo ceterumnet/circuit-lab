@@ -426,7 +426,8 @@ async function sweepPoint(primaryValue: number) {
       } else if (outputId === 'power') {
         // Calculate total power
         let totalPower = 0
-        Object.entries(result.currents).forEach(([componentId, current]) => {
+        Object.entries(result.currents).forEach(
+          ([_componentId, current]) => {
           const voltage = Object.values(result.voltages)[0] || 0 // Simplified - use first node voltage
           totalPower += Math.abs(current * voltage)
         })

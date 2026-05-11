@@ -396,10 +396,10 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
    * Linear DC stamping (ComponentStamper interface) - unused for diodes
    */
   stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _mnaMatrix: Matrix,
+    _rhsVector: Matrix,
+    _nodeMap: Map<string, number>,
+    _nextBranchIndex: number,
   ): StampResult {
     // For non-linear components, we don't stamp anything in the DC matrix
     // The actual behavior is handled entirely by Newton-Raphson via stampLinearized()
@@ -413,10 +413,10 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
    * This ensures 100% consistency between stamping and current calculation
    */
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // ARCHITECTURE COMPLIANCE: Use the stamped operating point current
     // This ensures 100% consistency with what was stamped into the matrix
@@ -425,9 +425,9 @@ export class DiodeStamper implements ComponentStamper, NonLinearStamper {
     }
 
     // Fallback: calculate from voltage using DiodeCharacteristic (not hardcoded values)
-    const [anodeNode, cathodeNode] = this.getNodeIndices(nodeMap)
-    const anodeVoltage = solution.get([anodeNode, 0]) as number
-    const cathodeVoltage = solution.get([cathodeNode, 0]) as number
+    const [anodeNode, cathodeNode] = this.getNodeIndices(_nodeMap)
+    const anodeVoltage = _solution.get([anodeNode, 0]) as number
+    const cathodeVoltage = _solution.get([cathodeNode, 0]) as number
     const diodeVoltage = anodeVoltage - cathodeVoltage
 
     // ARCHITECTURE COMPLIANCE: Use DiodeCharacteristic instead of hardcoded parameters

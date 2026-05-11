@@ -302,7 +302,7 @@ describe('PotentiometerStamper Unit Tests', () => {
       const v2 = 0.0 // Terminal 2: 0V
 
       const expectedCurrent1 = (v1 - vWiper) / r1 // Current through segment 1
-      const expectedCurrent2 = (vWiper - v2) / r2 // Current through segment 2
+      const _expectedCurrent2 = (vWiper - v2) / r2 // Current through segment 2
 
       const component = createTestPotentiometer('POT1', totalResistance, wiperPosition)
       const stamper = new PotentiometerStamper(component)
@@ -328,7 +328,7 @@ describe('PotentiometerStamper Unit Tests', () => {
       const totalResistance = 5000 // 5kΩ
       const wiperPosition = 30 // 30% - NOTE: 0-100 range
       const r1 = Math.max((wiperPosition / 100) * totalResistance, 1e-6) // 1500Ω
-      const r2 = Math.max(totalResistance - r1, 1e-6) // 3500Ω
+      const _r2 = Math.max(totalResistance - r1, 1e-6) // 3500Ω
 
       const component = createTestPotentiometer('POT1', totalResistance, wiperPosition)
       const stamper = new PotentiometerStamper(component)

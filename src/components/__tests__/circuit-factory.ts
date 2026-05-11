@@ -29,7 +29,7 @@ function nextWireId(): string {
 }
 
 /** Generate unique node ID */
-function nextNodeId(): string {
+function _nextNodeId(): string {
   return `N${nodeIdCounter++}`
 }
 

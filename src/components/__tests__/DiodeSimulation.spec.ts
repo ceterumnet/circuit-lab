@@ -385,7 +385,7 @@ describe('Diode Simulation', () => {
       expect(ratio_5V_to_1V).toBeLessThan(20) // But not exponentially (not 100x+)
 
       // All currents should be in reasonable range for these supply voltages
-      currents.forEach((current, i) => {
+      currents.forEach((current, _i) => {
         expect(current).toBeGreaterThan(1e-6) // > 1µA (should conduct)
         expect(current).toBeLessThan(0.01) // < 10mA (reasonable for 1kΩ circuit)
       })

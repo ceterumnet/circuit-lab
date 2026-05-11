@@ -241,7 +241,7 @@ const physicalCurrentInfo = computed(() => {
 })
 
 // Legacy currentInfo for backward compatibility (now uses physicalCurrentInfo)
-const currentInfo = computed(() => {
+const _currentInfo = computed(() => {
   const physical = physicalCurrentInfo.value
   return {
     value: physical.magnitude, // Always positive now
@@ -363,7 +363,7 @@ const probeValue = computed(() => {
   const dcSolution = circuitStore.dcSolution
   if (!dcSolution) return 'N/A'
 
-  const { voltages, currents, termToNodeIndex } = dcSolution
+  const { voltages, currents: _currents, termToNodeIndex } = dcSolution
   const targetId = props.probe.targetId
 
   if (props.probe.type === 'voltage') {

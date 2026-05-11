@@ -67,10 +67,10 @@ export class BJTPNPStamper implements ComponentStamper, NonLinearStamper {
    * DC stamping method - returns empty for non-linear components
    */
   stampDC(
-    mnaMatrix: Matrix,
-    rhsVector: Matrix,
-    nodeMap: Map<string, number>,
-    frequency: number,
+    _mnaMatrix: Matrix,
+    _rhsVector: Matrix,
+    _nodeMap: Map<string, number>,
+    _frequency: number,
   ): StampResult {
     // Non-linear components don't stamp during DC analysis
     // They use the Newton-Raphson solver with stampLinearized
@@ -269,11 +269,11 @@ export class BJTPNPStamper implements ComponentStamper, NonLinearStamper {
    */
   private identifyEmitterBaseComponents(
     allStampers: ComponentStamper[],
-    nodeMap: Map<string, number>,
-    emitterNode: number,
-    baseNode: number,
-    isVoltageDividerBias: boolean,
-    hasSmallVoltage: boolean,
+    _nodeMap: Map<string, number>,
+    _emitterNode: number,
+    _baseNode: number,
+    _isVoltageDividerBias: boolean,
+    _hasSmallVoltage: boolean,
   ): ComponentStamper[] {
     const components: ComponentStamper[] = []
 
@@ -313,7 +313,7 @@ export class BJTPNPStamper implements ComponentStamper, NonLinearStamper {
     const vE = solution.get([emitterNode, 0]) as number
     const vB = solution.get([baseNode, 0]) as number
     const vCE = vC - vE
-    const vEB = vE - vB // Note: VEB for PNP (not VBE)
+    const _vEB = vE - vB // Note: VEB for PNP (not VBE)
 
     // Analyze emitter-base circuit using Load Line Intersection
     const { theveninVoltage, theveninResistance } = this.analyzeEmitterBaseCircuit(
@@ -413,10 +413,10 @@ export class BJTPNPStamper implements ComponentStamper, NonLinearStamper {
    * For PNP BJT, we return collector current as the main current
    */
   calculateCurrent(
-    solution: Matrix,
-    nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _solution: Matrix,
+    _nodeMap: Map<string, number>,
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     // Return collector current as primary current measurement
     if (this.operatingPoint) {

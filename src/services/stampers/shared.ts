@@ -53,7 +53,7 @@ export abstract class ResistiveStamper implements ComponentStamper {
     mnaMatrix: Matrix,
     rhsVector: Matrix,
     nodeMap: Map<string, number>,
-    nextBranchIndex: number,
+    _nextBranchIndex: number,
   ): StampResult {
     if (this.resistance <= 0) return { branchCurrents: [] }
 
@@ -80,8 +80,8 @@ export abstract class ResistiveStamper implements ComponentStamper {
   calculateCurrent(
     solution: Matrix,
     nodeMap: Map<string, number>,
-    branchCurrents: number[],
-    allStampers?: ComponentStamper[],
+    _branchCurrents: number[],
+    _allStampers?: ComponentStamper[],
   ): number {
     const [n1, n2] = this.getNodeIndices(nodeMap)
 

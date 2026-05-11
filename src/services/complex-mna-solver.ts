@@ -307,7 +307,7 @@ export class ComplexMNASolver {
         const correction = lusolve(A, residual) as Matrix
         solution = add(solution, correction) as Matrix
         iterations++
-      } catch (error) {
+      } catch (_error) {
         // Refinement failed, return current solution
         break
       }
@@ -334,7 +334,7 @@ export class ComplexMNASolver {
 
     // Calculate norms
     const residualNorm = this.calculateComplexVectorNorm(residual)
-    const solutionNorm = this.calculateComplexVectorNorm(solution)
+    const _solutionNorm = this.calculateComplexVectorNorm(solution)
     const rhsNorm = this.calculateComplexVectorNorm(b)
 
     const relativeError = rhsNorm > 0 ? residualNorm / rhsNorm : residualNorm

@@ -5,7 +5,7 @@
  */
 
 import { Complex, ComplexUnits } from './complex-math'
-import type { Circuit } from '@/types/components'
+import type { Circuit as _Circuit } from '@/types/components'
 
 /**
  * AC Analysis result for a single frequency point
@@ -200,7 +200,7 @@ export class TransferFunctionCalculator {
     response: FrequencyResponse,
     inputNode: number,
     outputNode: number,
-    inputAmplitude: number = 1.0,
+    _inputAmplitude: number = 1.0,
   ): TransferFunction {
     const transferFunction: Complex[] = []
     const magnitudeDB: number[] = []
@@ -365,7 +365,7 @@ export class FilterAnalyzer {
     cornerFrequency?: number
     rolloffRate?: number // dB/decade
   } {
-    const { frequencies, magnitudeDB } = transferFunction
+    const { frequencies: _frequencies, magnitudeDB } = transferFunction
 
     // Simple heuristic-based classification
     const lowFreqMag = magnitudeDB[0]

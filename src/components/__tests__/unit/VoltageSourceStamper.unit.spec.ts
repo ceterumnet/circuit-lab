@@ -105,7 +105,7 @@ describe('VoltageSourceStamper REAL Implementation Unit Tests', () => {
       const stampedVoltages: number[] = []
       const realStampers: VoltageSourceStamper[] = []
 
-      voltageValues.forEach((voltage, index) => {
+      voltageValues.forEach((voltage, _index) => {
         const branchIndex = 2
         const mnaMatrix = matrix(zeros(3, 3))
         const rhsVector = matrix(zeros(3, 1))
@@ -136,7 +136,7 @@ describe('VoltageSourceStamper REAL Implementation Unit Tests', () => {
       expect(stampedVoltages).toEqual([1.5, 5.0, 12.0, 24.0])
 
       // Verify all are real VoltageSourceStamper instances
-      realStampers.forEach((stamper, index) => {
+      realStampers.forEach((stamper, _index) => {
         expect(stamper).toBeInstanceOf(VoltageSourceStamper)
         expect(stamper.type).toBe('voltage_source')
       })

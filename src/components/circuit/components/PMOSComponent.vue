@@ -228,7 +228,7 @@ const thresholdVoltage = computed(
   () => (props.component.properties?.thresholdVoltage as number) || -1.0,
 )
 
-const kp = computed(() => (props.component.properties?.kp as number) || 100e-6)
+const _kp = computed(() => (props.component.properties?.kp as number) || 100e-6)
 
 const isSelected = computed(() =>
   interactionStore.selectedComponentIds.includes(props.component.id),

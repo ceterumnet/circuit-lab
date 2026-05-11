@@ -179,7 +179,7 @@ function handleExport() {
 
     URL.revokeObjectURL(url)
     showStatus('Circuit exported successfully!', 'success')
-  } catch (error) {
+  } catch (_error) {
     showStatus('Failed to export circuit', 'error')
   }
 }
@@ -208,7 +208,7 @@ function handleFileImport(event: Event) {
       } else {
         showStatus('Failed to import circuit - invalid format', 'error')
       }
-    } catch (error) {
+    } catch (_error) {
       showStatus('Failed to read file', 'error')
     }
   }
