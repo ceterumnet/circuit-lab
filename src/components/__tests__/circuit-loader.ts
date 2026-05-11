@@ -312,9 +312,7 @@ export function listCircuitFiles(): string[] {
   const circuitsDir = join(__dirname, 'circuits')
 
   try {
-    const fs = require('fs')
-    return fs
-      .readdirSync(circuitsDir)
+    return readdirSync(circuitsDir)
       .filter((file: string) => file.endsWith('.json'))
       .sort()
   } catch (error) {
