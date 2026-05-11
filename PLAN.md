@@ -1,53 +1,10 @@
 # Circuit Lab - Project Plan
 
-## Project Status Update - Latest Session
+## Recent Changes
 
-**✅ BJT COMMON EMITTER AMPLIFIER - FULLY FUNCTIONAL**
-
-Critical bug fixes applied to make BJT transistors work correctly in real circuits:
-
-- **Fixed Resistance Threshold Bug**: Base resistor threshold lowered from ≥100kΩ to ≥10kΩ to include real-world bias resistors
-- **Fixed Cutoff Threshold Bug**: BJT cutoff threshold lowered from VBE < 0.6V to VBE < 0.5V for accurate operation region detection
-- **Circuit Bias Optimization**: Updated common-emitter amplifier with VIN = 3.5V, RB = 47kΩ for proper transistor biasing
-- **Educational Impact**: BJT now demonstrates active amplification instead of being stuck in cutoff mode
-- **Zero Regressions**: All 343/343 tests passing, comprehensive validation maintained
-
-**Phase 4A: BJT Foundation COMPLETE** - Ready for Phase 4B: MOSFET implementation and advanced amplifier analysis.
-
----
-
-## ✅ PREVIOUSLY COMPLETED - Design System Compliance
-
-All Circuit Lab components follow professional design system guidelines:
-
-- **Fixed AC Analysis Issues**: Eliminated problematic custom chart components causing vertical scrolling
-- **Professional Chart Integration**: All analysis now uses established AnalysisChart.vue (357 lines) with Chart.js
-- **Design System Compliance**: Replaced emojis with Lucide icons, removed custom CSS, used proper classes
-- **Naming Consistency**: Eliminated `.analysis-plot` vs `.analysis-chart` confusion
-- **Enhanced Analysis Panel**: Upgraded to follow design system while maintaining enhanced features
-
----
-
-## ✅ RECENTLY RESOLVED - Current Session
-
-### **Fixed: Current Probe Arrow Visualization**
-
-**✅ RESOLVED**: Current probe arrows now correctly display direction based on actual wire geometry and physical current flow.
-
-**Solution Implemented**:
-
-- **Wire-aligned arrows**: Arrows now follow the actual wire direction vector instead of fixed left/right orientation
-- **Physical accuracy**: Arrow direction matches `physicalCurrentInfo.flowsStartToEnd` calculation
-- **Orientation independence**: Works correctly regardless of circuit layout or wire positioning
-- **Maintained physics**: Simulation calculations remain accurate and unchanged
-
-**Technical Implementation**:
-
-- Updated `arrowLinePoints` and `arrowHeadPath` computed properties in `ProbeComponent.vue`
-- Added wire direction vector calculation using `getTerminalWorldPosition`
-- Arrow positioning now based on normalized wire direction and current flow physics
-
-**Testing**: All 339 tests pass, no regressions introduced.
+- BJT foundation completed with both NPN and PNP transistor support, including critical fixes to bias resistance and cutoff thresholds for accurate active-region operation
+- Current probe arrow visualization corrected to follow actual wire geometry and physical current flow direction
+- Chart component inconsistencies resolved by consolidating all analysis views onto the established AnalysisChart.vue component
 
 ---
 
@@ -170,40 +127,40 @@ Advanced visualization enhancements for orientation-independent current flow und
 
 1. ✅ **Reactive Components Foundation - COMPLETED**
 
-   - ✅ CapacitorComponent.vue and InductorComponent.vue following established patterns
-   - ✅ CapacitorStamper.ts and InductorStamper.ts with frequency-dependent impedance
-   - ✅ Component property panels for capacitance/inductance values
-   - ✅ Professional capacitor and inductor symbols with custom icons
+    - ✅ CapacitorComponent.vue and InductorComponent.vue following established patterns
+    - ✅ CapacitorStamper.ts and InductorStamper.ts with frequency-dependent impedance
+    - ✅ Component property panels for capacitance/inductance values
+    - ✅ Professional capacitor and inductor symbols with custom icons
 
 2. ✅ **Complex MNA System - COMPLETED**
 
-   - ✅ Extended MNA solver with ComplexMNASolver for complex number matrices
-   - ✅ Complex number mathematics foundation with full arithmetic operations
-   - ✅ ComplexMatrix class with MNA-compatible operations and mathjs integration
-   - ✅ Complex impedance calculations: Z_C = 1/(jωC), Z_L = jωL with frequency dependency
-   - ✅ AC analysis result structures with complex voltages and currents
-   - ✅ Frequency sweep infrastructure with logarithmic and linear spacing
-   - ✅ **Validation Complete**: 10/10 tests passing - complex arithmetic, impedance calculations, and AC solver
+    - ✅ Extended MNA solver with ComplexMNASolver for complex number matrices
+    - ✅ Complex number mathematics foundation with full arithmetic operations
+    - ✅ ComplexMatrix class with MNA-compatible operations and mathjs integration
+    - ✅ Complex impedance calculations: Z_C = 1/(jωC), Z_L = jωL with frequency dependency
+    - ✅ AC analysis result structures with complex voltages and currents
+    - ✅ Frequency sweep infrastructure with logarithmic and linear spacing
+    - ✅ **Validation Complete**: 10/10 tests passing - complex arithmetic, impedance calculations, and AC solver
 
 3. ✅ **AC Sources Implementation - COMPLETED**
 
-   - ✅ AC Voltage Source with amplitude, frequency, and phase parameters
-   - ✅ AC Current Source with amplitude, frequency, and phase parameters
-   - ✅ **Professional custom SVG symbols** with sine wave indicators matching design system
-   - ✅ Professional Vue components with AC-specific parameter display (5V@1kHz ∠45°)
-   - ✅ AC-specific stampers extending DC stampers with phasor analysis capability
-   - ✅ Component factory integration with comprehensive test coverage (15/15 tests passing)
-   - ✅ **Component palette integration** with proper symbol mapping and color coding
-   - ✅ **Consistent symbol rendering** between palette and circuit canvas
-   - ✅ Proper DC analysis behavior (AC sources have 0V/0A DC component)
-   - ✅ Phasor representation methods for future AC analysis integration
+    - ✅ AC Voltage Source with amplitude, frequency, and phase parameters
+    - ✅ AC Current Source with amplitude, frequency, and phase parameters
+    - ✅ **Professional custom SVG symbols** with sine wave indicators matching design system
+    - ✅ Professional Vue components with AC-specific parameter display (5V@1kHz ∠45°)
+    - ✅ AC-specific stampers extending DC stampers with phasor analysis capability
+    - ✅ Component factory integration with comprehensive test coverage (15/15 tests passing)
+    - ✅ **Component palette integration** with proper symbol mapping and color coding
+    - ✅ **Consistent symbol rendering** between palette and circuit canvas
+    - ✅ Proper DC analysis behavior (AC sources have 0V/0A DC component)
+    - ✅ Phasor representation methods for future AC analysis integration
 
 4. ✅ **AC Analysis Visualization - COMPLETED & DESIGN SYSTEM COMPLIANT**
-   - ✅ Professional ACAnalysisPanel.vue using established AnalysisChart.vue foundation
-   - ✅ Bode plot generation with magnitude (dB) and phase (degrees) using Chart.js
-   - ✅ Frequency response analysis with proper design system integration
-   - ✅ Engineering unit formatting and logarithmic frequency scaling
-   - ✅ Export capabilities following professional patterns
+    - ✅ Professional ACAnalysisPanel.vue using established AnalysisChart.vue foundation
+    - ✅ Bode plot generation with magnitude (dB) and phase (degrees) using Chart.js
+    - ✅ Frequency response analysis with proper design system integration
+    - ✅ Engineering unit formatting and logarithmic frequency scaling
+    - ✅ Export capabilities following professional patterns
 
 **Educational Features**
 
@@ -233,19 +190,19 @@ Advanced visualization enhancements for orientation-independent current flow und
 
 1. **Resistance Threshold Bug** - `src/services/stampers/nonlinear/BJTStamper.ts`
 
-   - **Issue**: Base resistor threshold too high (≥100kΩ) excluded typical bias resistors
-   - **Fix**: Lowered threshold to ≥10kΩ to include real-world base resistors (10kΩ-1MΩ range)
-   - **Result**: RB = 47kΩ now correctly included in base-emitter analysis
+    - **Issue**: Base resistor threshold too high (≥100kΩ) excluded typical bias resistors
+    - **Fix**: Lowered threshold to ≥10kΩ to include real-world base resistors (10kΩ-1MΩ range)
+    - **Result**: RB = 47kΩ now correctly included in base-emitter analysis
 
 2. **Cutoff Threshold Bug** - `src/services/stampers/nonlinear/BJTCharacteristic.ts`
 
-   - **Issue**: Cutoff threshold too high (VBE < 0.6V) classified weak active region as cutoff
-   - **Fix**: Lowered threshold to VBE < 0.5V to match real silicon BJT behavior
-   - **Result**: VBE = 0.586V now correctly identified as "Active"
+    - **Issue**: Cutoff threshold too high (VBE < 0.6V) classified weak active region as cutoff
+    - **Fix**: Lowered threshold to VBE < 0.5V to match real silicon BJT behavior
+    - **Result**: VBE = 0.586V now correctly identified as "Active"
 
 3. **Circuit Bias Optimization** - `src/components/__tests__/circuits/common-emitter-amplifier.json`
-   - **Updated**: VIN = 3.5V, RB = 47kΩ for proper transistor biasing
-   - **Result**: BJT now demonstrates active amplification with realistic operating point
+    - **Updated**: VIN = 3.5V, RB = 47kΩ for proper transistor biasing
+    - **Result**: BJT now demonstrates active amplification with realistic operating point
 
 **Validation Results:**
 
@@ -314,59 +271,16 @@ Advanced visualization enhancements for orientation-independent current flow und
 
 ## Technical Architecture
 
+For architecture details, see [SIMULATION-ARCHITECTURE.md](SIMULATION-ARCHITECTURE.md) and [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md).
+
 ### Current Stack
 
 - **Frontend**: Vue 3 + TypeScript + Vite
 - **Canvas**: Konva.js with vue-konva integration
 - **State Management**: Pinia stores
-- **Simulation**: Pure MNA implementation with load line intersection solver
-- **Styling**: Tailwind CSS with professional circuit-specific design tokens
-- **Charts**: Chart.js integration with engineering units and real-time updates
-
-### Key Architectural Principles
-
-**Pure MNA Implementation**
-
-- All passive components use G-matrix stamping for consistent physics
-- Only voltage sources add branch current variables
-- Current sources use RHS injection for known currents
-
-**Load Line Intersection Approach**
-
-- Complex I-V models for educational analysis and visualization
-- Simple linear equivalent circuits for MNA stability
-- Eliminates Newton-Raphson oscillations while maintaining accuracy
-
-**Modular Component System**
-
-```
-src/services/stampers/
-├── shared.ts                  # Core interfaces & base classes
-├── linear/                    # Linear component stampers (11 complete)
-├── nonlinear/                 # Non-linear component stampers (2 complete)
-├── ComponentStamperFactory.ts # Centralized stamper creation
-└── index.ts                   # Clean public API
-```
-
-**Professional Design System - FULLY COMPLIANT**
-
-```
-src/assets/main-new.css        # Circuit-specific design tokens
-src/components/design-system/  # Comprehensive design system demo
-- IDE layout patterns (.ide-layout, .component-palette, .properties-panel)
-- Circuit semantic colors (voltage-red, current-blue, resistance-purple)
-- Professional measurement displays with engineering units
-- Custom HD cursors for circuit simulation interactions
-- .chart-container standard for all chart containers
-- AnalysisChart.vue as the single professional charting foundation
-```
-
-**Design System Compliance Achieved:**
-
-- ✅ **No emoji usage** - All UI uses professional Lucide icons
-- ✅ **Consistent naming** - `.analysis-chart` for components, `.chart-container` for containers
-- ✅ **Single chart foundation** - All analysis uses professional AnalysisChart.vue
-- ✅ **Design system classes only** - No custom CSS violations
+- **Simulation**: Pure MNA with load line intersection solver
+- **Styling**: Tailwind CSS with circuit-specific design tokens
+- **Charts**: Chart.js with engineering units
 
 ## Success Metrics
 
@@ -383,36 +297,9 @@ src/components/design-system/  # Comprehensive design system demo
 - ✅ **Professional Chart.js integration** with consistent AnalysisChart.vue foundation
 - ✅ **100% Circuit Lab Design System compliance** across all components and interfaces
 
-### Current Achievement: Phase 4A.5 Complete! 🎉 Complete BJT Foundation (NPN + PNP)
+### Recent Milestones
 
-**COMPLETE BJT Implementation - BOTH NPN AND PNP TRANSISTORS FULLY SUPPORTED**
-
-- ✅ **Complete BJT Foundation** - Professional NPN and PNP transistor implementation with Ebers-Moll model
-- ✅ **Load Line Integration** - Proven approach ensures stable operation point calculation for both types
-- ✅ **Educational Q-Point Analysis** - Real-time operating region detection (Cutoff/Active/Saturation) for both NPN and PNP
-- ✅ **Professional UI Integration** - IEEE-standard symbols with current gain display and region visualization for both types
-- ✅ **Comprehensive Validation** - 30/30 BJT unit tests passing (16 NPN + 14 PNP), 357/357 total tests (zero regressions)
-- ✅ **Critical Bug Fixes** - BJT common-emitter amplifier now demonstrates active operation correctly
-- ✅ **Production Ready** - Real-world bias resistor values (10kΩ-1MΩ) properly supported for both types
-- ✅ **Educational Circuits** - Both NPN and PNP transistors fully functional for comprehensive circuit analysis learning
-- ✅ **Complementary Support** - Enables push-pull amplifiers, differential pairs, and complete BJT education
-
-**AC Analysis & Reactive Components - FULLY IMPLEMENTED & PROFESSIONALLY INTEGRATED**
-
-- ✅ AC analysis foundation with capacitors and inductors - **COMPLETED**
-- ✅ Complex number MNA system for frequency domain analysis - **COMPLETED**
-- ✅ AC sources (voltage/current with amplitude, frequency, phase) - **COMPLETED**
-- ✅ **Professional AC analysis using established AnalysisChart.vue foundation - COMPLETED**
-- ✅ **Bode plot and frequency response with Chart.js integration - COMPLETED**
-- ✅ **Design system compliance: Lucide icons, proper classes, no custom CSS - COMPLETED**
-
-**Recent Fixes & Improvements:**
-
-- ✅ **Eliminated problematic custom chart components** (BodePlotChart.vue, PhasorDiagramChart.vue)
-- ✅ **Fixed vertical scrolling issues** by using professional AnalysisChart.vue
-- ✅ **Resolved .analysis-chart vs .analysis-plot naming inconsistency**
-- ✅ **Enhanced Parameter Analysis Panel** now follows design system guidelines
-- ✅ **100% Circuit Lab Design System compliance** across all analysis components
+Phase 4A.5 is complete with full NPN and PNP BJT support, including Ebers-Moll modeling, load line intersection for stable operating points, and accurate active-region detection across 30 unit tests. BJT bias threshold bugs were resolved and the common-emitter amplifier now demonstrates active operation correctly with 357/357 total tests passing. AC analysis is fully implemented with capacitors, inductors, AC sources, and Bode plot visualization. All analysis views have been consolidated onto AnalysisChart.vue with Chart.js integration, eliminating custom chart components and achieving full design system compliance across the interface.
 
 ### Long-term Vision
 

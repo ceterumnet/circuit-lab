@@ -27,10 +27,74 @@
 - Never assume your changes simply work, always test!
 - If the project does not have any testing tools, scripts, MCP tools, skills, etc. available for testing, ask the user whether testing should be skipped.
 
-## UI DESIGN
+## UI GUARDRAILS
 
-- Always follow the UI design system when creating or reviewing components or pages.
-- Design System: @DESIGN-SYSTEM.md
+### Read Before Building
+
+Always read these files first:
+- `src/assets/main-new.css` — all design tokens and component patterns
+- `src/components/design-system/DesignSystemDemo.vue` — see what's already built
+
+### Search Before Creating
+
+Check for existing implementations before building anything new:
+- `src/components/circuit/symbols/` — 12 professional IEEE-standard circuit symbols
+- `src/components/circuit/analysis/` — Chart.js-based analysis charts
+- `src/components/circuit/components/` — professional component library
+- `src/components/circuit/probes/` — measurement tools (ProbeComponent.vue)
+
+### Design System Compliance
+
+- **Colors**: Only use `--color-primary-*`, `--color-circuit-*`, `--color-simulation-*` design tokens from `main-new.css`
+- **Layout**: Only use `.ide-layout`, `.component-palette`, `.properties-panel`, `.btn` classes
+- **Icons**: Lucide for UI elements, existing circuit symbols for components — never use generic icons for circuit components
+- **Cursors**: Use `.cursor-crosshair-hd`, `.cursor-grab-hd`, etc. already in the design system
+- **Form controls**: Match heights using `.property-input`
+
+### Tech Stack
+
+- **Tailwind CSS only** — no custom CSS unless absolutely necessary
+- **Headless UI** — for dropdowns, modals, toggles
+- **Lucide Icons** — for UI elements only
+- **Vue 3 + TypeScript** — proper types, never use `any`
+
+### Emergency Stops — Ask Before Doing
+
+If you're about to do any of the following, STOP and ask first:
+
+- Create charts, circuit symbols, or measurement tools (professional implementations already exist)
+- Change color values in `main-new.css`
+- Add custom CSS instead of Tailwind classes
+- Replace functional components with placeholders
+- Use generic icons for circuit components
+
+Default question: "I need to [task]. A professional implementation exists at [file]. Should I use/modify it or create something new?"
+
+### Quality Gates
+
+- All 170+ tests pass
+- MNA simulation engine remains intact
+- Real circuit data in charts, never placeholder content
+- Professional IDE appearance maintained
+
+### Success Formula
+
+1. **Search** → find existing implementation
+2. **Read** → understand design tokens and patterns
+3. **Use** → apply existing patterns and professional components
+4. **Ask** → when uncertain about existing vs. new
+5. **Test** → verify tests pass and no visual regressions
+
+### Context
+
+This is a professional educational circuit simulator — NOT a generic web app. It has:
+- Complete DC simulation engine (MNA)
+- 12 IEEE-standard circuit symbols
+- Real-time parameter analysis with Chart.js
+- Advanced component library with realistic physics
+- Professional design system with custom cursors
+
+When in doubt: default to using existing implementations and established patterns.
 
 # Project
 
