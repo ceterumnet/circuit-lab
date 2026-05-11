@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { getAllComponents } from '@/registry/components'
 import { useInteractionStore } from '@/stores/interaction'
 import type { ComponentDefinition } from '@/types/components'

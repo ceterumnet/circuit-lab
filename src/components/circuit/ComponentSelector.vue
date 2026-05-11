@@ -41,8 +41,6 @@ import { computed, ref, nextTick, watch } from 'vue'
 import { ArrowUp, ArrowDown } from 'lucide-vue-next'
 import { useInteractionStore } from '@/stores/interaction'
 import { getAllComponents } from '@/registry/components'
-import type { ComponentDefinition } from '@/types/components'
-
 // Import component symbols
 import ResistorSymbol from './symbols/ResistorSymbol.vue'
 import VoltageSourceSymbol from './symbols/VoltageSourceSymbol.vue'

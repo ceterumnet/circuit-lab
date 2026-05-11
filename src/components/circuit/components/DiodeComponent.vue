@@ -155,7 +155,6 @@
 import { computed } from 'vue'
 import type { CircuitComponent, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
-import DiodeSymbol from '@/components/circuit/symbols/DiodeSymbol.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useInteractionStore } from '@/stores/interaction'
 import { getComponentDefinition } from '@/registry/components'

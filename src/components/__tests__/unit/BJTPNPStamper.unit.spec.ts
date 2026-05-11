@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { matrix, zeros, Matrix } from 'mathjs'
 import type { CircuitComponent } from '@/types/components'
-import { BJTPNPStamper, type ComponentStamper } from '@/services/stampers'
+import { BJTPNPStamper } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR PNP BJT STAMPER MNA INTEGRATION

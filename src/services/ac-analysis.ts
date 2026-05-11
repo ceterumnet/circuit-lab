@@ -4,8 +4,8 @@
  * for capacitors, inductors, and AC sources
  */
 
-import { Complex, ComplexMatrix, ComplexUnits } from './complex-math'
-import type { Circuit, CircuitComponent } from '@/types/components'
+import { Complex, ComplexUnits } from './complex-math'
+import type { Circuit } from '@/types/components'
 
 /**
  * AC Analysis result for a single frequency point

@@ -199,7 +199,6 @@
 import { computed } from 'vue'
 import type { CircuitComponent, Position } from '@/types/components'
 import CircuitTerminal from '@/components/circuit/components/CircuitTerminal.vue'
-import LEDSymbol from '@/components/circuit/symbols/LEDSymbol.vue'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { useInteractionStore } from '@/stores/interaction'
 import { useCircuitStore } from '@/stores/circuit'

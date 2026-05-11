@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { matrix, zeros, Matrix } from 'mathjs'
 import type { CircuitComponent } from '@/types/components'
-import { PMOSStamper, type ComponentStamper } from '@/services/stampers'
+import { PMOSStamper } from '@/services/stampers'
 
 function createTestPMOS(
   id: string,

@@ -201,10 +201,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
-import AnalysisChart from './AnalysisChart.vue'
-import type { DC_Result } from '@/services/simulation'
 import {
   BarChart3,
   Play,

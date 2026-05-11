@@ -5,7 +5,7 @@
  */
 
 import { Complex, ComplexMatrix } from './complex-math'
-import type { SolverOptions, SolverResult } from './numerical-solver'
+import type { SolverOptions } from './numerical-solver'
 import { lusolve, matrix, Matrix, multiply, subtract, add } from 'mathjs'
 
 /**

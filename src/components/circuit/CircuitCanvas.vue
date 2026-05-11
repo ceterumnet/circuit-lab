@@ -12,8 +12,7 @@ import type { KonvaEventObject } from 'konva/lib/Node'
 import * as componentFactory from '@/services/componentFactory'
 import * as geometry from '@/services/geometry'
 import { screenToWorld } from '@/services/coordinates'
-import { getComponentDefinition } from '@/registry/components'
-import type { CircuitComponent as CircuitComponentType, Position } from '@/types/components'
+import type { Position } from '@/types/components'
 
 // Stage configuration
 const stageConfig = ref({

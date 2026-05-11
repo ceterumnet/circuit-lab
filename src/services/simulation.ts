@@ -1,4 +1,4 @@
-import type { Circuit, CircuitComponent, Wire } from '@/types/components'
+import type { Circuit, CircuitComponent } from '@/types/components'
 import { zeros, lusolve, matrix, Matrix } from 'mathjs'
 import { getComponentDefinition } from '@/registry/components'
 import { EnhancedMNASolver, NewtonRaphsonSolver, type NonLinearStamper } from './numerical-solver'

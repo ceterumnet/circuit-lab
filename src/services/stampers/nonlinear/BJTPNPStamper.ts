@@ -1,6 +1,5 @@
 import type { CircuitComponent } from '@/types/components'
 import { Matrix, matrix } from 'mathjs'
-import { getComponentDefinition } from '@/registry/components'
 import type { ComponentStamper, StampResult } from '../shared'
 import type { NonLinearStamper } from '@/services/numerical-solver'
 import { BJTCharacteristic } from './BJTCharacteristic'

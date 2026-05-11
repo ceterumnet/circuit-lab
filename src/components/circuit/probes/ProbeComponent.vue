@@ -91,7 +91,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
-import type { Probe, Position } from '@/types/components'
+import type { Probe } from '@/types/components'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import { getComponentDefinition } from '@/registry/components'
 import { getTerminalWorldPosition } from '@/services/geometry'

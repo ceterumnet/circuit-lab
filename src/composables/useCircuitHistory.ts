@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, computed } from 'vue'
+import { computed } from 'vue'
 import { useCircuitStore } from '@/stores/circuit'
 import { useHistoryStore } from '@/stores/history'
 import { useInteractionStore } from '@/stores/interaction'
