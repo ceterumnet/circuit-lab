@@ -926,13 +926,18 @@ export async function solveDC(
         const emitterNodeIndex = termToNodeIndex.get(`${stamper.id}:emitter`)
 
         let vBE: number | undefined
+        let vEB: number | undefined
         let vCE: number | undefined
         let currentGain: number | undefined
 
         if (baseNodeIndex !== undefined && emitterNodeIndex !== undefined) {
           const vB = solution.get([baseNodeIndex, 0]) as number
           const vE = solution.get([emitterNodeIndex, 0]) as number
-          vBE = vB - vE
+          if (stamper.type === 'bjt_pnp') {
+            vEB = vE - vB
+          } else {
+            vBE = vB - vE
+          }
         }
 
         if (collectorNodeIndex !== undefined && emitterNodeIndex !== undefined) {
@@ -961,13 +966,19 @@ export async function solveDC(
             emitterCurrent: emitterCurrent,
           }
 
-          if (vBE !== undefined) updatedProperties.vBE = vBE
+          if (stamper.type === 'bjt_pnp' && vEB !== undefined) {
+            updatedProperties.vEB = vEB
+          } else if (vBE !== undefined) {
+            updatedProperties.vBE = vBE
+          }
           if (vCE !== undefined) updatedProperties.vCE = vCE
           if (currentGain !== undefined) updatedProperties.currentGain = currentGain
 
           component.properties = updatedProperties
+          const junctionVoltage = stamper.type === 'bjt_pnp' ? vEB : vBE
+          const junctionLabel = stamper.type === 'bjt_pnp' ? 'VEB' : 'VBE'
           console.log(
-            `🎯 Updating BJT ${stamper.id} properties: operatingRegion = "${operatingRegion}", IB = ${baseCurrent?.toExponential(2)}A, IC = ${collectorCurrent?.toExponential(2)}A, VBE = ${vBE?.toFixed(3)}V`,
+            `🎯 Updating BJT ${stamper.id} properties: operatingRegion = "${operatingRegion}", IB = ${baseCurrent?.toExponential(2)}A, IC = ${collectorCurrent?.toExponential(2)}A, ${junctionLabel} = ${junctionVoltage?.toFixed(3)}V`,
           )
         }
       }

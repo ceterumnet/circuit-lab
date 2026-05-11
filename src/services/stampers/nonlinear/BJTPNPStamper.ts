@@ -1,5 +1,6 @@
 import type { CircuitComponent } from '@/types/components'
 import { Matrix, matrix } from 'mathjs'
+import { getComponentDefinition } from '@/registry/components'
 import type { ComponentStamper, StampResult } from '../shared'
 import type { NonLinearStamper } from '@/services/numerical-solver'
 import { BJTCharacteristic } from './BJTCharacteristic'
@@ -51,15 +52,25 @@ export class BJTPNPStamper implements ComponentStamper, NonLinearStamper {
   /**
    * Get the collector, base, and emitter nodes from the node map
    */
-  private getThreeTerminalNodes(nodeMap: Map<string, number>): [number, number, number] {
-    const collectorNode = nodeMap.get(`${this.id}:collector`)
-    const baseNode = nodeMap.get(`${this.id}:base`)
-    const emitterNode = nodeMap.get(`${this.id}:emitter`)
+  private getTerminalId = (c: CircuitComponent, t: string) => `${c.id}:${t}`
 
-    if (collectorNode === undefined || baseNode === undefined || emitterNode === undefined) {
-      throw new Error(`PNP BJT ${this.id}: Missing terminal nodes`)
+  private getThreeTerminalNodes(nodeMap: Map<string, number>): [number, number, number] {
+    const definition = getComponentDefinition(this.type)!
+    const collectorTerminal = this.getTerminalId({ id: this.id } as CircuitComponent, definition.terminals[0].id)
+    const baseTerminal = this.getTerminalId({ id: this.id } as CircuitComponent, definition.terminals[1].id)
+    const emitterTerminal = this.getTerminalId({ id: this.id } as CircuitComponent, definition.terminals[2].id)
+
+    const missingTerminals: string[] = []
+    if (!nodeMap.has(collectorTerminal)) missingTerminals.push('collector')
+    if (!nodeMap.has(baseTerminal)) missingTerminals.push('base')
+    if (!nodeMap.has(emitterTerminal)) missingTerminals.push('emitter')
+    if (missingTerminals.length > 0) {
+      throw new Error(`PNP BJT ${this.id}: Missing terminal connections for ${missingTerminals.join(', ')} — connect all three terminals (collector, base, emitter) before simulating`)
     }
 
+    const collectorNode = nodeMap.get(collectorTerminal)!
+    const baseNode = nodeMap.get(baseTerminal)!
+    const emitterNode = nodeMap.get(emitterTerminal)!
     return [collectorNode, baseNode, emitterNode]
   }
 
@@ -265,35 +276,85 @@ export class BJTPNPStamper implements ComponentStamper, NonLinearStamper {
   }
 
   /**
-   * Identify components in the emitter-base path using graph traversal
+    * Identify components in the emitter-base circuit path using smart heuristics
+   * Mirrors NPN's identifyBaseEmitterComponents but adapted for PNP polarity
    */
   private identifyEmitterBaseComponents(
     allStampers: ComponentStamper[],
     _nodeMap: Map<string, number>,
     _emitterNode: number,
     _baseNode: number,
-    _isVoltageDividerBias: boolean,
+    isVoltageDividerBias: boolean,
     _hasSmallVoltage: boolean,
   ): ComponentStamper[] {
-    const components: ComponentStamper[] = []
+    console.log(`  🔍 Smart heuristic analysis for emitter-base circuit`)
 
-    // Simple heuristic: include resistors in reasonable range and voltage sources
+    const emitterBaseComponents: ComponentStamper[] = []
+
+    const voltageSources: { stamper: ComponentStamper; voltage: number }[] = []
+    const resistors: { stamper: ComponentStamper; resistance: number }[] = []
+
     for (const stamper of allStampers) {
-      if (stamper.type === 'voltage_source') {
-        components.push(stamper)
+      if (stamper.type === 'voltage_source' && 'component' in stamper) {
+        const component = (stamper as { component: CircuitComponent }).component
+        const voltage = (component.properties?.voltage as number) || 0
+        voltageSources.push({ stamper, voltage })
       } else if (stamper.type === 'resistor' && 'component' in stamper) {
-        const component = (stamper as unknown as { component: CircuitComponent }).component
+        const component = (stamper as { component: CircuitComponent }).component
         const resistance = (component.properties?.resistance as number) || 0
-
-        // Include resistors that could be in the bias path
-        if (resistance >= 10000 && resistance <= 1000000) {
-          // 10kΩ to 1MΩ range
-          components.push(stamper)
-        }
+        resistors.push({ stamper, resistance })
       }
     }
 
-    return components
+    console.log(`  Found ${voltageSources.length} voltage sources, ${resistors.length} resistors`)
+
+    // For PNP: emitter is at higher potential. Base bias voltage sources (0-5V)
+    // are typically tied to ground or a lower rail relative to emitter.
+    for (const { stamper, voltage } of voltageSources) {
+      if (voltage > 0 && voltage <= 5) {
+        emitterBaseComponents.push(stamper)
+        console.log(
+          `  ✅ Base bias voltage source: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${voltage}V`,
+        )
+      } else if (voltage > 5 && isVoltageDividerBias) {
+        emitterBaseComponents.push(stamper)
+        console.log(
+          `  ✅ Supply voltage for voltage divider bias: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${voltage}V`,
+        )
+      } else {
+        console.log(
+          `  ❌ Excluded collector supply: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${voltage}V`,
+        )
+      }
+    }
+
+    // PNP bias resistors: same heuristic ranges as NPN
+    for (const { stamper, resistance } of resistors) {
+      if (resistance >= 10000) {
+        emitterBaseComponents.push(stamper)
+        console.log(
+          `  ✅ Base bias resistor: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${resistance}Ω`,
+        )
+      } else if (isVoltageDividerBias && resistance >= 1000 && resistance <= 50000) {
+        const componentId = (stamper as unknown as { component: CircuitComponent }).component.id
+        if (
+          !componentId.toUpperCase().includes('RC') &&
+          !componentId.toUpperCase().includes('COLLECTOR')
+        ) {
+          emitterBaseComponents.push(stamper)
+          console.log(`  ✅ Voltage divider resistor: ${componentId} = ${resistance}Ω`)
+        } else {
+          console.log(`  ❌ Excluded collector resistor: ${componentId} = ${resistance}Ω`)
+        }
+      } else {
+        console.log(
+          `  ❌ Excluded resistor: ${(stamper as unknown as { component: CircuitComponent }).component.id} = ${resistance}Ω`,
+        )
+      }
+    }
+
+    console.log(`  Final emitter-base components: ${emitterBaseComponents.length}`)
+    return emitterBaseComponents
   }
 
   /**

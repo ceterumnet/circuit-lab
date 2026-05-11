@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { matrix, zeros, Matrix } from 'mathjs'
 import type { CircuitComponent } from '@/types/components'
-import { BJTPNPStamper } from '@/services/stampers'
+import { BJTPNPStamper, type ComponentStamper } from '@/services/stampers'
 
 /**
  * UNIT TESTS FOR PNP BJT STAMPER MNA INTEGRATION
@@ -34,6 +34,23 @@ function createTestPNPBJT(
     selected: false,
     properties,
   }
+}
+
+/**
+ * Create mock stamper for testing
+ */
+function createMockStamper(
+  id: string,
+  type: string,
+  component: CircuitComponent,
+): ComponentStamper {
+  return {
+    id,
+    type,
+    component,
+    stampDC: () => ({ branchCurrents: [] }),
+    calculateCurrent: () => 0,
+  } as ComponentStamper & { component: CircuitComponent }
 }
 
 describe('BJTPNPStamper Unit Tests', () => {
@@ -239,6 +256,313 @@ describe('BJTPNPStamper Unit Tests', () => {
       expect(highSatCurrent).toBeGreaterThan(lowSatCurrent)
       expect(lowSatCurrent).toBeGreaterThan(0)
       expect(highSatCurrent).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Load Line Integration', () => {
+    it('should use Load Line Intersection for operating point determination', () => {
+      // PNP active region: emitter at high voltage, base lower, collector lowest
+      const solution = matrix([[0.0], [4.3], [5.0]]) // VC=0V, VB=4.3V, VE=5V -> VEB=0.7V
+
+      const mockStampers: ComponentStamper[] = []
+
+      expect(() => {
+        bjtStamper.stampLinearized(mnaMatrix, rhsVector, nodeMap, solution, mockStampers)
+      }).not.toThrow()
+
+      const region = bjtStamper.getOperatingRegion()
+      expect(region).toBeDefined()
+      expect(region.length).toBeGreaterThan(0)
+    })
+
+    it('should handle PNP cutoff conditions properly (VEB <= 0)', () => {
+      // PNP cutoff: emitter at same or lower potential than base
+      const solution = matrix([[0.0], [5.0], [5.0]]) // VC=0V, VB=5V, VE=5V -> VEB=0V (cutoff)
+
+      bjtStamper.stampLinearized(mnaMatrix, rhsVector, nodeMap, solution, [])
+
+      const region = bjtStamper.getOperatingRegion()
+      expect(region).toBe('Cutoff')
+
+      const collectorCurrent = bjtStamper.calculateCurrent(solution, nodeMap, [])
+      expect(collectorCurrent).toBe(0) // No collector current in cutoff
+    })
+  })
+})
+
+describe('BJTPNPStamper - Emitter-Base Circuit Analysis', () => {
+  describe('analyzeEmitterBaseCircuit', () => {
+    it('should correctly analyze simple emitter bias circuit', () => {
+      // Test circuit: VEE (12V, emitter supply) → RE (4.7kΩ) → Q1 emitter → Q1 base → RB (47kΩ) → ground (0V base bias)
+      // PNP: emitter pulled high via VEE, base pulled low via RB to ground
+      const mockComponent: CircuitComponent = {
+        id: 'Q1',
+        type: 'bjt_pnp',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTPNPStamper(mockComponent)
+
+      const mockStampers = [
+        createMockStamper('VEB', 'voltage_source', {
+          id: 'VEB',
+          type: 'voltage_source',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 2.0 },
+        }),
+        createMockStamper('RB', 'resistor', {
+          id: 'RB',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 47000 },
+        }),
+        createMockStamper('VCC', 'voltage_source', {
+          id: 'VCC',
+          type: 'voltage_source',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 12.0 },
+        }),
+        createMockStamper('RC', 'resistor', {
+          id: 'RC',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 2200 },
+        }),
+      ]
+
+      const analyzeMethod = (
+        bjtStamper as unknown as {
+          analyzeEmitterBaseCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeEmitterBaseCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:collector', 0],
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      // Only VEB (2V) and RB (47k) should be picked up for emitter-base; VCC (12V) and RC should be excluded
+      expect(result.theveninVoltage).toBe(2.0)
+      expect(result.theveninResistance).toBe(47000)
+    })
+
+    it('should correctly analyze voltage divider bias at the emitter side', () => {
+      // PNP voltage divider: VCC → R1 → base → R2 → ground; emitter at VCC via RE
+      // VEB = VCC - VB = VCC - VCC*R2/(R1+R2) = VCC*R1/(R1+R2)
+      const mockComponent: CircuitComponent = {
+        id: 'Q1',
+        type: 'bjt_pnp',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTPNPStamper(mockComponent)
+
+      const mockStampers = [
+        createMockStamper('VCC', 'voltage_source', {
+          id: 'VCC',
+          type: 'voltage_source',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 12.0 },
+        }),
+        createMockStamper('R1', 'resistor', {
+          id: 'R1',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 10000 },
+        }),
+        createMockStamper('R2', 'resistor', {
+          id: 'R2',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 2200 },
+        }),
+        createMockStamper('RE', 'resistor', {
+          id: 'RE',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 1000 },
+        }),
+        createMockStamper('RC', 'resistor', {
+          id: 'RC',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 4700 },
+        }),
+      ]
+
+      const analyzeMethod = (
+        bjtStamper as unknown as {
+          analyzeEmitterBaseCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeEmitterBaseCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:collector', 0],
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      // PNP voltage divider: VEB = VCC * R1/(R1+R2) = 12 * 10000/12200 ~= 9.84V
+      // Rth = R1||R2 + RE = (10000*2200)/12200 + 1000 ~= 2811Ω
+      const expectedVth = (12.0 * 10000) / (10000 + 2200)
+      const expectedRth = (10000 * 2200) / (10000 + 2200) + 1000
+
+      expect(result.theveninVoltage).toBeCloseTo(expectedVth, 2)
+      expect(result.theveninResistance).toBeCloseTo(expectedRth, 0)
+    })
+
+    it('should handle multiple voltage sources correctly', () => {
+      const mockComponent: CircuitComponent = {
+        id: 'Q1',
+        type: 'bjt_pnp',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTPNPStamper(mockComponent)
+
+      const mockStampers = [
+        createMockStamper('VEE', 'voltage_source', {
+          id: 'VEE',
+          type: 'voltage_source',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 2.0 },
+        }),
+        createMockStamper('VBIAS', 'voltage_source', {
+          id: 'VBIAS',
+          type: 'voltage_source',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { voltage: 1.0 },
+        }),
+        createMockStamper('RB', 'resistor', {
+          id: 'RB',
+          type: 'resistor',
+          position: { x: 0, y: 0 },
+          rotation: 0,
+          selected: false,
+          properties: { resistance: 100000 },
+        }),
+      ]
+
+      const analyzeMethod = (
+        bjtStamper as unknown as {
+          analyzeEmitterBaseCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeEmitterBaseCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:collector', 0],
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      expect(result.theveninVoltage).toBeGreaterThan(0)
+      expect(result.theveninResistance).toBeGreaterThan(0)
+    })
+
+    it('should provide defaults when no components found', () => {
+      const mockComponent: CircuitComponent = {
+        id: 'Q1',
+        type: 'bjt_pnp',
+        position: { x: 300, y: 200 },
+        rotation: 0,
+        selected: false,
+        properties: {
+          saturationCurrent: 1e-14,
+          currentGain: 100,
+          label: 'Q1',
+        },
+      }
+
+      const bjtStamper = new BJTPNPStamper(mockComponent)
+
+      const mockStampers: ComponentStamper[] = []
+
+      const analyzeMethod = (
+        bjtStamper as unknown as {
+          analyzeEmitterBaseCircuit: (
+            solution: Matrix,
+            nodeMap: Map<string, number>,
+            stampers: ComponentStamper[],
+          ) => { theveninVoltage: number; theveninResistance: number }
+        }
+      ).analyzeEmitterBaseCircuit.bind(bjtStamper)
+
+      const solution = matrix([[0], [0], [0]])
+      const nodeMap = new Map([
+        ['Q1:collector', 0],
+        ['Q1:base', 1],
+        ['Q1:emitter', 2],
+      ])
+
+      const result = analyzeMethod(solution, nodeMap, mockStampers)
+
+      expect(result.theveninVoltage).toBe(0.0)
+      expect(result.theveninResistance).toBe(1000000.0)
     })
   })
 })
