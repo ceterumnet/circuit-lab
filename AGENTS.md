@@ -18,8 +18,9 @@
 - Always write unit tests along with new code
 - Identify changes from the plan that can be implemented in parallel, and use sub-agents to implement the features efficiently
 - When using sub-agents to implement features, act as a coordinator only
-- After completing features (large or small), always run commands like lint, type check and next build to check code quality
-
+- After completing features (large or small), always run commands like lint, type check, unit tests, and next build to check code quality
+- Always verify a linter's "unused" claim by checking the source** — especially for runtime imports (not type imports). Prefix with _ instead of removing.
+- 
 ## TESTING
 
 - Use any testing tools, libraries available to the project for testing your changes
