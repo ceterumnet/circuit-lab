@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { solveDC } from '@/services/simulation'
-import type { Circuit, CircuitComponent } from '@/types/components'
+import type { Circuit } from '@/types/components'
 
 describe('Diode Parameter Scaling System', () => {
   // Helper function to create a circuit with variable parameters

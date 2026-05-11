@@ -1,5 +1,5 @@
 import type { Circuit, CircuitComponent, Wire, Position } from '@/types/components'
-import type { TestCircuitSpec, ExpectedResults, TolerancePresets } from './test-types'
+import type { TestCircuitSpec, ExpectedResults } from './test-types'
 import { TolerancePresets as Tolerances } from './test-types'
 
 /**

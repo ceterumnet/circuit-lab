@@ -1,4 +1,4 @@
-import type { ValidationResult, ExpectedResults, ToleranceSpec } from './test-types'
+import type { ValidationResult, ExpectedResults } from './test-types'
 import type { SimulationResult } from '@/types/components'
 
 /**

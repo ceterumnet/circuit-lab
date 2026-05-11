@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { solveDC } from '@/services/simulation'
 import type { Circuit } from '@/types/components'
 
